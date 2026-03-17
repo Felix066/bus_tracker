@@ -1,0 +1,10 @@
+# Exclude logs
+ngrok_log.txt
+*.log
+
+# Windows-specific
+Thumbs.db
+desktop.ini
+
+# PHP temporary files
+sess_*
