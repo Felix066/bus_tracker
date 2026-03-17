@@ -1,0 +1,8 @@
+{
+    "name": "bus-tracker",
+    "description": "Real-time bus tracking application",
+    "type": "project",
+    "require": {
+        "php": ">=8.0"
+    }
+}

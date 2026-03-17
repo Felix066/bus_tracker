@@ -1,0 +1,2 @@
+# Handle basic routing if needed, but for simple PHP apps on Render
+# they usually use Apache by default. This is just a placeholder.

@@ -3,10 +3,10 @@
 // config.php — DB credentials, connection helper, session bootstrap
 // ============================================================
 
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'bus_tracking');
+define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+define('DB_USER', getenv('DB_USER') ?: 'root');
+define('DB_PASS', getenv('DB_PASS') ?: '');
+define('DB_NAME', getenv('DB_NAME') ?: 'bus_tracking');
 
 /**
  * Returns a MySQLi connection. Dies with a JSON error on failure.
