@@ -492,20 +492,30 @@ function startSharing() {
   showActiveUI();
   gpsError.style.display = 'none';
 
-  watchId = navigator.geolocation.watchPosition(
-    function(position) {
-      var lat = position.coords.latitude;
-      var lng = position.coords.longitude;
-      sendLocation(lat, lng);
-      updateMapMarker(lat, lng);
-      showCoordinates(lat, lng);
-    },
-    function(err) {
-      gpsError.style.display = 'block';
-      gpsError.textContent   = 'Location error: ' + err.message;
-    },
-    { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-  );
+  function onGPSSuccess(position) {
+    gpsError.style.display = 'none';
+    var lat = position.coords.latitude;
+    var lng = position.coords.longitude;
+    sendLocation(lat, lng);
+    updateMapMarker(lat, lng);
+    showCoordinates(lat, lng);
+  }
+
+  function onGPSError(err) {
+    gpsError.style.display = 'block';
+    gpsError.textContent   = 'Location error: ' + err.message;
+    // Fallback: If High Accuracy times out, try once with normal accuracy
+    if (err.code === err.TIMEOUT && options.enableHighAccuracy) {
+      console.warn('GPS timeout, retrying with normal accuracy...');
+      options.enableHighAccuracy = false;
+      options.timeout = 10000;
+      navigator.geolocation.clearWatch(watchId);
+      watchId = navigator.geolocation.watchPosition(onGPSSuccess, onGPSError, options);
+    }
+  }
+
+  var options = { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 };
+  watchId = navigator.geolocation.watchPosition(onGPSSuccess, onGPSError, options);
 }
 
 function stopSharing() {
