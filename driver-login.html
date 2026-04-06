@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Driver Login | BusTrack</title>
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/login.css">
+</head>
+<body class="theme-driver">
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-panel-left">
+        <div class="branding">
+          <h1>BusTrack</h1>
+          <p class="tagline">Track every bus, in real time.</p>
+        </div>
+        <div class="stats-row">
+          <div class="stat-item"><span class="val">100%</span><span class="lbl">GPS Accuracy</span></div>
+          <div class="stat-item"><span class="val">17</span><span class="lbl">Stops</span></div>
+        </div>
+      </div>
+      <div class="login-panel-right">
+        <h2>Driver Login</h2>
+        <div id="error-banner" class="error-banner hidden"></div>
+        <form id="login-form">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="username" placeholder="driver_name" required>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="password" placeholder="••••••••" required>
+          </div>
+          <button type="submit" style="width: 100%;">Driver Sign In</button>
+        </form>
+        <div class="demo-credentials">
+          <p>Demo: <code>driver4</code> / <code>driver123</code></p>
+        </div>
+        <div style="margin-top: 20px; text-align: center;">
+          <a href="index.html" style="color: var(--text-dark); text-decoration: none; font-size: 14px; font-weight: 600;">← Student Login</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/driver-auth.js"></script>
+  <script>
+    document.getElementById('login-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const errBanner = document.getElementById('error-banner');
+      errBanner.classList.add('hidden');
+
+      try {
+        await handleDriverLogin(
+          document.getElementById('username').value,
+          document.getElementById('password').value
+        );
+      } catch (err) {
+        errBanner.textContent = err.message;
+        errBanner.classList.remove('hidden');
+      }
+    };
+  </script>
+</body>
+</html>

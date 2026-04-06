@@ -1,0 +1,81 @@
+.dashboard-container {
+  padding: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.user-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  padding: 8px 16px;
+  border-radius: 30px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.bus-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.bus-card {
+  background: white;
+  border-radius: var(--card-radius);
+  padding: 30px;
+  box-shadow: var(--shadow-premium);
+  transition: transform 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.bus-card:hover { transform: translateY(-8px); }
+
+.bus-card .status-dot {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e5e7eb;
+}
+
+.bus-card.online .status-dot {
+  background: #22c55e;
+  box-shadow: 0 0 12px #22c55e;
+}
+
+.bus-info { margin-bottom: 24px; }
+.bus-info h3 { font-size: 24px; margin-bottom: 4px; }
+.bus-info p { color: #6B7280; font-size: 14px; }
+
+.track-btn {
+  width: 100%;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 40px;
+  border-radius: var(--card-radius);
+  max-width: 400px;
+  text-align: center;
+}

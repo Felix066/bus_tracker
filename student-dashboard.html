@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | BusTrack</title>
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+  <div class="dashboard-container">
+    <div class="header-row">
+      <div class="branding">
+        <h1 style="font-size: 32px;">Providence <span class="tagline" style="font-weight: normal; font-size: 28px;">BusTrack</span></h1>
+      </div>
+      <div class="user-badge">
+        <span id="user-email-display" style="font-weight: 600;">user@student...</span>
+        <button onclick="logout()" style="height: 36px; padding: 0 16px; font-size: 13px;">Logout</button>
+      </div>
+    </div>
+
+    <div class="bus-grid" id="bus-grid">
+      <!-- Bus cards injected here -->
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/routes.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script>
+    const session = JSON.parse(localStorage.getItem('userSession'));
+    if (!session) window.location.href = 'index.html';
+
+    document.getElementById('user-email-display').textContent = session.email;
+    renderBusCards();
+
+    // Refresh status every 10 seconds
+    setInterval(renderBusCards, 10000);
+  </script>
+</body>
+</html>

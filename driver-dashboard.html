@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Driver Dashboard | BusTrack</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/driver.css">
+  <link rel="stylesheet" href="css/timeline.css">
+  <style>
+    #map { height: 100%; border-radius: 20px; }
+  </style>
+</head>
+<body>
+  <div class="driver-nav">
+    <div class="nav-brand">
+      <h1 style="font-size: 24px;">BusTrack <span style="font-family: Fraunces; font-weight: normal; font-style: italic;">Driver Console</span></h1>
+    </div>
+    <div class="nav-controls">
+      <span id="driver-name-display" style="font-weight: 600;">Driver Name</span>
+      <select id="bus-select" class="nav-select">
+        <option value="">Select Bus</option>
+        <option value="Bus 4" selected>Bus 4</option>
+      </select>
+      <select id="trip-select" class="nav-select">
+        <option value="morning">Morning</option>
+        <option value="evening">Evening</option>
+      </select>
+      <button id="start-btn" onclick="startTrip()">Start Trip</button>
+      <button onclick="location.href='driver-login.html'" style="background: transparent; color: #666; font-size: 14px;">Logout</button>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span class="label">Speed</span>
+      <span class="value" id="speed-display">0.0 km/h</span>
+    </div>
+    <div class="stat-card">
+      <span class="label">Next Stop</span>
+      <span class="value" id="next-stop-display">--</span>
+    </div>
+    <div class="stat-card">
+      <span class="label">Duration</span>
+      <span class="value" id="trip-duration-display">00:00:00</span>
+    </div>
+  </div>
+
+  <div class="driver-main-grid">
+    <div class="map-container">
+      <div id="map"></div>
+    </div>
+    <div class="timeline-container" style="position: relative;">
+      <div id="chart-bus-marker">🚌</div>
+      <div class="stop-timeline" id="stop-timeline">
+        <div class="timeline-header">
+          <h3>Progress Tracker</h3>
+          <p>Real-time stop arrival status</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/haversine.js"></script>
+  <script src="js/kalman.js"></script>
+  <script src="js/routes.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/location.js"></script>
+  <script src="js/timer.js"></script>
+  <script src="js/trip.js"></script>
+  <script src="js/sync.js"></script>
+
+  <script>
+    const driver = JSON.parse(localStorage.getItem('driverSession'));
+    if (!driver) window.location.href = 'driver-login.html';
+
+    document.getElementById('driver-name-display').textContent = driver.username;
+
+    // Init map with morning by default
+    initMap('morning');
+    renderTimeline(getRoute('morning'), 0);
+
+    // Subscribe to realtime location updates for map/chart synchronization
+    // Bus 4 is our tracker bus
+    subscribeToBus('Bus 4', 'morning');
+
+  </script>
+</body>
+</html>

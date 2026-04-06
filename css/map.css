@@ -1,0 +1,42 @@
+.map-page-container {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  height: 100vh;
+}
+
+#map {
+  height: 100%;
+  width: 100%;
+}
+
+.map-overlay-back {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+}
+
+.map-overlay-back button {
+  padding: 0 24px;
+  background: white;
+  color: var(--text-dark);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.tracking-sidebar {
+  background: #111827;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.bus-meta-card {
+  background: #1a1f2e;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.bus-meta-card h2 { font-size: 20px; margin-bottom: 4px; }
+.bus-meta-card p { font-size: 14px; opacity: 0.7; }
