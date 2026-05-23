@@ -247,6 +247,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     locationPopup.classList.remove('active');
   });
 
+  // Immediate Bus Location Fetch
+  async function fetchLatestBusLocationImmediate() {
+    try {
+      const { data, error } = await supabase
+        .from('computed_locations')
+        .select('latitude, longitude, speed_kmh')
+        .eq('bus_id', 'Bus 4')
+        .order('computed_at', { ascending: false })
+        .limit(1);
+      
+      if (error) throw error;
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].latitude);
+        const lon = parseFloat(data[0].longitude);
+        const speed = data[0].speed_kmh;
+        
+        // Update position UI and marker instantly
+        updateBusPosition(lat, lon, speed);
+        
+        // Focus map on the bus immediately if map exists
+        if (map) {
+          map.setView([lat, lon], 14);
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch immediate bus location:', err);
+    }
+  }
+
   // Start the flow
+  fetchLatestBusLocationImmediate();
   fetchActiveTrip();
 });
