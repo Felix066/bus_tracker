@@ -105,3 +105,34 @@
 
 .bottom-link { text-align: center; margin-top: 30px; font-size: 14px; color: #6B7280; }
 .bottom-link a { color: #111827; font-weight: 700; text-decoration: none; }
+
+/* Mobile Responsiveness */
+@media (max-width: 900px) {
+  .login-container {
+    padding: 16px;
+  }
+  .login-card {
+    flex-direction: column;
+    min-height: auto;
+    border-radius: 20px;
+  }
+  .login-panel-left {
+    padding: 40px 24px;
+    flex: none;
+  }
+  .login-panel-right {
+    padding: 40px 24px;
+    flex: none;
+  }
+  .login-panel-left h1 {
+    font-size: 32px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+  .login-panel-left .tagline {
+    font-size: 20px;
+  }
+  .login-panel-left > div:last-child {
+    display: none !important; /* Hide the 3 columns of stats on mobile for space */
+  }
+}
