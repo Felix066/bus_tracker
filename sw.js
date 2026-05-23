@@ -1,6 +1,6 @@
-const CACHE_NAME = 'bustrack-v2';
-const STATIC_CACHE = 'bustrack-static-v2';
-const TILE_CACHE  = 'bustrack-tiles-v2';
+const CACHE_NAME = 'bustrack-v3';
+const STATIC_CACHE = 'bustrack-static-v3';
+const TILE_CACHE  = 'bustrack-tiles-v3';
 const MAX_TILES  = 500;
 
 async function cacheTileWithLimit(cache, request, response) {
@@ -19,12 +19,14 @@ const STATIC_FILES = [
   '/driver-login.html',
   '/student-dashboard.html',
   '/bus_track.html',
+  '/bus-track.html',
   '/driver-dashboard.html',
   '/css/global.css',
   '/css/login.css',
   '/css/dashboard.css',
   '/css/map.css',
   '/css/driver.css',
+  '/css/bus-track.css',
   '/js/supabase-client.js',
   '/js/auth.js',
   '/js/driver-auth.js',
@@ -38,6 +40,7 @@ const STATIC_FILES = [
   '/js/timer.js',
   '/js/sync.js',
   '/js/dashboard.js',
+  '/js/bus-track.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
@@ -76,7 +79,8 @@ self.addEventListener('fetch', (event) => {
     url.hostname === 'a.tile.openstreetmap.org' ||
     url.hostname === 'b.tile.openstreetmap.org' ||
     url.hostname === 'c.tile.openstreetmap.org' ||
-    url.hostname.endsWith('.tile.openstreetmap.org')
+    url.hostname.endsWith('.tile.openstreetmap.org') ||
+    url.hostname.endsWith('.basemaps.cartocdn.com')
   ) {
     event.respondWith(
       caches.open(TILE_CACHE).then(async (cache) => {
