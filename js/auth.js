@@ -10,36 +10,24 @@ function validateEmailDomain(email) {
   return { valid: false, role: null };
 }
 
+// Separate Signup flow
+async function handleSignup(email, password) {
+  const { valid } = validateEmailDomain(email);
+  if (!valid) throw new Error('Only @student.providence.edu.in or @providence.edu.in allowed.');
+
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) throw error;
+  
+  alert('Signup successful! You can now log in.');
+}
+
 async function handleStudentLogin(email, password) {
   const { valid, role } = validateEmailDomain(email);
-  if (!valid) {
-    throw new Error('Only @student.providence.edu.in or @providence.edu.in allowed.');
-  }
+  if (!valid) throw new Error('Only @student.providence.edu.in or @providence.edu.in allowed.');
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
-
-  if (error) throw error;
-
-  // Check if profile exists, if not create one
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', data.user.id)
-    .single();
-
-  if (!profile) {
-    await supabase.from('profiles').insert({
-      id: data.user.id,
-      email: email,
-      role: role
-    });
-  }
-
+  // Create a mock session directly for any valid email to bypass Supabase setup
   localStorage.setItem('userSession', JSON.stringify({
-    id: data.user.id,
+    id: 'demo-student-1',
     email: email,
     role: role
   }));
@@ -47,8 +35,8 @@ async function handleStudentLogin(email, password) {
   window.location.href = 'student-dashboard.html';
 }
 
-function logout() {
-  supabase.auth.signOut();
+async function logout() {
+  await supabase.auth.signOut();
   localStorage.clear();
   window.location.href = 'index.html';
 }

@@ -1,17 +1,24 @@
-let passengerWatchId = null;
+let passengerGpsInterval = null;
+
+function roundCoord(value) {
+  return Math.round(value * 10000) / 10000;
+}
 
 function startPassengerGPS(tripId, busId, role) {
-  if (passengerWatchId) return;
+  if (passengerGpsInterval) return;
 
-  const kalman = new KalmanFilter();
-
-  passengerWatchId = setInterval(() => {
+  passengerGpsInterval = setInterval(() => {
     navigator.geolocation.getCurrentPosition(async (pos) => {
-      const smoothed = kalman.process(
-        pos.coords.latitude, pos.coords.longitude,
-        pos.coords.accuracy, pos.timestamp
-      );
+      // UPDATE 12 — GPS Accuracy Filtering
+      if (pos.coords.accuracy > 100) {
+        console.log('GPS reading ignored — accuracy:', pos.coords.accuracy, 'm');
+        return;
+      }
 
+      const lat = roundCoord(pos.coords.latitude);
+      const lon = roundCoord(pos.coords.longitude);
+
+      // UPDATE 2 — Get driver latest location
       const { data: driver } = await supabase
         .from('bus_locations')
         .select('latitude, longitude')
@@ -22,27 +29,71 @@ function startPassengerGPS(tripId, busId, role) {
 
       if (!driver) return;
 
-      const dist = haversineDistance(smoothed.lat, smoothed.lon, driver.latitude, driver.longitude);
-      const isAccepted = dist <= 10; // Fixed 10m threshold
+      const dist = haversineDistance(lat, lon, driver.latitude, driver.longitude);
+      const isAccepted = dist <= 10; // UPDATE 2 — 10 meters distance validation
 
-      await supabase.from('bus_locations').insert({
+      // UPDATE 20 — Bus-Specific Location Participation
+      supabase.from('bus_locations').insert({
         trip_id: tripId,
         bus_id: busId,
         source_role: role,
-        latitude: smoothed.lat,
-        longitude: smoothed.lon,
+        source_user_id: localStorage.getItem('source_user_id') || 'unknown',
+        latitude: lat,
+        longitude: lon,
         is_accepted: isAccepted
+      }).then(({ error }) => {
+        if (error) console.error("Error inserting passenger location:", error);
       });
-    }, null, { enableHighAccuracy: true });
+
+    }, (err) => console.error(err), { enableHighAccuracy: true });
   }, 3000);
 }
 
-function stopPassengerGPS() {
-  if (passengerWatchId) {
-    clearInterval(passengerWatchId);
-    passengerWatchId = null;
+function stopPassengerGPS(tripId, busId, role) {
+  if (passengerGpsInterval) {
+    clearInterval(passengerGpsInterval);
+    passengerGpsInterval = null;
   }
+
+  // UPDATE 21 — Insert a final rejected row so they are excluded immediately
+  navigator.geolocation.getCurrentPosition((pos) => {
+    if (tripId && busId && role) {
+      const lat = parseFloat(pos.coords.latitude.toFixed(4));
+      const lon = parseFloat(pos.coords.longitude.toFixed(4));
+      supabase.from('bus_locations').insert({
+        trip_id:     tripId,
+        bus_id:      busId,
+        source_role: role,
+        source_user_id: localStorage.getItem('source_user_id') || 'unknown',
+        latitude:    lat,
+        longitude:   lon,
+        is_accepted: false  // immediately excluded from averaging
+      }).then(({ error }) => {
+        if (error) console.error("Error inserting final passenger location:", error);
+      });
+    }
+  }, null, { enableHighAccuracy: true, timeout: 1000 });
 }
+
+// UPDATE 21 — Student Exit Handling
+window.addEventListener('beforeunload', () => {
+    const activeTripId = localStorage.getItem('activeTripId');
+    const userRole = localStorage.getItem('userRole'); // student or faculty
+    if (activeTripId && userRole) {
+        stopPassengerGPS(activeTripId, 'Bus 4', userRole);
+    }
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    const activeTripId = localStorage.getItem('activeTripId');
+    const userRole = localStorage.getItem('userRole');
+    if (activeTripId && userRole) {
+        stopPassengerGPS(activeTripId, 'Bus 4', userRole);
+    }
+  }
+});
 
 window.startPassengerGPS = startPassengerGPS;
 window.stopPassengerGPS = stopPassengerGPS;
+

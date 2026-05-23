@@ -3,55 +3,101 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Driver Login | BusTrack</title>
+  <title>Driver Portal | BusTrack</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/login.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1A1A1A">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="BusTrack">
 </head>
 <body class="theme-driver">
+<div id="offline-indicator" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1A1A1A; color:white; padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; font-family:Inter,sans-serif; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.3); align-items:center; gap:8px;">
+  You are offline - showing cached data
+</div>
   <div class="login-container">
     <div class="login-card">
       <div class="login-panel-left">
-        <div class="branding">
-          <h1>BusTrack</h1>
-          <p class="tagline">Track every bus, in real time.</p>
+        <div class="top-nav">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: rgba(255,255,255,0.2); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-bus"></i>
+            </div>
+            <span style="font-weight: 800; font-size: 20px; letter-spacing: -0.5px;">BusTrack</span>
+          </div>
         </div>
-        <div class="stats-row">
-          <div class="stat-item"><span class="val">100%</span><span class="lbl">GPS Accuracy</span></div>
-          <div class="stat-item"><span class="val">17</span><span class="lbl">Stops</span></div>
+        
+        <div>
+          <h1 class="tagline">Track every bus, in real time.</h1>
+          <p style="margin-top: 20px; opacity: 0.7; font-size: 18px; max-width: 320px;">Professional fleet management for schools and institutions.</p>
+        </div>
+
+        <div style="display: flex; gap: 40px;">
+          <div><span style="display:block; font-weight: 800; font-size: 20px;">3 sec</span><span style="font-size: 11px; opacity: 0.6; text-transform: uppercase; font-weight: 700;">Location Updates</span></div>
+          <div><span style="display:block; font-weight: 800; font-size: 20px;">Live</span><span style="font-size: 11px; opacity: 0.6; text-transform: uppercase; font-weight: 700;">GPS Tracking</span></div>
+          <div><span style="display:block; font-weight: 800; font-size: 20px;">Free</span><span style="font-size: 11px; opacity: 0.6; text-transform: uppercase; font-weight: 700;">OpenStreetMap</span></div>
         </div>
       </div>
+
       <div class="login-panel-right">
-        <h2>Driver Login</h2>
+        <span style="font-size: 11px; font-weight: 800; color: #9CA3AF; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block;">Driver Portal</span>
+        <h2 style="font-size: 42px; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px;">Welcome back</h2>
+        <p style="color: #6B7280; font-size: 16px; margin-bottom: 40px;">Sign in with your driver credentials to begin your shift.</p>
+
         <div id="error-banner" class="error-banner hidden"></div>
+
         <form id="login-form">
           <div class="form-group">
             <label>Username</label>
-            <input type="text" id="username" placeholder="driver_name" required>
+            <div class="input-wrapper">
+              <i class="far fa-user"></i>
+              <input type="text" id="username" placeholder="driver1" required>
+            </div>
           </div>
           <div class="form-group">
             <label>Password</label>
-            <input type="password" id="password" placeholder="••••••••" required>
+            <div class="input-wrapper">
+              <i class="fas fa-lock"></i>
+              <input type="password" id="password" placeholder="••••••••" required>
+            </div>
           </div>
-          <button type="submit" style="width: 100%;">Driver Sign In</button>
+
+          <div class="demo-credentials">
+            <p>Demo Credentials</p>
+            <code>driver1 / password123</code>
+            <code>driver2 / password123</code>
+          </div>
+
+          <button type="submit" class="btn-primary br-14">Sign In <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 4px;"></i></button>
         </form>
-        <div class="demo-credentials">
-          <p>Demo: <code>driver4</code> / <code>driver123</code></p>
-        </div>
-        <div style="margin-top: 20px; text-align: center;">
-          <a href="index.html" style="color: var(--text-dark); text-decoration: none; font-size: 14px; font-weight: 600;">← Student Login</a>
+
+        <div class="bottom-link">
+          Are you a student? <a href="index.html">Sign in here →</a>
         </div>
       </div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/driver-auth.js"></script>
   <script>
+
+
+    // Login Form Submission
     document.getElementById('login-form').onsubmit = async (e) => {
       e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const originalText = btn.innerHTML;
       const errBanner = document.getElementById('error-banner');
+      
       errBanner.classList.add('hidden');
+      btn.disabled = true;
+      btn.innerHTML = 'Verifying... <i class="fas fa-spinner fa-spin"></i>';
 
       try {
         await handleDriverLogin(
@@ -64,5 +110,33 @@
       }
     };
   </script>
+<script>
+window.addEventListener('online', () => {
+  document.getElementById('offline-indicator').style.display = 'none';
+  console.log('[Network] Back online');
+});
+
+window.addEventListener('offline', () => {
+  document.getElementById('offline-indicator').style.display = 'flex';
+  console.log('[Network] Gone offline');
+});
+
+if (!navigator.onLine) {
+  document.getElementById('offline-indicator').style.display = 'flex';
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then((reg) => {
+        console.log('[BusTrack] Service Worker registered:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('[BusTrack] Service Worker failed:', err);
+      });
+  });
+}
+</script>
 </body>
 </html>

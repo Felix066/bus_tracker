@@ -4,62 +4,62 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Driver Dashboard | BusTrack</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/driver.css">
-  <link rel="stylesheet" href="css/timeline.css">
-  <style>
-    #map { height: 100%; border-radius: 20px; }
-  </style>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1A1A1A">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="BusTrack">
 </head>
 <body>
-  <div class="driver-nav">
-    <div class="nav-brand">
-      <h1 style="font-size: 24px;">BusTrack <span style="font-family: Fraunces; font-weight: normal; font-style: italic;">Driver Console</span></h1>
-    </div>
-    <div class="nav-controls">
-      <span id="driver-name-display" style="font-weight: 600;">Driver Name</span>
-      <select id="bus-select" class="nav-select">
-        <option value="">Select Bus</option>
-        <option value="Bus 4" selected>Bus 4</option>
-      </select>
-      <select id="trip-select" class="nav-select">
-        <option value="morning">Morning</option>
-        <option value="evening">Evening</option>
-      </select>
-      <button id="start-btn" onclick="startTrip()">Start Trip</button>
-      <button onclick="location.href='driver-login.html'" style="background: transparent; color: #666; font-size: 14px;">Logout</button>
-    </div>
-  </div>
+<div id="offline-indicator" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1A1A1A; color:white; padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; font-family:Inter,sans-serif; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.3); align-items:center; gap:8px;">
+  You are offline - showing cached data
+</div>
 
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="brand">BusTrack <em>Driver Console</em></div>
+    <span class="driver-label" id="driver-name-display">driver1</span>
+    <span class="bus-badge" id="assigned-bus-label">Assigned Bus: Bus 4</span>
+    <select class="trip-select" id="trip-select">
+      <option value="morning">Morning</option>
+      <option value="evening">Evening</option>
+    </select>
+    <button class="start-btn" id="start-btn" onclick="startTrip()">Start Trip</button>
+  </nav>
+
+  <!-- STAT CARDS — 3 cards, Next Stop hidden for JS only -->
   <div class="stats-grid">
     <div class="stat-card">
-      <span class="label">Speed</span>
-      <span class="value" id="speed-display">0.0 km/h</span>
+      <div class="stat-label">Speed</div>
+      <div class="stat-value" id="speed-display">0.0 km/h</div>
     </div>
     <div class="stat-card">
-      <span class="label">Next Stop</span>
-      <span class="value" id="next-stop-display">--</span>
+      <div class="stat-label">Duration</div>
+      <div class="stat-value" id="trip-duration-display">00:00:00</div>
     </div>
     <div class="stat-card">
-      <span class="label">Duration</span>
-      <span class="value" id="trip-duration-display">00:00:00</span>
+      <div class="stat-label">Current Position</div>
+      <div class="stat-value searching" id="location-display">Searching...</div>
     </div>
   </div>
 
-  <div class="driver-main-grid">
-    <div class="map-container">
-      <div id="map"></div>
-    </div>
-    <div class="timeline-container" style="position: relative;">
-      <div id="chart-bus-marker">🚌</div>
-      <div class="stop-timeline" id="stop-timeline">
-        <div class="timeline-header">
-          <h3>Progress Tracker</h3>
-          <p>Real-time stop arrival status</p>
-        </div>
-      </div>
-    </div>
+  <!-- Hidden next stop for JS reference — not visible on page -->
+  <span id="next-stop-display" style="display:none;"></span>
+
+  <!-- TRIP STATUS BAR — shows when trip is active -->
+  <div class="trip-status-bar" id="trip-status-bar">
+    <div class="status-dot-green"></div>
+    <span id="trip-status-text">Trip active — GPS tracking live</span>
+  </div>
+
+  <!-- MAP -->
+  <div class="map-wrapper">
+    <div id="map"></div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -69,26 +69,94 @@
   <script src="js/kalman.js"></script>
   <script src="js/routes.js"></script>
   <script src="js/map.js"></script>
-  <script src="js/chart.js"></script>
   <script src="js/location.js"></script>
   <script src="js/timer.js"></script>
-  <script src="js/trip.js"></script>
+  <script src="js/trip.js?v=2"></script>
   <script src="js/sync.js"></script>
+  <script src="js/session-protection.js"></script>
 
   <script>
+    protectRoute('driver');
     const driver = JSON.parse(localStorage.getItem('driverSession'));
-    if (!driver) window.location.href = 'driver-login.html';
+    if (!driver || !driver.driverId) window.location.href = 'driver-login.html';
+
+    // UPDATE 8 — Driver Bus Assignment Restriction
+    function lockBusToDriver() {
+      const session     = JSON.parse(localStorage.getItem('driverSession'));
+      const assignedBus = session.assignedBus || session.busId; // fallback to busId if assignedBus not set
+
+      const select = document.getElementById('bus-select');
+      if (select && assignedBus) {
+        // Clear and add only the assigned bus
+        select.innerHTML = `<option value="${assignedBus}">${assignedBus}</option>`;
+        select.value     = assignedBus;
+        select.disabled  = true;
+      }
+      
+      if (assignedBus) {
+        const label = document.getElementById('assigned-bus-label');
+        if (label) label.textContent = assignedBus;
+      }
+    }
 
     document.getElementById('driver-name-display').textContent = driver.username;
+    lockBusToDriver();
 
-    // Init map with morning by default
-    initMap('morning');
-    renderTimeline(getRoute('morning'), 0);
+    // Init map defaults
+    const defaultType = 'morning';
+    initMap(defaultType);
+
+    // DYNAMIC UPDATE ON SHIFT CHANGE
+    document.getElementById('trip-select').onchange = (e) => {
+      const selectedType = e.target.value;
+      localStorage.setItem('activeTripType', selectedType);
+      
+      // Update map properly
+      if (typeof map !== 'undefined' && map !== null) {
+        map.remove(); // Safely remove the old Leaflet instance
+        map = null;
+      }
+      initMap(selectedType);
+    };
 
     // Subscribe to realtime location updates for map/chart synchronization
-    // Bus 4 is our tracker bus
-    subscribeToBus('Bus 4', 'morning');
+    if (driver && (driver.assignedBus || driver.busId)) {
+      subscribeToBus(driver.assignedBus || driver.busId, defaultType);
+    }
 
+    // UPDATE 13 — Trip Recovery After Page Refresh
+    if (typeof recoverActiveTrip === 'function') {
+      recoverActiveTrip();
+    }
   </script>
+
+<script>
+window.addEventListener('online', () => {
+  document.getElementById('offline-indicator').style.display = 'none';
+  console.log('[Network] Back online');
+});
+
+window.addEventListener('offline', () => {
+  document.getElementById('offline-indicator').style.display = 'flex';
+  console.log('[Network] Gone offline');
+});
+
+if (!navigator.onLine) {
+  document.getElementById('offline-indicator').style.display = 'flex';
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then((reg) => {
+        console.log('[BusTrack] Service Worker registered:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('[BusTrack] Service Worker failed:', err);
+      });
+  });
+}
+</script>
 </body>
 </html>

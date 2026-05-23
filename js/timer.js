@@ -1,7 +1,8 @@
 let timerInterval;
 
-function startTripTimer() {
-  const startTime = Date.now();
+function startTripTimer(resumeStartTime = null) {
+  if (timerInterval) clearInterval(timerInterval);
+  const startTime = resumeStartTime || Date.now();
   timerInterval = setInterval(() => {
     const diff = Date.now() - startTime;
     const h = Math.floor(diff / 3600000);
@@ -19,3 +20,4 @@ function stopTripTimer() {
 
 window.startTripTimer = startTripTimer;
 window.stopTripTimer = stopTripTimer;
+

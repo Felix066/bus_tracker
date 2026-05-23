@@ -4,40 +4,90 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard | BusTrack</title>
-  <link rel="stylesheet" href="css/global.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1A1A1A">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="BusTrack">
 </head>
 <body>
-  <div class="dashboard-container">
-    <div class="header-row">
-      <div class="branding">
-        <h1 style="font-size: 32px;">Providence <span class="tagline" style="font-weight: normal; font-size: 28px;">BusTrack</span></h1>
-      </div>
-      <div class="user-badge">
-        <span id="user-email-display" style="font-weight: 600;">user@student...</span>
-        <button onclick="logout()" style="height: 36px; padding: 0 16px; font-size: 13px;">Logout</button>
-      </div>
-    </div>
+<div id="offline-indicator" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1A1A1A; color:white; padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; font-family:Inter,sans-serif; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.3); align-items:center; gap:8px;">
+  You are offline - showing cached data
+</div>
 
-    <div class="bus-grid" id="bus-grid">
-      <!-- Bus cards injected here -->
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="brand">BusTrack</div>
+    <div class="nav-right">
+      <span class="user-greeting" id="user-greeting">Hello</span>
+      <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <h1 class="page-title">Available Buses</h1>
+    <p class="page-subtitle">Select an active bus to track its live location</p>
+    <div class="live-pill">
+      <span class="live-dot"></span>
+      Updates every 10s
+    </div>
+  </div>
+
+  <!-- BUS GRID -->
+  <div class="bus-grid" id="bus-grid">
+    <!-- Cards rendered by dashboard.js -->
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/session-protection.js"></script>
   <script src="js/routes.js"></script>
   <script src="js/dashboard.js"></script>
+
   <script>
+    protectRoute('student');
     const session = JSON.parse(localStorage.getItem('userSession'));
     if (!session) window.location.href = 'index.html';
 
-    document.getElementById('user-email-display').textContent = session.email;
+    // Initial render
     renderBusCards();
 
-    // Refresh status every 10 seconds
-    setInterval(renderBusCards, 10000);
+    // Refresh every 15 seconds for status updates
+    setInterval(renderBusCards, 15000);
   </script>
+<script>
+window.addEventListener('online', () => {
+  document.getElementById('offline-indicator').style.display = 'none';
+  console.log('[Network] Back online');
+});
+
+window.addEventListener('offline', () => {
+  document.getElementById('offline-indicator').style.display = 'flex';
+  console.log('[Network] Gone offline');
+});
+
+if (!navigator.onLine) {
+  document.getElementById('offline-indicator').style.display = 'flex';
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then((reg) => {
+        console.log('[BusTrack] Service Worker registered:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('[BusTrack] Service Worker failed:', err);
+      });
+  });
+}
+</script>
 </body>
 </html>

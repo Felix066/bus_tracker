@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,33 +14,49 @@ serve(async (req) => {
   try {
     const { username, password } = await req.json()
 
-    const supabase = createClient(
+    // 1. Initialize Supabase client with SERVICE_ROLE key to bypass RLS
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { data: driver, error } = await supabase
+    // 2. Query driver securely
+    const { data: driver, error } = await supabaseClient
       .from('drivers')
-      .select('*')
+      .select('id, username, password_hash, assigned_bus')
       .eq('username', username)
       .single()
 
     if (error || !driver) {
-      throw new Error('Invalid credentials')
+      return new Response(JSON.stringify({ success: false, error: 'Invalid username or password' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      })
     }
 
-    const isValid = await bcrypt.compare(password, driver.password_hash)
-
-    if (!isValid) {
-      throw new Error('Invalid credentials')
+    // 3. Compare passwords (Plain text as requested)
+    if (password !== driver.password_hash) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid username or password' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      })
     }
 
-    return new Response(JSON.stringify({ success: true, driver }), {
+    // 4. Return success session data (excluding password)
+    return new Response(JSON.stringify({
+      success: true,
+      driver: {
+        driverId: driver.id,
+        username: driver.username,
+        assignedBus: driver.assigned_bus
+      }
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
+
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
     })

@@ -1,3 +1,33 @@
+const ROUTE_CACHE_VERSION = 'v1';
+
+function getCachedRoute(busId = 'Bus 4') {
+  try {
+    const key = `bustrack_route_${busId.toLowerCase().replace(' ', '')}`;
+    const cached = localStorage.getItem(key);
+    if (!cached) return null;
+    const parsed = JSON.parse(cached);
+    if (parsed.version !== ROUTE_CACHE_VERSION) return null;
+    console.log(`[Cache] Route loaded from localStorage for ${busId}`);
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
+
+function cacheRoute(busId, routeData) {
+  try {
+    const key = `bustrack_route_${busId.toLowerCase().replace(' ', '')}`;
+    localStorage.setItem(key, JSON.stringify({
+      version: ROUTE_CACHE_VERSION,
+      data: routeData,
+      cached_at: Date.now()
+    }));
+    console.log(`[Cache] Route saved to localStorage for ${busId}`);
+  } catch {
+    console.warn(`[Cache] Could not save route to localStorage for ${busId}`);
+  }
+}
+
 const busStopsBus4 = [
   { name: 'Kottarakkara',      lat: 9.0018, lon: 76.7759 },
   { name: 'Mylom',             lat: 9.0125, lon: 76.7795 },
@@ -15,7 +45,7 @@ const busStopsBus4 = [
   { name: 'Karakkadu',         lat: 9.2926, lon: 76.6527 },
   { name: 'Mulakkuzha',        lat: 9.3076, lon: 76.6408 },
   { name: 'Hatchery',          lat: 9.3139, lon: 76.6382 },
-  { name: 'Providence College',lat: 9.3203, lon: 76.6390 },
+  { name: 'Providence College',lat: 9.3203, lon: 76.6390 }
 ];
 
 const BUSES = {
@@ -27,8 +57,15 @@ const BUSES = {
   'Bus 6': { hasRoute: false },
 };
 
-function getRoute(tripType) {
-  return tripType === 'morning' ? busStopsBus4 : [...busStopsBus4].reverse();
+function getRoute(tripType, busId = 'Bus 4') {
+  let route = getCachedRoute(busId);
+  if (!route) {
+    // For now we fallback to busStopsBus4 if the route isn't defined
+    // Later you can add actual routes for Bus 1, Bus 2, etc.
+    route = BUSES[busId]?.stops || busStopsBus4;
+    cacheRoute(busId, route);
+  }
+  return tripType === 'morning' ? route : [...route].reverse();
 }
 
 window.BUSES = BUSES;

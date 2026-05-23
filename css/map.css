@@ -1,7 +1,7 @@
 .map-page-container {
-  display: grid;
-  grid-template-columns: 1fr 400px;
+  display: block;
   height: 100vh;
+  position: relative;
 }
 
 #map {
@@ -24,10 +24,17 @@
 }
 
 .tracking-sidebar {
-  background: #111827;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 320px;
+  z-index: 1000;
+  background: rgba(17, 24, 39, 0.95);
   padding: 20px;
   display: flex;
   flex-direction: column;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
 }
 
 .bus-meta-card {
