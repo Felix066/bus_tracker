@@ -234,16 +234,4 @@ body {
   height: 14px;
 }
 
-.stop-marker.passed {
-  background: var(--online);
-  border-color: var(--surface);
-}
 
-.bus-marker {
-  background: var(--accent);
-  border: 3px solid white;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  box-shadow: var(--shadow-sm);
-}

@@ -164,6 +164,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
   }
 
+  function animateMarker(marker, fromLat, fromLon, toLat, toLon, durationMs) {
+    const startTime = performance.now();
+  
+    function step(currentTime) {
+      const elapsed  = currentTime - startTime;
+      const progress = Math.min(elapsed / durationMs, 1);
+      const lat      = fromLat + (toLat - fromLat) * progress;
+      const lon      = fromLon + (toLon - fromLon) * progress;
+      marker.setLatLng([lat, lon]);
+      if (progress < 1) requestAnimationFrame(step);
+    }
+  
+    requestAnimationFrame(step);
+  }
+
   function updateBusPosition(lat, lon, speed) {
     if (speed !== null) {
       speedEl.textContent = `${Math.round(speed)} km/h`;
@@ -178,10 +193,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       busMarker = L.marker([lat, lon], { icon: busIcon, zIndexOffset: 1000 }).addTo(map);
     } else {
-      busMarker.setLatLng([lat, lon]);
+      const oldPos = busMarker.getLatLng();
+      animateMarker(busMarker, oldPos.lat, oldPos.lng, lat, lon, 1000); // 1s smooth transition
     }
     
-    // Optionally pan map slowly if bus moves near edge, but keep it simple for now
+    if (map) {
+      map.panTo([lat, lon], { animate: true, duration: 1.0 });
+    }
   }
 
   function markStopPassed(index, name) {

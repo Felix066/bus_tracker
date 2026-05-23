@@ -26,9 +26,9 @@ let lastProcessedLat = null;
 let lastProcessedLon = null;
 let lastProcessedTime = 0;
 
-const MIN_DISTANCE_METERS = 5;
-const MAX_SAVE_INTERVAL_MS = 10000;
-const MIN_COMPUTED_MOVEMENT = 3; // meters
+const MIN_DISTANCE_METERS = 1;
+const MAX_SAVE_INTERVAL_MS = 2500;
+const MIN_COMPUTED_MOVEMENT = 1; // meters
 
 async function startTrip() {
     const driver = JSON.parse(localStorage.getItem('driverSession'));
@@ -88,7 +88,7 @@ function calculateSafeSpeed(lat1, lon1, lat2, lon2, timeDiffMs) {
 }
 
 function roundCoord(value) {
-    return Math.round(value * 10000) / 10000;
+    return Math.round(value * 1000000) / 1000000; // 6 decimal places (~11cm accuracy)
 }
 
 // UPDATE 14 — Database Load Control
@@ -120,8 +120,8 @@ function saveLocationBackground(tripId, busId, lat, lon, speed) {
 
 // UPDATE 18 — Realtime Update Optimization
 async function saveComputedLocationIfChanged(tripId, busId, lat, lon, speedKmh) {
-    const roundedLat = parseFloat(lat.toFixed(4));
-    const roundedLon = parseFloat(lon.toFixed(4));
+    const roundedLat = parseFloat(lat.toFixed(6));
+    const roundedLon = parseFloat(lon.toFixed(6));
 
     if (lastComputedLat !== null) {
         const dist = haversineDistance(lastComputedLat, lastComputedLon, roundedLat, roundedLon);
@@ -209,8 +209,8 @@ async function geocodeIfNeeded(lat, lon) {
 }
 
 function getDynamicInterval(speedKmh) {
-    if (speedKmh > 20) return 3000;  // fast — send every 3s
-    return 5000;                      // slow or stopped — send every 5s
+    if (speedKmh > 20) return 1000;  // fast — send every 1s
+    return 2000;                      // slow or stopped — send every 2s
 }
 
 function isValidGPSReading(lat1, lon1, lat2, lon2, timeDiffSec) {
