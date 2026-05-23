@@ -122,11 +122,15 @@ body {
 
 @media (max-width: 900px) {
   .bus-grid { grid-template-columns: repeat(2, 1fr); }
+  .navbar { padding: 0 16px; }
+  .page-header { padding: 24px 16px 16px; }
+  .bus-grid { padding: 0 16px 40px; gap: 12px; }
 }
 
 @media (max-width: 580px) {
   .bus-grid { grid-template-columns: 1fr; }
   .page-header { flex-direction: column; align-items: flex-start; }
+  .page-title { font-size: 24px; }
 }
 
 .bus-card {

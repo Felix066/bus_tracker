@@ -204,3 +204,56 @@ body {
 ::-webkit-scrollbar-track { background: #F0EDE8; }
 ::-webkit-scrollbar-thumb { background: #D4CFC8; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #B0A89E; }
+
+/* Mobile Responsiveness for Driver Dashboard */
+@media (max-width: 900px) {
+  .navbar {
+    padding: 0 16px;
+    flex-wrap: wrap;
+    height: auto;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    gap: 8px;
+  }
+  .brand {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+  .driver-label, .bus-badge, .trip-select {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+  .start-btn {
+    padding: 6px 14px;
+    font-size: 13px;
+    margin-left: auto;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 12px 16px 0;
+    gap: 10px;
+  }
+  .stat-card {
+    padding: 12px 16px;
+  }
+  .stat-value {
+    font-size: 20px;
+  }
+  .stat-value.searching {
+    font-size: 13px;
+  }
+  .map-wrapper {
+    margin: 12px 16px 16px;
+    height: calc(100vh - 200px);
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 500px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .map-wrapper {
+    height: calc(100vh - 350px);
+  }
+}
