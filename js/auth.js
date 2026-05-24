@@ -10,16 +10,6 @@ function validateEmailDomain(email) {
   return { valid: false, role: null };
 }
 
-// Separate Signup flow
-async function handleSignup(email, password) {
-  const { valid } = validateEmailDomain(email);
-  if (!valid) throw new Error('Only @student.providence.edu.in or @providence.edu.in allowed.');
-
-  const { data, error } = await supabase.auth.signUp({ email, password });
-  if (error) throw error;
-  
-  alert('Signup successful! You can now log in.');
-}
 
 async function handleStudentLogin(email, password) {
   const { valid, role } = validateEmailDomain(email);

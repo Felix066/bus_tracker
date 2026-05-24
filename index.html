@@ -98,15 +98,7 @@
         const emailVal = document.getElementById('email').value.trim();
         const passVal = document.getElementById('password').value;
         
-        if (emailVal === 'student1@student.providence.edu.in' && passVal === 'student123') {
-          localStorage.setItem('userSession', JSON.stringify({ id: 'demo-student-1', email: emailVal, role: 'student' }));
-          window.location.href = 'student-dashboard.html';
-        } else if (emailVal === 'faculty1@providence.edu.in' && passVal === 'faculty123') {
-          localStorage.setItem('userSession', JSON.stringify({ id: 'demo-student-1', email: emailVal, role: 'faculty' }));
-          window.location.href = 'student-dashboard.html';
-        } else {
-          throw new Error('Invalid login credentials');
-        }
+        await handleStudentLogin(emailVal, passVal);
       } catch (err) {
         errBanner.textContent = err.message;
         errBanner.classList.remove('hidden');
@@ -132,20 +124,14 @@ if (!navigator.onLine) {
 </script>
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(registrations) {
-    for(let registration of registrations) {
-      registration.unregister();
-      console.log('[BusTrack] Service Worker forcefully unregistered to clear cache');
-    }
-  });
-}
-// Force clear caches
-if ('caches' in window) {
-  caches.keys().then((names) => {
-    names.forEach(name => {
-      caches.delete(name);
-      console.log('[BusTrack] Cache deleted:', name);
-    });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then((reg) => {
+        console.log('[BusTrack] Service Worker registered:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('[BusTrack] Service Worker failed:', err);
+      });
   });
 }
 </script>
