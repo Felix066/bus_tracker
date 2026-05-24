@@ -236,106 +236,58 @@ function startDriverGPS(tripId, busId, tripType) {
     const busLabel = busId.toLowerCase().includes('bus') ? 
                      busId.replace(/bus\s*/i, 'B').toUpperCase() : busId;
 
-    async function sendGPS() {
-        if (watchId === null) return; // stopped
+    watchId = navigator.geolocation.watchPosition(async (pos) => {
+        const now = Date.now();
 
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-            const now = Date.now();
-            // Point 11 — Accuracy check first according to user snippet
-            if (pos.coords.accuracy > 50) {
-                console.log('GPS reading ignored — accuracy:', pos.coords.accuracy, 'm');
-                const locationDisplay = document.getElementById('location-display');
-                if (locationDisplay) locationDisplay.textContent = 'Searching (Low Accuracy)...';
-                watchId = setTimeout(sendGPS, getDynamicInterval(lastSpeedKmh));
-                return;
+        const smoothed = kalman.process(
+            pos.coords.latitude, pos.coords.longitude,
+            pos.coords.accuracy, pos.timestamp
+        );
+
+        if (typeof cacheCurrentLocation === 'function') {
+            cacheCurrentLocation(smoothed.lat, smoothed.lon, pos.coords.accuracy);
+        }
+
+        // UPDATE 4 — Safe Speed Calculation
+        if (lastLat && lastLon) {
+            const speed = calculateSafeSpeed(lastLat, lastLon, smoothed.lat, smoothed.lon, now - lastTime);
+            if (speed !== null) lastSpeedKmh = speed;
+        }
+        
+        lastLat = smoothed.lat; 
+        lastLon = smoothed.lon; 
+        lastTime = now;
+
+        // UI Updates for Driver
+        const speedDisplay = document.getElementById('speed-display');
+        if (speedDisplay) speedDisplay.textContent = lastSpeedKmh + ' km/h';
+
+        const locationDisplay = document.getElementById('location-display');
+        if (locationDisplay) {
+            let shouldGeocode = (now - lastReverseGeocodeTime > 25000);
+            if (!shouldGeocode && lastReverseGeocodeLat !== null) {
+                const distMoved = haversineDistance(lastReverseGeocodeLat, lastReverseGeocodeLon, smoothed.lat, smoothed.lon);
+                if (distMoved > 200) shouldGeocode = true;
             }
 
-            const smoothed = kalman.process(
-                pos.coords.latitude, pos.coords.longitude,
-                pos.coords.accuracy, pos.timestamp
-            );
-
-            // Save smoothed position to cache every time GPS updates
-            if (typeof cacheCurrentLocation === 'function') {
-                cacheCurrentLocation(smoothed.lat, smoothed.lon, pos.coords.accuracy);
+            if (shouldGeocode || lastReverseGeocodeLat === null) {
+                geocodeIfNeeded(smoothed.lat, smoothed.lon).then(name => {
+                    locationDisplay.textContent = name;
+                    lastReverseGeocodeTime = now;
+                    lastReverseGeocodeLat  = smoothed.lat;
+                    lastReverseGeocodeLon  = smoothed.lon;
+                });
             }
+        }
 
-            // Point 2 — Filter invalid GPS data that represents impossible movement
-            if (lastRawLat !== null) {
-                const rawTimeDiffSec = (now - lastRawTime) / 1000;
-                if (!isValidGPSReading(lastRawLat, lastRawLon, pos.coords.latitude, pos.coords.longitude, rawTimeDiffSec)) {
-                    console.log("GPS reading discarded — impossible speed");
-                    watchId = setTimeout(sendGPS, getDynamicInterval(lastSpeedKmh));
-                    return;
-                }
-            }
-            lastRawLat = pos.coords.latitude;
-            lastRawLon = pos.coords.longitude;
-            lastRawTime = now;
+        updateBusMarker(smoothed.lat, smoothed.lon, busLabel);
 
-            // Point 3 — Movement check before processing
-            if (lastProcessedLat !== null) {
-                const processedTimeDiff = (now - lastProcessedTime) / 1000;
-                if (!shouldProcessUpdate(lastProcessedLat, lastProcessedLon, smoothed.lat, smoothed.lon, processedTimeDiff)) {
-                    console.log("Skipping processing: moved < 20m and < 10s passed");
-                    watchId = setTimeout(sendGPS, getDynamicInterval(lastSpeedKmh));
-                    return;
-                }
-            }
+        processNewDriverLocation(tripId, busId, smoothed.lat, smoothed.lon);
+        checkStopArrivalDualRadius(smoothed.lat, smoothed.lon, tripType, tripId);
 
-            lastProcessedLat = smoothed.lat;
-            lastProcessedLon = smoothed.lon;
-            lastProcessedTime = now;
-
-            // UPDATE 4 — Safe Speed Calculation
-            if (lastLat && lastLon) {
-                const speed = calculateSafeSpeed(lastLat, lastLon, smoothed.lat, smoothed.lon, now - lastTime);
-                if (speed !== null) lastSpeedKmh = speed;
-            }
-            
-            lastLat = smoothed.lat; 
-            lastLon = smoothed.lon; 
-            lastTime = now;
-
-            // UI Updates for Driver
-            const speedDisplay = document.getElementById('speed-display');
-            if (speedDisplay) speedDisplay.textContent = lastSpeedKmh + ' km/h';
-
-            const locationDisplay = document.getElementById('location-display');
-            if (locationDisplay) {
-                // Point 6 — Reverse geocoding rate limiting — only call Nominatim every 25 seconds or after 200 meters of movement
-                let shouldGeocode = (now - lastReverseGeocodeTime > 25000);
-                
-                if (!shouldGeocode && lastReverseGeocodeLat !== null) {
-                    const distMoved = haversineDistance(lastReverseGeocodeLat, lastReverseGeocodeLon, smoothed.lat, smoothed.lon);
-                    if (distMoved > 200) shouldGeocode = true;
-                }
-
-                if (shouldGeocode || lastReverseGeocodeLat === null) {
-                    geocodeIfNeeded(smoothed.lat, smoothed.lon).then(name => {
-                        locationDisplay.textContent = name;
-                        lastReverseGeocodeTime = now;
-                        lastReverseGeocodeLat  = smoothed.lat;
-                        lastReverseGeocodeLon  = smoothed.lon;
-                    });
-                }
-            }
-
-            updateBusMarker(smoothed.lat, smoothed.lon, busLabel);
-
-            // Point 9 — Non-blocking UI rule — all database writes must be fire and forget and must never block map or chart updates
-            processNewDriverLocation(tripId, busId, smoothed.lat, smoothed.lon);
-            checkStopArrivalDualRadius(smoothed.lat, smoothed.lon, tripType, tripId);
-
-            watchId = setTimeout(sendGPS, getDynamicInterval(lastSpeedKmh));
-
-        }, (err) => {
-            console.error(err);
-            watchId = setTimeout(sendGPS, getDynamicInterval(lastSpeedKmh));
-        }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
-    }
-
-    watchId = setTimeout(sendGPS, 0);
+    }, (err) => {
+        console.error(err);
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
 }
 
 function advanceStopIndex(newIndex, tripId) {

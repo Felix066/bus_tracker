@@ -41,6 +41,8 @@ const STATIC_FILES = [
   '/js/sync.js',
   '/js/dashboard.js',
   '/js/bus-track.js',
+  '/student-console.html',
+  '/js/student-console.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',

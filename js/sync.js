@@ -31,7 +31,7 @@ function subscribeToBus(busId, tripType) {
     if (!busMarker) {
       busMarker = L.marker([latitude, longitude], { icon: createBusIcon(busLabel) }).addTo(map);
     } else {
-      busMarker.setLatLng([latitude, longitude]);
+      animateMarker(busMarker, old.lat, old.lng, latitude, longitude, 2000);
       busMarker.setIcon(createBusIcon(busLabel));
     }
     map.panTo([latitude, longitude]);

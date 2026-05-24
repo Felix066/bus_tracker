@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Console | BusTrack</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/driver.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1A1A1A">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="BusTrack">
+  <style>
+    /* Add specific location prompt styling reusing driver UI aesthetics */
+    .location-prompt-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(5px);
+    }
+    .location-prompt-modal.active {
+      display: flex;
+    }
+    .location-prompt-card {
+      background: var(--surface);
+      padding: 30px;
+      border-radius: 20px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .location-prompt-card h3 {
+      color: white;
+      margin-bottom: 15px;
+    }
+    .location-prompt-card p {
+      color: var(--text-muted);
+      margin-bottom: 25px;
+      line-height: 1.5;
+    }
+    .prompt-btn-group {
+      display: flex;
+      gap: 10px;
+    }
+    .prompt-btn-group button {
+      flex: 1;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-allow {
+      background: var(--accent);
+      color: white;
+    }
+    .btn-deny {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border) !important;
+    }
+  </style>
+</head>
+<body>
+<div id="offline-indicator" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1A1A1A; color:white; padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; font-family:Inter,sans-serif; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.3); align-items:center; gap:8px;">
+  You are offline - showing cached data
+</div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="brand" onclick="window.location.href='student-dashboard.html'" style="cursor: pointer;">
+      <span style="font-size:18px; margin-right:8px;">&larr;</span> BusTrack <em>Student Console</em>
+    </div>
+    <span class="driver-label" id="driver-name-display">Loading...</span>
+    <span class="bus-badge" id="assigned-bus-label">Loading...</span>
+    <!-- Start/End buttons and trip select removed per spec -->
+  </nav>
+
+  <!-- STAT CARDS -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Speed</div>
+      <div class="stat-value" id="speed-display">0.0 km/h</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Duration</div>
+      <div class="stat-value" id="trip-duration-display">00:00:00</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Current Position</div>
+      <div class="stat-value searching" id="location-display">Searching...</div>
+    </div>
+  </div>
+
+  <!-- Hidden next stop for JS reference — not visible on page -->
+  <span id="next-stop-display" style="display:none;"></span>
+
+  <!-- TRIP STATUS BAR — matches driver console exactly -->
+  <div class="trip-status-bar" id="trip-status-bar">
+    <div class="status-dot-green"></div>
+    <span id="trip-status-text">Trip active — GPS tracking live</span>
+  </div>
+
+  <!-- MAP -->
+  <div class="map-wrapper" style="margin-top: 15px;">
+    <div id="map"></div>
+  </div>
+
+  <!-- Optional Location Prompt -->
+  <div class="location-prompt-modal" id="locationPrompt">
+    <div class="location-prompt-card">
+      <h3>Enhance Live Tracking</h3>
+      <p>Allow location access for better route accuracy? This will show your position relative to the bus and improve timing estimates.</p>
+      <div class="prompt-btn-group">
+        <button class="btn-deny" id="btn-deny">Not Now</button>
+        <button class="btn-allow" id="btn-allow">Allow Access</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/haversine.js"></script>
+  <script src="js/routes.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/location.js"></script>
+  <script src="js/gps.js"></script>
+  <script src="js/timer.js"></script>
+  <script src="js/session-protection.js"></script>
+  <script src="js/student-console.js"></script>
+
+  <script>
+    protectRoute('student');
+    const session = JSON.parse(localStorage.getItem('userSession'));
+    if (!session) window.location.href = 'index.html';
+  </script>
+
+<script>
+window.addEventListener('online', () => {
+  document.getElementById('offline-indicator').style.display = 'none';
+});
+
+window.addEventListener('offline', () => {
+  document.getElementById('offline-indicator').style.display = 'flex';
+});
+
+if (!navigator.onLine) {
+  document.getElementById('offline-indicator').style.display = 'flex';
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js');
+  });
+}
+</script>
+</body>
+</html>

@@ -151,7 +151,8 @@ function updateBusMarker(lat, lon, label = 'Bus') {
     if (!busMarker) {
         busMarker = L.marker([lat, lon], { icon: createBusIcon(label) }).addTo(map);
     } else {
-        busMarker.setLatLng([lat, lon]);
+        const oldPos = busMarker.getLatLng();
+        animateMarker(busMarker, oldPos.lat, oldPos.lng, lat, lon, 2000);
         busMarker.setIcon(createBusIcon(label));
     }
     map.panTo([lat, lon]);

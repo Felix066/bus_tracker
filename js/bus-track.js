@@ -193,11 +193,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       busMarker = L.marker([lat, lon], { icon: busIcon, zIndexOffset: 1000 }).addTo(map);
     } else {
-      busMarker.setLatLng([lat, lon]);
+      const oldPos = busMarker.getLatLng();
+      animateMarker(busMarker, oldPos.lat, oldPos.lng, lat, lon, 1000); // 1s smooth transition
     }
     
     if (map) {
-      map.panTo([lat, lon]);
+      map.panTo([lat, lon], { animate: true, duration: 1.0 });
     }
   }
 

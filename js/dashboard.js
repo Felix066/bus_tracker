@@ -77,11 +77,7 @@ function handleTrackClick(busId, isOnline, hasRoute) {
 
   // Route check removed so all active buses can be tracked
   const busParam = busId.replace(' ', ''); // 'Bus 4' -> 'Bus4'
-  if (busId === 'Bus 4') {
-    window.location.href = `bus-track.html?bus=${busParam}`;
-  } else {
-    window.location.href = `bus_track.html?bus=${busParam}`;
-  }
+  window.location.href = `student-console.html?bus=${busParam}`;
 }
 
 // Initial Call
