@@ -111,11 +111,42 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE handle_new_user();
 
--- 6. SEED DATA WITH PLAIN TEXT (since Edge Function compares plain text)
+-- 6. SEED DATA SECURELY WITH HASHED PASSWORDS
 INSERT INTO drivers (username, password_hash, assigned_bus) VALUES
-  ('driver1','password123','Bus 1'),
-  ('driver2','password123','Bus 2'),
-  ('driver3','password123','Bus 3'),
-  ('driver4','password123','Bus 4'),
-  ('driver5','password123','Bus 5'),
-  ('driver6','password123','Bus 6');
+  ('driver1', crypt('password123', gen_salt('bf')), 'Bus 1'),
+  ('driver2', crypt('password123', gen_salt('bf')), 'Bus 2'),
+  ('driver3', crypt('password123', gen_salt('bf')), 'Bus 3'),
+  ('driver4', crypt('password123', gen_salt('bf')), 'Bus 4'),
+  ('driver5', crypt('password123', gen_salt('bf')), 'Bus 5'),
+  ('driver6', crypt('password123', gen_salt('bf')), 'Bus 6');
+
+-- 7. SECURE DRIVER VERIFICATION RPC
+CREATE OR REPLACE FUNCTION verify_driver(input_username text, input_password text)
+RETURNS jsonb AS $$
+DECLARE
+  v_driver RECORD;
+BEGIN
+  -- Find the driver by username
+  SELECT id, username, assigned_bus, password_hash INTO v_driver
+  FROM drivers
+  WHERE username = input_username;
+
+  -- If driver not found or password doesn't match the hash
+  IF NOT FOUND OR v_driver.password_hash != crypt(input_password, v_driver.password_hash) THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', 'Invalid username or password'
+    );
+  END IF;
+
+  -- If password matches
+  RETURN jsonb_build_object(
+    'success', true,
+    'driver', jsonb_build_object(
+      'driverId', v_driver.id,
+      'username', v_driver.username,
+      'assignedBus', v_driver.assigned_bus
+    )
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

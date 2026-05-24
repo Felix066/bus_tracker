@@ -30,6 +30,17 @@ async function handleDriverLogin(username, password) {
     };
 
     localStorage.setItem('driverSession', JSON.stringify(session));
+
+    // Register driver session in realtime
+    if (data.driver.assignedBus) {
+      await supabase.from('driver_sessions').upsert({
+        bus_id: data.driver.assignedBus,
+        driver_name: data.driver.username,
+        is_online: true,
+        last_seen: new Date().toISOString()
+      }, { onConflict: 'bus_id' });
+    }
+
     window.location.href = 'driver-dashboard.html';
     
   } catch (err) {
@@ -37,7 +48,20 @@ async function handleDriverLogin(username, password) {
   }
 }
 
-function driverLogout() {
+// Ensure offline on unload
+window.addEventListener('beforeunload', () => {
+  const session = JSON.parse(localStorage.getItem('driverSession'));
+  if (session && session.assignedBus) {
+    // Fire-and-forget offline status update
+    supabase.from('driver_sessions').update({ is_online: false }).eq('bus_id', session.assignedBus).then();
+  }
+});
+
+async function driverLogout() {
+  const session = JSON.parse(localStorage.getItem('driverSession'));
+  if (session && session.assignedBus) {
+    await supabase.from('driver_sessions').update({ is_online: false }).eq('bus_id', session.assignedBus);
+  }
   localStorage.removeItem('driverSession');
   window.location.href = 'driver-login.html';
 }
