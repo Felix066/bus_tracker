@@ -147,7 +147,7 @@ async function saveInlineDriver(busId) {
   const newName = input.value.trim();
 
   // Update Supabase
-  const { error } = await supabase.from('buses').update({ driver_name: newName }).eq('bus_id', busId);
+  const { error } = await supabase.from('buses').update({ driver_name: newName }).eq('id', busId);
   if (error) {
     alert("Error updating driver: " + error.message);
   } else {

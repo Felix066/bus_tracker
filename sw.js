@@ -1,6 +1,6 @@
-const CACHE_NAME = 'bustrack-v3';
-const STATIC_CACHE = 'bustrack-static-v3';
-const TILE_CACHE  = 'bustrack-tiles-v3';
+const CACHE_NAME = 'bustrack-v4';
+const STATIC_CACHE = 'bustrack-static-v4';
+const TILE_CACHE  = 'bustrack-tiles-v4';
 const MAX_TILES  = 500;
 
 async function cacheTileWithLimit(cache, request, response) {
