@@ -146,12 +146,6 @@
 
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
-          // UPDATE 12 — GPS Accuracy Filtering
-          if (pos.coords.accuracy > 50) {
-            document.getElementById('tracking-status').textContent = 
-                'Poor GPS accuracy (' + Math.round(pos.coords.accuracy) + 'm). Try moving to a clearer area.';
-            return;
-          }
 
           const dist = haversineDistance(
             pos.coords.latitude, pos.coords.longitude,

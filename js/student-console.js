@@ -18,13 +18,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     busId = busParam.replace(/Bus/i, 'Bus '); // "Bus4" -> "Bus 4"
 
-    // 2. Fetch Active Trip for this Bus
-    const { data: trip } = await supabase
-        .from('trips')
-        .select('id, driver_id, trip_type, started_at, current_stop_index')
-        .eq('bus_id', busId)
-        .eq('status', 'active')
-        .single();
+    // 2. Fetch Active Trip and Initial Location in parallel
+    const [tripRes, locRes] = await Promise.all([
+        supabase.from('trips')
+            .select('id, driver_id, trip_type, started_at, current_stop_index')
+            .eq('bus_id', busId)
+            .eq('status', 'active')
+            .single(),
+        supabase.from('computed_locations')
+            .select('latitude, longitude, speed_kmh')
+            .eq('bus_id', busId)
+            .order('computed_at', { ascending: false })
+            .limit(1)
+    ]);
+
+    const trip = tripRes.data;
 
     if (!trip) {
         document.getElementById('location-display').textContent = 'No active trip for ' + busId;
@@ -52,8 +60,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         startTripTimer(startedAt);
     }
 
-    // 5. Fetch Initial Location Immediately
-    fetchInitialLocation();
+    // 5. Display Initial Location Immediately
+    if (locRes.data && locRes.data.length > 0) {
+        processNewLocation(locRes.data[0].latitude, locRes.data[0].longitude, locRes.data[0].speed_kmh);
+    }
 
     // 6. Subscribe to Realtime Updates
     subscribeToLiveUpdates();
@@ -61,19 +71,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 7. Prompt for Location Access (Optional)
     checkLocationSharingPrompt();
 });
-
-async function fetchInitialLocation() {
-    const { data, error } = await supabase
-        .from('computed_locations')
-        .select('latitude, longitude, speed_kmh')
-        .eq('bus_id', busId)
-        .order('computed_at', { ascending: false })
-        .limit(1);
-    
-    if (data && data.length > 0) {
-        processNewLocation(data[0].latitude, data[0].longitude, data[0].speed_kmh);
-    }
-}
 
 function subscribeToLiveUpdates() {
     supabase.channel(`bus-${busId}-live`)

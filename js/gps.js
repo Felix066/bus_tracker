@@ -9,11 +9,6 @@ function startPassengerGPS(tripId, busId, role) {
 
   passengerGpsInterval = setInterval(() => {
     navigator.geolocation.getCurrentPosition(async (pos) => {
-      // UPDATE 12 — GPS Accuracy Filtering
-      if (pos.coords.accuracy > 100) {
-        console.log('GPS reading ignored — accuracy:', pos.coords.accuracy, 'm');
-        return;
-      }
 
       const lat = roundCoord(pos.coords.latitude);
       const lon = roundCoord(pos.coords.longitude);

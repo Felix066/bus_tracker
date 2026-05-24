@@ -380,6 +380,7 @@ async function endTrip() {
     localStorage.removeItem('activeTripId');
     localStorage.removeItem('activeBusId');
     localStorage.removeItem('activeTripType');
+    localStorage.removeItem('bustrack_last_location'); // Clear map marker on end trip
 
     location.reload();
 }
