@@ -324,7 +324,7 @@
       <p style="color: var(--text-muted); margin: 5px 0 0; font-size: 14px;">Manage all buses, routes, and drivers in real-time.</p>
     </div>
     <div class="header-actions">
-      <input type="text" class="search-bar" id="searchInput" placeholder="Search buses, drivers, routes..." onkeyup="filterBuses()">
+      <input type="text" class="search-bar" id="filterFleet" autocomplete="off" placeholder="Search buses, drivers, routes..." onkeyup="filterBuses()">
       <button class="btn-add" onclick="openMasterModal()">
         + Add Bus
       </button>
@@ -409,11 +409,11 @@
         <div class="form-section-title">Driver Login Credentials</div>
         <div class="form-group">
           <label>Driver Username</label>
-          <input type="text" id="inpDriverUser" placeholder="e.g. driver7">
+          <input type="text" id="inpDriverUser" autocomplete="new-password" placeholder="e.g. driver7">
         </div>
         <div class="form-group">
           <label>Driver Password</label>
-          <input type="password" id="inpDriverPass" placeholder="Leave blank to keep existing password">
+          <input type="password" id="inpDriverPass" autocomplete="new-password" placeholder="Leave blank to keep existing password">
         </div>
       </div>
       <div class="modal-footer">

@@ -41,7 +41,7 @@ function renderBusTable() {
   tbody.innerHTML = '';
   
   // Search filtering
-  const searchTerm = (document.getElementById('searchInput').value || '').toLowerCase();
+  const searchTerm = (document.getElementById('filterFleet').value || '').toLowerCase();
 
   const filteredBuses = busesData.filter(b => 
     (b.id || '').toLowerCase().includes(searchTerm) || 
