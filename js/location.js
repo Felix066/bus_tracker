@@ -48,6 +48,10 @@ async function checkProximityToDriver(activeTripId) {
 
   return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition((pos) => {
+      if (pos.coords.accuracy > 50) {
+        resolve(false);
+        return;
+      }
       const dist = haversineDistance(
         pos.coords.latitude, pos.coords.longitude,
         driverLoc.latitude, driverLoc.longitude

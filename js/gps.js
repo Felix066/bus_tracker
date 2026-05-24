@@ -9,6 +9,11 @@ function startPassengerGPS(tripId, busId, role) {
 
   passengerGpsInterval = setInterval(() => {
     navigator.geolocation.getCurrentPosition(async (pos) => {
+      // Filter out low accuracy passenger locations
+      if (pos.coords.accuracy > 50) {
+        console.log('Student GPS ignored — accuracy > 50m:', pos.coords.accuracy);
+        return;
+      }
 
       const lat = roundCoord(pos.coords.latitude);
       const lon = roundCoord(pos.coords.longitude);
