@@ -94,6 +94,23 @@
       document.getElementById('trip-type-display').textContent = currentTripType.toUpperCase() + ' TRIP';
 
       initMap(currentTripType);
+      
+      // Fetch initial immediately
+      supabase.from('computed_locations')
+        .select('latitude, longitude')
+        .eq('bus_id', busId)
+        .order('computed_at', { ascending: false })
+        .limit(1)
+        .then(({data}) => {
+          if (data && data.length > 0) {
+             updateBusMarker(data[0].latitude, data[0].longitude, busId);
+             if (typeof lastRenderedLat !== 'undefined') {
+                 lastRenderedLat = data[0].latitude;
+                 lastRenderedLon = data[0].longitude;
+             }
+          }
+        });
+
       subscribeToBus(busId, currentTripType);
       if (currentStopIndex > 0) {
         setMaxReachedStopIndex(currentStopIndex - 1);
