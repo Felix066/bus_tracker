@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- LOAD DATA ---
 async function loadDashboardData() {
   const [busesRes, sessionsRes, logsRes, sosRes] = await Promise.all([
-    supabase.from('buses').select('*').order('bus_id'),
+    supabase.from('buses').select('*').order('id'),
     supabase.from('driver_sessions').select('*'),
     supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(50),
     supabase.from('sos_alerts').select('*').eq('status', 'active')
@@ -44,7 +44,7 @@ function renderBusTable() {
   const searchTerm = (document.getElementById('searchInput').value || '').toLowerCase();
 
   const filteredBuses = busesData.filter(b => 
-    (b.bus_id || '').toLowerCase().includes(searchTerm) || 
+    (b.id || '').toLowerCase().includes(searchTerm) || 
     (b.driver_name || '').toLowerCase().includes(searchTerm) ||
     (b.route_name || '').toLowerCase().includes(searchTerm)
   );
@@ -55,7 +55,7 @@ function renderBusTable() {
   }
 
   filteredBuses.forEach(bus => {
-    const session = driverSessions.find(s => s.bus_id === bus.bus_id);
+    const session = driverSessions.find(s => s.bus_id === bus.id);
     const isOnline = session && session.is_online;
     
     // Status Logic
@@ -84,14 +84,14 @@ function renderBusTable() {
     
     // Inline editing logic for driver
     let driverCellHtml = '';
-    if (editingDriverForBusId === bus.bus_id) {
+    if (editingDriverForBusId === bus.id) {
       driverCellHtml = `
-        <input type="text" class="inline-input" id="inlineDriver_${bus.bus_id}" value="${bus.driver_name || ''}" placeholder="Enter driver name">
-        <button class="btn-inline-save" onclick="saveInlineDriver('${bus.bus_id}')">Save Changes</button>
+        <input type="text" class="inline-input" id="inlineDriver_${bus.id}" value="${bus.driver_name || ''}" placeholder="Enter driver name">
+        <button class="btn-inline-save" onclick="saveInlineDriver('${bus.id}')">Save Changes</button>
       `;
     } else {
       driverCellHtml = `
-        <div class="driver-name-display" onclick="enableInlineEdit('${bus.bus_id}')">
+        <div class="driver-name-display" onclick="enableInlineEdit('${bus.id}')">
           ${bus.driver_name || '<span style="color:#9ca3af; font-style:italic;">No driver assigned</span>'}
           <i class="fas fa-pen"></i>
         </div>
@@ -102,7 +102,7 @@ function renderBusTable() {
       <td>
         <div style="display:flex; align-items:center; gap: 12px;">
           ${bus.bus_photo_url ? `<img src="${bus.bus_photo_url}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : ''}
-          <span>${bus.bus_id}</span>
+          <span>${bus.id}</span>
         </div>
       </td>
       <td>
@@ -117,8 +117,8 @@ function renderBusTable() {
       </td>
       <td>
         <div class="actions-cell">
-          <button class="btn-remove" onclick="deleteBus('${bus.bus_id}')">Remove</button>
-          <button class="btn-edit-row" onclick="openMasterModal('${bus.bus_id}')"><i class="fas fa-cog"></i></button>
+          <button class="btn-remove" onclick="deleteBus('${bus.id}')">Remove</button>
+          <button class="btn-edit-row" onclick="openMasterModal('${bus.id}')"><i class="fas fa-cog"></i></button>
         </div>
       </td>
     `;
@@ -179,9 +179,9 @@ function openMasterModal(busId = null) {
     document.getElementById('editBusId').value = busId;
     document.getElementById('inpBusName').disabled = true;
     
-    const bus = busesData.find(b => b.bus_id === busId);
+    const bus = busesData.find(b => b.id === busId);
     if (bus) {
-      document.getElementById('inpBusName').value = bus.bus_id;
+      document.getElementById('inpBusName').value = bus.id;
       document.getElementById('inpRoute').value = bus.route_name || '';
       document.getElementById('inpPlate').value = bus.number_plate || '';
       document.getElementById('inpDriverName').value = bus.driver_name || '';
@@ -249,12 +249,12 @@ async function saveMasterBus() {
     if (driverPhotoUrl) busPayload.driver_photo_url = driverPhotoUrl;
 
     if (isNew) {
-      busPayload.bus_id = busId;
+      busPayload.id = busId;
       const { error: busErr } = await supabase.from('buses').insert(busPayload);
       if (busErr) throw new Error("Insert Error: " + busErr.message);
       await logAdminAction(`Added new bus: ${busId}`);
     } else {
-      const { error: busErr } = await supabase.from('buses').update(busPayload).eq('bus_id', busId);
+      const { error: busErr } = await supabase.from('buses').update(busPayload).eq('id', busId);
       if (busErr) throw new Error("Update Error: " + busErr.message);
       await logAdminAction(`Updated details for bus: ${busId}`);
     }
@@ -285,7 +285,7 @@ async function deleteBus(busId) {
   if (!confirm(`Are you absolutely sure you want to remove ${busId}? This will remove driver assignments as well.`)) return;
   await supabase.from('driver_sessions').delete().eq('bus_id', busId);
   await supabase.from('drivers').update({ assigned_bus: null }).eq('assigned_bus', busId);
-  await supabase.from('buses').delete().eq('bus_id', busId);
+  await supabase.from('buses').delete().eq('id', busId);
   await logAdminAction(`Removed bus: ${busId}`);
   loadDashboardData();
 }

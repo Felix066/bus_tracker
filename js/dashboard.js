@@ -8,7 +8,7 @@ async function loadStudentDashboard() {
   if (!container) return;
 
   const [busesRes, sessionsRes] = await Promise.all([
-    supabase.from('buses').select('*').order('bus_id'),
+    supabase.from('buses').select('*').order('id'),
     supabase.from('driver_sessions').select('*')
   ]);
 
@@ -29,7 +29,7 @@ function renderBusCards() {
   }
 
   busesData.forEach(bus => {
-    const session = driverSessions.find(s => s.bus_id === bus.bus_id);
+    const session = driverSessions.find(s => s.bus_id === bus.id);
     const isOnline = session && session.is_online;
     
     let lastSeenStr = 'Never active';
@@ -69,7 +69,7 @@ function renderBusCards() {
       </div>
       
       <div style="padding: 20px; flex-grow: 1; display:flex; flex-direction:column;">
-        <h2 style="margin: 0; font-size: 20px; font-weight: 700;">${bus.bus_id}</h2>
+        <h2 style="margin: 0; font-size: 20px; font-weight: 700;">${bus.id}</h2>
         <p style="color: #aaa; font-size: 13px; font-weight: 500; margin: 4px 0 10px;"><i class="fas fa-route"></i> ${bus.route_name || 'No route assigned'}</p>
         
         <div style="display:flex; align-items:center; gap: 12px; margin-top: auto; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
@@ -82,7 +82,7 @@ function renderBusCards() {
         </div>
       </div>
       
-      <button style="border-radius: 0; padding: 15px; font-size: 14px; display:flex; justify-content:center; align-items:center; gap: 8px; border:none; border-top: 1px solid rgba(255,255,255,0.05);" class="track-btn ${isOnline ? '' : 'disabled'}" onclick="handleTrackClick('${bus.bus_id}', ${isOnline})">
+      <button style="border-radius: 0; padding: 15px; font-size: 14px; display:flex; justify-content:center; align-items:center; gap: 8px; border:none; border-top: 1px solid rgba(255,255,255,0.05);" class="track-btn ${isOnline ? '' : 'disabled'}" onclick="handleTrackClick('${bus.id}', ${isOnline})">
         ${isOnline ? '<i class="fas fa-map-marker-alt"></i> Track Live Location' : '<i class="fas fa-bed"></i> Currently Offline'}
       </button>
     `;
