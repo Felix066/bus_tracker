@@ -5,6 +5,7 @@ let driverSessions = [];
 let adminLogs = [];
 let sosAlerts = [];
 let adminUsername = 'Admin';
+let editingDriverForBusId = null; // Tracks which bus row is currently in inline-edit mode
 
 document.addEventListener('DOMContentLoaded', () => {
   const session = JSON.parse(localStorage.getItem('adminSession'));
@@ -28,15 +29,16 @@ async function loadDashboardData() {
   if (logsRes.data) adminLogs = logsRes.data;
   if (sosRes.data) sosAlerts = sosRes.data;
 
-  renderBusGrid();
+  renderBusTable();
   renderAdminLogs();
   checkSOSAlerts();
 }
 
-// --- RENDER BUS GRID ---
-function renderBusGrid() {
-  const grid = document.getElementById('bus-grid');
-  grid.innerHTML = '';
+// --- RENDER BUS TABLE ---
+function renderBusTable() {
+  const tbody = document.getElementById('bus-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
   
   // Search filtering
   const searchTerm = (document.getElementById('searchInput').value || '').toLowerCase();
@@ -48,7 +50,7 @@ function renderBusGrid() {
   );
 
   if (filteredBuses.length === 0) {
-    grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 40px; color: #888;">No buses found. Add one to get started!</div>`;
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 40px; color: #888;">No buses found. Add one to get started!</td></tr>`;
     return;
   }
 
@@ -56,61 +58,103 @@ function renderBusGrid() {
     const session = driverSessions.find(s => s.bus_id === bus.bus_id);
     const isOnline = session && session.is_online;
     
-    const statusText = isOnline ? 'Active' : 'Offline';
-    const statusClass = isOnline ? 'active' : 'offline';
+    // Status Logic
+    let statusText = 'Offline';
+    let statusClass = 'offline';
     
-    let lastSeenStr = 'Never';
-    if (session && session.last_seen) {
+    if (isOnline) {
+      statusText = 'Active';
+      statusClass = 'active';
+    } else if (session) {
+      // If there is a session but not online, maybe Idle? Let's say if they were seen in last hour it's Idle
       const mins = Math.round((new Date() - new Date(session.last_seen)) / 60000);
-      lastSeenStr = isOnline ? 'Just now' : `${mins} mins ago`;
+      if (mins < 60) {
+        statusText = 'Idle';
+        statusClass = 'idle';
+      }
+    }
+    
+    let lastSeenStr = '';
+    if (!isOnline && session && session.last_seen) {
+      const mins = Math.round((new Date() - new Date(session.last_seen)) / 60000);
+      lastSeenStr = `<span style="font-size: 11px; color:#9ca3af; margin-left: 8px;">(Last active: ${mins} mins ago)</span>`;
     }
 
-    const busPhotoHtml = bus.bus_photo_url 
-      ? `<div class="bus-photo" style="background-image: url('${bus.bus_photo_url}')"></div>`
-      : `<div class="bus-photo"><div class="bus-photo-placeholder"><i class="fas fa-bus"></i></div></div>`;
-
-    const driverPhotoHtml = bus.driver_photo_url
-      ? `<div class="driver-avatar" style="background-image: url('${bus.driver_photo_url}')"></div>`
-      : `<div class="driver-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;color:#888;"><i class="fas fa-user"></i></div>`;
-
-    const card = document.createElement('div');
-    card.className = 'bus-card';
-    card.innerHTML = `
-      ${busPhotoHtml}
-      <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight:bold; border: 1px solid rgba(255,255,255,0.2);">
-        ${bus.number_plate || 'No Plate'}
-      </div>
-      <div class="bus-card-content">
-        <div class="bus-title-row">
-          <div>
-            <h3 class="bus-name">${bus.bus_id}</h3>
-            <p class="bus-route"><i class="fas fa-route"></i> ${bus.route_name || 'No Route Assigned'}</p>
-          </div>
-          <div class="status-badge ${statusClass}">
-            <div class="status-dot"></div> ${statusText}
-          </div>
+    const tr = document.createElement('tr');
+    
+    // Inline editing logic for driver
+    let driverCellHtml = '';
+    if (editingDriverForBusId === bus.bus_id) {
+      driverCellHtml = `
+        <input type="text" class="inline-input" id="inlineDriver_${bus.bus_id}" value="${bus.driver_name || ''}" placeholder="Enter driver name">
+        <button class="btn-inline-save" onclick="saveInlineDriver('${bus.bus_id}')">Save Changes</button>
+      `;
+    } else {
+      driverCellHtml = `
+        <div class="driver-name-display" onclick="enableInlineEdit('${bus.bus_id}')">
+          ${bus.driver_name || '<span style="color:#9ca3af; font-style:italic;">No driver assigned</span>'}
+          <i class="fas fa-pen"></i>
         </div>
-        <div style="font-size: 11px; color: #888; text-align: right; margin-top: -5px;">Last seen: ${lastSeenStr}</div>
-        
-        <div class="driver-info-row">
-          ${driverPhotoHtml}
-          <div class="driver-details">
-            <p class="driver-name">${bus.driver_name || 'No Driver Assigned'}</p>
-            <p class="driver-phone"><i class="fas fa-phone"></i> ${bus.driver_phone || 'N/A'}</p>
-          </div>
+      `;
+    }
+
+    tr.innerHTML = `
+      <td>
+        <div style="display:flex; align-items:center; gap: 12px;">
+          ${bus.bus_photo_url ? `<img src="${bus.bus_photo_url}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : ''}
+          <span>${bus.bus_id}</span>
         </div>
-      </div>
-      <div class="card-actions">
-        <button class="btn-card btn-edit" onclick="openMasterModal('${bus.bus_id}')"><i class="fas fa-pen"></i> Edit</button>
-        <button class="btn-card btn-del" onclick="deleteBus('${bus.bus_id}')"><i class="fas fa-trash"></i> Delete</button>
-      </div>
+      </td>
+      <td>
+        ${driverCellHtml}
+      </td>
+      <td>
+        <div class="status-cell">
+          <div class="status-dot ${statusClass}"></div> 
+          <span style="text-transform: capitalize;">${statusText}</span>
+          ${lastSeenStr}
+        </div>
+      </td>
+      <td>
+        <div class="actions-cell">
+          <button class="btn-remove" onclick="deleteBus('${bus.bus_id}')">Remove</button>
+          <button class="btn-edit-row" onclick="openMasterModal('${bus.bus_id}')"><i class="fas fa-cog"></i></button>
+        </div>
+      </td>
     `;
-    grid.appendChild(card);
+    tbody.appendChild(tr);
   });
 }
 
 function filterBuses() {
-  renderBusGrid();
+  renderBusTable();
+}
+
+// --- INLINE EDITING ---
+function enableInlineEdit(busId) {
+  editingDriverForBusId = busId;
+  renderBusTable();
+  // Focus the input
+  setTimeout(() => {
+    const input = document.getElementById(`inlineDriver_${busId}`);
+    if (input) input.focus();
+  }, 50);
+}
+
+async function saveInlineDriver(busId) {
+  const input = document.getElementById(`inlineDriver_${busId}`);
+  if (!input) return;
+  const newName = input.value.trim();
+
+  // Update Supabase
+  const { error } = await supabase.from('buses').update({ driver_name: newName }).eq('bus_id', busId);
+  if (error) {
+    alert("Error updating driver: " + error.message);
+  } else {
+    await logAdminAction(`Updated assigned driver for ${busId} to "${newName}"`);
+    editingDriverForBusId = null; // Exit edit mode
+    loadDashboardData(); // Refetch and re-render
+  }
 }
 
 // --- MASTER MODAL ---
@@ -133,7 +177,7 @@ function openMasterModal(busId = null) {
     document.getElementById('modalTitle').innerText = `Edit ${busId}`;
     document.getElementById('isNewBus').value = 'false';
     document.getElementById('editBusId').value = busId;
-    document.getElementById('inpBusName').disabled = true; // don't allow changing PK easily here
+    document.getElementById('inpBusName').disabled = true;
     
     const bus = busesData.find(b => b.bus_id === busId);
     if (bus) {
@@ -220,11 +264,7 @@ async function saveMasterBus() {
     const password = document.getElementById('inpDriverPass').value.trim();
 
     if (username) {
-      // Create or update driver
       const driverPayload = { username: username, assigned_bus: busId, driver_name: busPayload.driver_name };
-      // In a real system you hash this properly using the RPC we built. 
-      // For now we will update the password_hash directly if using pgcrypto inside a trigger, 
-      // or we can call our RPC if needed. 
       if (password) driverPayload.password_hash = password; 
       
       const { error: drvErr } = await supabase.from('drivers').upsert(driverPayload, { onConflict: 'username' });
@@ -242,11 +282,11 @@ async function saveMasterBus() {
 }
 
 async function deleteBus(busId) {
-  if (!confirm(`Are you absolutely sure you want to delete ${busId}?`)) return;
+  if (!confirm(`Are you absolutely sure you want to remove ${busId}? This will remove driver assignments as well.`)) return;
   await supabase.from('driver_sessions').delete().eq('bus_id', busId);
   await supabase.from('drivers').update({ assigned_bus: null }).eq('assigned_bus', busId);
   await supabase.from('buses').delete().eq('bus_id', busId);
-  await logAdminAction(`Deleted bus: ${busId}`);
+  await logAdminAction(`Removed bus: ${busId}`);
   loadDashboardData();
 }
 
@@ -293,9 +333,18 @@ function checkSOSAlerts() {
 // --- REALTIME ---
 function subscribeToRealtime() {
   supabase.channel('admin-master-sync')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'buses' }, () => loadDashboardData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_sessions' }, () => loadDashboardData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_logs' }, () => loadDashboardData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'sos_alerts' }, () => loadDashboardData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'buses' }, () => {
+      // Don't auto-reload data if currently inline editing, could lose focus
+      if (!editingDriverForBusId) loadDashboardData();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_sessions' }, () => {
+      if (!editingDriverForBusId) loadDashboardData();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_logs' }, () => {
+      if (!editingDriverForBusId) loadDashboardData();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sos_alerts' }, () => {
+      if (!editingDriverForBusId) loadDashboardData();
+    })
     .subscribe();
 }

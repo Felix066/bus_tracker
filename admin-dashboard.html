@@ -10,19 +10,35 @@
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/dashboard.css">
   <style>
+    :root {
+      --bg: #f9fafb;
+      --surface: #ffffff;
+      --text: #111827;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #ef4444; /* Match the red 'Remove' button */
+      --btn-bg: #ef4444;
+      --btn-hover: #dc2626;
+    }
     body {
       background: var(--bg);
       color: var(--text);
       font-family: 'Inter', sans-serif;
     }
     
+    .navbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
     /* V3 Top Header */
     .admin-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 20px 40px;
-      margin-top: 60px;
+      margin-top: 40px;
       gap: 20px;
     }
     .admin-header h1 {
@@ -30,6 +46,7 @@
       font-size: 28px;
       font-weight: 800;
       letter-spacing: -1px;
+      color: var(--text);
     }
     .header-actions {
       display: flex;
@@ -37,18 +54,24 @@
       align-items: center;
     }
     .search-bar {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border);
-      color: white;
+      background: #f3f4f6;
+      border: 1px solid transparent;
+      color: var(--text);
       padding: 10px 16px;
       border-radius: 12px;
       width: 250px;
       font-family: inherit;
+      transition: all 0.2s;
+    }
+    .search-bar:focus {
+      background: var(--surface);
+      border-color: #d1d5db;
+      outline: none;
     }
     .btn-add {
-      background: var(--accent);
-      color: white;
-      border: none;
+      background: #f8fafc;
+      color: #334155;
+      border: 1px solid #cbd5e1;
       padding: 10px 20px;
       border-radius: 12px;
       font-weight: 600;
@@ -58,7 +81,7 @@
       gap: 8px;
       transition: all 0.2s;
     }
-    .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn-add:hover { background: #f1f5f9; }
 
     /* SOS Banner */
     #sos-banner {
@@ -76,102 +99,138 @@
     }
     @keyframes pulse-red { 0% { background: #ef4444; } 50% { background: #b91c1c; } 100% { background: #ef4444; } }
 
-    /* Bus Cards Grid */
-    .bus-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 20px;
+    /* Table Container */
+    .table-wrapper {
       padding: 0 40px 40px;
     }
-    .bus-card {
+    .table-container {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-    }
-    .bus-photo {
-      height: 140px;
-      background: #2a2a2a;
-      background-size: cover;
-      background-position: center;
-      position: relative;
-    }
-    .bus-photo-placeholder {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      color: #666;
-      font-size: 32px;
-    }
-    .bus-card-content {
-      padding: 20px;
-      flex-grow: 1;
-    }
-    .bus-title-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
-    }
-    .bus-name { font-size: 20px; font-weight: 700; margin: 0; }
-    .bus-route { color: var(--text-muted); font-size: 13px; font-weight: 500; margin: 4px 0 0; }
-    
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
       border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+      overflow: hidden;
+      padding: 30px;
+    }
+
+    /* Modern Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    th {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 15px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 20px 10px;
+      vertical-align: middle;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    
+    /* Inline Editing Inputs */
+    .inline-input {
+      background: #f3f4f6;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      width: 150px;
+      transition: all 0.2s;
+    }
+    .inline-input:focus {
+      background: var(--surface);
+      border-color: #9ca3af;
+      outline: none;
+    }
+    .btn-inline-save {
+      background: #10b981;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
       font-size: 12px;
       font-weight: 600;
-      background: rgba(255,255,255,0.05);
+      cursor: pointer;
+      margin-left: 8px;
     }
-    .status-badge.active { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-    .status-badge.offline { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .status-badge.active .status-dot { background: #10b981; box-shadow: 0 0 5px #10b981; }
-    .status-badge.offline .status-dot { background: #ef4444; }
+    .btn-inline-save:hover { background: #059669; }
+    .driver-name-display {
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .driver-name-display:hover {
+      background: #f3f4f6;
+    }
+    .driver-name-display i {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-left: 8px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .driver-name-display:hover i {
+      opacity: 1;
+    }
 
-    .driver-info-row {
+    /* Status Dots */
+    .status-cell {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px solid var(--border);
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
     }
-    .driver-avatar {
-      width: 40px; height: 40px; border-radius: 50%; background: #333;
-      background-size: cover; background-position: center; flex-shrink: 0;
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
     }
-    .driver-details { flex-grow: 1; }
-    .driver-name { font-weight: 600; font-size: 14px; margin: 0; }
-    .driver-phone { color: var(--text-muted); font-size: 12px; margin: 2px 0 0; }
+    .status-dot.active { background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.4); }
+    .status-dot.offline { background: #9ca3af; }
+    .status-dot.idle { background: #eab308; }
 
-    .card-actions {
+    /* Actions */
+    .actions-cell {
       display: flex;
       gap: 10px;
-      padding: 15px 20px;
-      background: rgba(0,0,0,0.2);
-      border-top: 1px solid var(--border);
     }
-    .btn-card {
-      flex: 1;
-      padding: 8px;
-      border-radius: 8px;
+    .btn-remove {
+      background: var(--btn-bg);
+      color: white;
       border: none;
-      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 8px;
       font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
+      transition: background 0.2s;
     }
-    .btn-edit { background: rgba(255,255,255,0.1); color: white; }
-    .btn-edit:hover { background: rgba(255,255,255,0.2); }
-    .btn-del { background: transparent; color: #ef4444; }
-    .btn-del:hover { background: rgba(239, 68, 68, 0.1); }
+    .btn-remove:hover { background: var(--btn-hover); }
+    
+    .btn-edit-row {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-edit-row:hover { background: #e2e8f0; }
 
     /* Admin Logs Section */
     .logs-section {
@@ -181,7 +240,7 @@
       border-radius: 16px;
       padding: 20px;
     }
-    .logs-section h3 { margin-top: 0; margin-bottom: 15px; font-size: 16px; }
+    .logs-section h3 { margin-top: 0; margin-bottom: 15px; font-size: 16px; color: var(--text); }
     .log-list {
       max-height: 200px;
       overflow-y: auto;
@@ -194,12 +253,12 @@
       justify-content: space-between;
       color: var(--text-muted);
     }
-    .log-item span.log-action { color: white; }
+    .log-item span.log-action { color: var(--text); }
 
     /* Master Edit Modal */
     .modal {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(5px);
       display: flex; align-items: center; justify-content: center;
       z-index: 9999;
     }
@@ -207,41 +266,48 @@
     .modal-box {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 16px; width: 500px; max-width: 90vw;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
       max-height: 90vh; overflow-y: auto;
+      color: var(--text);
     }
     .modal-header {
       padding: 20px; border-bottom: 1px solid var(--border);
       display: flex; justify-content: space-between; align-items: center;
     }
     .modal-header h3 { margin: 0; font-size: 18px; }
-    .modal-close { background: none; border: none; color: white; cursor: pointer; font-size: 20px; }
+    .modal-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; }
+    .modal-close:hover { color: var(--text); }
     
     .modal-body { padding: 20px; }
     .form-group { margin-bottom: 15px; }
     .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; }
-    .form-group input { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; padding: 10px; border-radius: 8px; box-sizing: border-box; }
+    .form-group input { width: 100%; background: #f9fafb; border: 1px solid #d1d5db; color: var(--text); padding: 10px; border-radius: 8px; box-sizing: border-box; }
+    .form-group input:focus { border-color: #9ca3af; outline:none; }
     
-    .form-section-title { font-size: 14px; font-weight: 700; color: var(--accent); margin: 25px 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+    .form-section-title { font-size: 14px; font-weight: 700; color: #3b82f6; margin: 25px 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
     
     .file-input-wrapper { display: flex; align-items: center; gap: 10px; }
-    .file-input-wrapper input[type="file"] { flex-grow: 1; padding: 6px; }
+    .file-input-wrapper input[type="file"] { flex-grow: 1; padding: 6px; border:none; background:transparent;}
 
     .modal-footer {
       padding: 20px; border-top: 1px solid var(--border);
       display: flex; justify-content: flex-end; gap: 10px;
+      background: #f9fafb;
+      border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;
     }
-    .btn-save { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
-    .btn-cancel { background: transparent; color: white; border: 1px solid var(--border); padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+    .btn-save { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-save:hover { background: #2563eb; }
+    .btn-cancel { background: white; color: #4b5563; border: 1px solid #d1d5db; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    .btn-cancel:hover { background: #f3f4f6; }
   </style>
 </head>
 <body>
 
   <!-- NAVBAR -->
   <nav class="navbar">
-    <div class="brand">BusTrack <em>Admin Platform</em></div>
+    <div class="brand" style="color:var(--text);">BusTrack <em>Admin Platform</em></div>
     <div class="nav-right" style="display: flex; align-items: center; gap: 15px;">
-      <span class="user-greeting" id="admin-name-display">Admin</span>
+      <span class="user-greeting" id="admin-name-display" style="color:var(--text-muted);">Admin</span>
       <button class="logout-btn" onclick="logoutAdmin()">Logout</button>
     </div>
   </nav>
@@ -260,14 +326,28 @@
     <div class="header-actions">
       <input type="text" class="search-bar" id="searchInput" placeholder="Search buses, drivers, routes..." onkeyup="filterBuses()">
       <button class="btn-add" onclick="openMasterModal()">
-        <i class="fas fa-plus"></i> Add Bus
+        + Add Bus
       </button>
     </div>
   </div>
 
-  <!-- BUS GRID -->
-  <div class="bus-grid" id="bus-grid">
-    <!-- Rendered via JS -->
+  <!-- TABLE CONTAINER -->
+  <div class="table-wrapper">
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Bus ID</th>
+            <th>Assigned Driver</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="bus-table-body">
+          <!-- Rendered via JS -->
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <!-- ACTIVITY LOGS -->

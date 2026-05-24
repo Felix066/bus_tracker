@@ -58,8 +58,9 @@ function renderBusCards() {
     card.style.display = 'flex';
     card.style.flexDirection = 'column';
     card.style.textAlign = 'left';
-    card.style.background = 'var(--surface)';
-    card.style.border = '1px solid var(--border)';
+    card.style.background = '#1a1a1a';
+    card.style.color = '#ffffff';
+    card.style.border = '1px solid #333333';
     
     card.innerHTML = `
       ${busPhotoHtml}
