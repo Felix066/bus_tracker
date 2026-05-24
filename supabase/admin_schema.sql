@@ -73,7 +73,10 @@ ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE buses ENABLE ROW LEVEL SECURITY;
 
 -- Admins can only be queried by service role or authenticated admins
+DROP POLICY IF EXISTS "buses_select_policy" ON buses;
 CREATE POLICY "buses_select_policy" ON buses FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "buses_all_policy" ON buses;
 CREATE POLICY "buses_all_policy" ON buses FOR ALL USING (true);
 
 -- End of script
