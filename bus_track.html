@@ -148,7 +148,7 @@
         async (pos) => {
           if (pos.coords.accuracy > 50) {
             document.getElementById('tracking-status').textContent = 
-                'Poor GPS accuracy (' + Math.round(pos.coords.accuracy) + 'm). Move closer to window.';
+                'Poor GPS accuracy (' + Math.round(pos.coords.accuracy) + 'm). Try moving to a clearer area.';
             return;
           }
 
