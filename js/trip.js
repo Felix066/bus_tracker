@@ -442,3 +442,38 @@ window.startTrip = startTrip;
 window.endTrip = endTrip;
 window.recoverActiveTrip = recoverActiveTrip;
 
+// --- V3 SOS FUNCTIONALITY ---
+window.triggerSOS = async function() {
+    const driver = JSON.parse(localStorage.getItem('driverSession'));
+    if (!driver) return;
+    
+    let busId = driver.assignedBus || driver.busId;
+    if (!busId) { alert("No bus assigned!"); return; }
+
+    const btn = document.getElementById('sos-btn');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SENDING...';
+    btn.disabled = true;
+
+    try {
+        const payload = {
+            bus_id: busId,
+            driver_name: driver.username,
+            latitude: lastLat || null,
+            longitude: lastLon || null,
+            status: 'active'
+        };
+
+        const { error } = await supabase.from('sos_alerts').insert(payload);
+        if (error) throw error;
+
+        btn.innerHTML = '<i class="fas fa-check"></i> SOS SENT!';
+        btn.style.background = '#991b1b'; // Darker red to indicate it is active
+        alert("EMERGENCY SOS SENT TO ADMIN!");
+    } catch (err) {
+        console.error(err);
+        alert("Failed to send SOS! " + err.message);
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+    }
+};

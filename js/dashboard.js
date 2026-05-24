@@ -1,86 +1,110 @@
-const busStatusCache = {
-  data: null,
-  timestamp: 0,
-  TTL: 30000
-};
+// js/dashboard.js
 
-async function getBusStatusCached() {
-  const now = Date.now();
+let busesData = [];
+let driverSessions = [];
 
-  if (busStatusCache.data && (now - busStatusCache.timestamp) < busStatusCache.TTL) {
-    console.log('[Cache] Returning cached bus status');
-    return busStatusCache.data;
-  }
-
-  const { data: activeTrips } = await supabase
-    .from('trips')
-    .select('bus_id')
-    .eq('status', 'active');
-
-  const onlineBuses = new Set((activeTrips || []).map(t => t.bus_id));
-
-  busStatusCache.data = onlineBuses;
-  busStatusCache.timestamp = now;
-  console.log('[Cache] Bus status refreshed from Supabase');
-
-  return onlineBuses;
-}
-
-async function renderBusCards() {
+async function loadStudentDashboard() {
   const container = document.getElementById('bus-grid');
   if (!container) return;
 
-  // 1. Get current active trips using the cache
-  const onlineBuses = await getBusStatusCached();
-  const activeBuses = Array.from(onlineBuses);
+  const [busesRes, sessionsRes] = await Promise.all([
+    supabase.from('buses').select('*').order('bus_id'),
+    supabase.from('driver_sessions').select('*')
+  ]);
 
-  // 2. Define the fleet (as per instructions: Bus 1 to Bus 6)
-  const fleet = [
-    { id: 'Bus 1', driver: 'driver1' },
-    { id: 'Bus 2', driver: 'driver2' },
-    { id: 'Bus 3', driver: 'driver3' },
-    { id: 'Bus 4', driver: 'driver4' },
-    { id: 'Bus 5', driver: 'driver5' },
-    { id: 'Bus 6', driver: 'driver6' },
-  ];
+  busesData = busesRes.data || [];
+  driverSessions = sessionsRes.data || [];
 
-  // 3. Clear container
+  renderBusCards();
+}
+
+function renderBusCards() {
+  const container = document.getElementById('bus-grid');
+  if (!container) return;
   container.innerHTML = '';
 
-  // 4. Render cards
-  fleet.forEach(bus => {
-    const isOnline = activeBuses.includes(bus.id);
-    const hasRoute = bus.id === 'Bus 4'; // Requirement 3
+  if (busesData.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding: 40px; color:#888;">No buses currently available.</div>';
+    return;
+  }
+
+  busesData.forEach(bus => {
+    const session = driverSessions.find(s => s.bus_id === bus.bus_id);
+    const isOnline = session && session.is_online;
+    
+    let lastSeenStr = 'Never active';
+    if (session && session.last_seen) {
+      const mins = Math.round((new Date() - new Date(session.last_seen)) / 60000);
+      lastSeenStr = isOnline ? 'Active Now' : `Last active: ${mins} mins ago`;
+    }
+
+    const busPhotoHtml = bus.bus_photo_url 
+      ? `<div style="height: 140px; background: url('${bus.bus_photo_url}') center/cover; position: relative;"></div>`
+      : `<div style="height: 140px; background: #2a2a2a; display:flex; align-items:center; justify-content:center; font-size:32px; color:#555;"><i class="fas fa-bus"></i></div>`;
+
+    const driverPhotoHtml = bus.driver_photo_url
+      ? `<div style="width: 40px; height: 40px; border-radius: 50%; background: url('${bus.driver_photo_url}') center/cover; flex-shrink: 0;"></div>`
+      : `<div style="width: 40px; height: 40px; border-radius: 50%; background: #333; display:flex; align-items:center; justify-content:center; color:#888;"><i class="fas fa-user"></i></div>`;
+
+    const callBtnHtml = bus.driver_phone
+      ? `<a href="tel:${bus.driver_phone.replace(/\s+/g,'')}" style="background: #10b981; color: white; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 600; display:flex; align-items:center; gap: 6px;"><i class="fas fa-phone"></i> Call Driver</a>`
+      : '';
 
     const card = document.createElement('div');
     card.className = `bus-card ${isOnline ? 'online' : 'offline'}`;
+    // Using inline styles to override legacy card styles rapidly to match V3 requested premium UI without needing huge CSS edits
+    card.style.padding = '0';
+    card.style.overflow = 'hidden';
+    card.style.display = 'flex';
+    card.style.flexDirection = 'column';
+    card.style.textAlign = 'left';
+    card.style.background = 'var(--surface)';
+    card.style.border = '1px solid var(--border)';
     
     card.innerHTML = `
-      <div class="status-badge ${isOnline ? 'online' : 'offline'}">
+      ${busPhotoHtml}
+      <div style="position: absolute; top: 10px; right: 10px; background: ${isOnline ? 'rgba(16,185,129,0.9)' : 'rgba(239,68,68,0.9)'}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight:bold; box-shadow: 0 2px 10px rgba(0,0,0,0.5);">
         ${isOnline ? 'ONLINE' : 'OFFLINE'}
       </div>
-      <div class="bus-icon-bg">
-        <i class="fas fa-bus"></i>
+      
+      <div style="padding: 20px; flex-grow: 1; display:flex; flex-direction:column;">
+        <h2 style="margin: 0; font-size: 20px; font-weight: 700;">${bus.bus_id}</h2>
+        <p style="color: #aaa; font-size: 13px; font-weight: 500; margin: 4px 0 10px;"><i class="fas fa-route"></i> ${bus.route_name || 'No route assigned'}</p>
+        
+        <div style="display:flex; align-items:center; gap: 12px; margin-top: auto; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+          ${driverPhotoHtml}
+          <div style="flex-grow: 1;">
+            <p style="margin: 0; font-weight: 600; font-size: 14px;">${bus.driver_name || 'No Driver'}</p>
+            <p style="margin: 0; font-size: 11px; color: #888;">${lastSeenStr}</p>
+          </div>
+          ${callBtnHtml}
+        </div>
       </div>
-      <h2>Bus ${bus.id.toLowerCase().replace(' ', '')}</h2>
-      <p class="driver-text">Driver: <span class="driver-name">${bus.driver}</span></p>
-      <button class="track-btn ${isOnline ? '' : 'disabled'}" onclick="handleTrackClick('${bus.id}', ${isOnline}, ${hasRoute})">
-        ${isOnline ? 'Track Live Location' : 'OFFLINE'}
+      
+      <button style="border-radius: 0; padding: 15px; font-size: 14px; display:flex; justify-content:center; align-items:center; gap: 8px; border:none; border-top: 1px solid rgba(255,255,255,0.05);" class="track-btn ${isOnline ? '' : 'disabled'}" onclick="handleTrackClick('${bus.bus_id}', ${isOnline})">
+        ${isOnline ? '<i class="fas fa-map-marker-alt"></i> Track Live Location' : '<i class="fas fa-bed"></i> Currently Offline'}
       </button>
     `;
     container.appendChild(card);
   });
 }
 
-function handleTrackClick(busId, isOnline, hasRoute) {
+function handleTrackClick(busId, isOnline) {
   if (!isOnline) return;
-
-  // Route check removed so all active buses can be tracked
-  const busParam = busId.replace(' ', ''); // 'Bus 4' -> 'Bus4'
+  const busParam = busId.replace(/\s+/g, ''); // 'Bus 4' -> 'Bus4'
   window.location.href = `student-console.html?bus=${busParam}`;
 }
 
+// Setup Realtime 
+function subscribeToStudentSync() {
+  supabase.channel('student-dashboard-sync')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'buses' }, () => loadStudentDashboard())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_sessions' }, () => loadStudentDashboard())
+    .subscribe();
+}
+
 // Initial Call
-document.addEventListener('DOMContentLoaded', renderBusCards);
-window.renderBusCards = renderBusCards;
-setInterval(renderBusCards, 10000);
+document.addEventListener('DOMContentLoaded', () => {
+  loadStudentDashboard();
+  subscribeToStudentSync();
+});

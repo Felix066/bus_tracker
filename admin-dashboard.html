@@ -6,228 +6,342 @@
   <title>Admin Dashboard | BusTrack</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/dashboard.css">
   <style>
-    /* Admin specific overrides to fit the aesthetic */
     body {
       background: var(--bg);
       color: var(--text);
       font-family: 'Inter', sans-serif;
     }
-    .admin-container {
-      padding: 80px 20px 20px; /* Leave room for navbar */
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    .admin-grid {
-      display: grid;
-      grid-template-columns: 1fr;
+    
+    /* V3 Top Header */
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      margin-top: 60px;
       gap: 20px;
     }
-    @media (min-width: 768px) {
-      .admin-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-      .full-width {
-        grid-column: 1 / -1;
-      }
+    .admin-header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
     }
-    .admin-card {
+    .header-actions {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+    .search-bar {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: white;
+      padding: 10px 16px;
+      border-radius: 12px;
+      width: 250px;
+      font-family: inherit;
+    }
+    .btn-add {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+    /* SOS Banner */
+    #sos-banner {
+      background: #ef4444;
+      color: white;
+      text-align: center;
+      padding: 15px;
+      font-weight: bold;
+      font-size: 16px;
+      display: none;
+      animation: pulse-red 1.5s infinite;
+      position: sticky;
+      top: 60px;
+      z-index: 100;
+    }
+    @keyframes pulse-red { 0% { background: #ef4444; } 50% { background: #b91c1c; } 100% { background: #ef4444; } }
+
+    /* Bus Cards Grid */
+    .bus-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+      padding: 0 40px 40px;
+    }
+    .bus-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .bus-photo {
+      height: 140px;
+      background: #2a2a2a;
+      background-size: cover;
+      background-position: center;
+      position: relative;
+    }
+    .bus-photo-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #666;
+      font-size: 32px;
+    }
+    .bus-card-content {
+      padding: 20px;
+      flex-grow: 1;
+    }
+    .bus-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .bus-name { font-size: 20px; font-weight: 700; margin: 0; }
+    .bus-route { color: var(--text-muted); font-size: 13px; font-weight: 500; margin: 4px 0 0; }
+    
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(255,255,255,0.05);
+    }
+    .status-badge.active { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .status-badge.offline { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .status-badge.active .status-dot { background: #10b981; box-shadow: 0 0 5px #10b981; }
+    .status-badge.offline .status-dot { background: #ef4444; }
+
+    .driver-info-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid var(--border);
+    }
+    .driver-avatar {
+      width: 40px; height: 40px; border-radius: 50%; background: #333;
+      background-size: cover; background-position: center; flex-shrink: 0;
+    }
+    .driver-details { flex-grow: 1; }
+    .driver-name { font-weight: 600; font-size: 14px; margin: 0; }
+    .driver-phone { color: var(--text-muted); font-size: 12px; margin: 2px 0 0; }
+
+    .card-actions {
+      display: flex;
+      gap: 10px;
+      padding: 15px 20px;
+      background: rgba(0,0,0,0.2);
+      border-top: 1px solid var(--border);
+    }
+    .btn-card {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-edit { background: rgba(255,255,255,0.1); color: white; }
+    .btn-edit:hover { background: rgba(255,255,255,0.2); }
+    .btn-del { background: transparent; color: #ef4444; }
+    .btn-del:hover { background: rgba(239, 68, 68, 0.1); }
+
+    /* Admin Logs Section */
+    .logs-section {
+      margin: 0 40px 40px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 20px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     }
-    .admin-card h2 {
-      margin-top: 0;
-      font-size: 18px;
-      color: white;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 10px;
-      margin-bottom: 20px;
-    }
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-    .data-table th, .data-table td {
-      text-align: left;
-      padding: 12px 8px;
-      border-bottom: 1px solid var(--border);
-    }
-    .data-table th {
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-    .btn {
-      padding: 6px 12px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-weight: 500;
+    .logs-section h3 { margin-top: 0; margin-bottom: 15px; font-size: 16px; }
+    .log-list {
+      max-height: 200px;
+      overflow-y: auto;
       font-size: 13px;
     }
-    .btn-primary { background: var(--accent); color: white; }
-    .btn-danger { background: #ef4444; color: white; }
-    .btn-sm { padding: 4px 8px; font-size: 12px; }
-    
-    input[type="text"], select {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border);
-      color: white;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-family: inherit;
-    }
-    /* V2 Redesign Additions */
-    .table-header-bar {
+    .log-item {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 10px;
-      margin-bottom: 20px;
+      color: var(--text-muted);
     }
-    .table-header-bar h2 {
-      margin: 0;
-      font-size: 18px;
-      color: white;
-      border: none;
-      padding: 0;
-    }
-    
-    .driver-assign-cell {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .driver-input {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border);
-      color: white;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-family: inherit;
-      width: 200px;
-    }
-    .save-btn {
-      background: #10b981;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 500;
-    }
-    .clear-btn {
-      background: #ef4444;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 500;
-    }
+    .log-item span.log-action { color: white; }
 
-    /* Modal Styles */
+    /* Master Edit Modal */
     .modal {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+      display: flex; align-items: center; justify-content: center;
       z-index: 9999;
     }
-    .modal.hidden {
-      display: none;
-    }
+    .modal.hidden { display: none; }
     .modal-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      padding: 24px;
-      border-radius: 12px;
-      width: 400px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; width: 500px; max-width: 90vw;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      max-height: 90vh; overflow-y: auto;
     }
-    .modal-box h3 { margin-top: 0; color: white; margin-bottom: 20px; }
-    .modal-box label { display: block; color: var(--text-muted); margin-bottom: 6px; font-size: 14px; }
-    .modal-box input { width: 100%; margin-bottom: 20px; box-sizing: border-box; }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+    .modal-header {
+      padding: 20px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-header h3 { margin: 0; font-size: 18px; }
+    .modal-close { background: none; border: none; color: white; cursor: pointer; font-size: 20px; }
     
-    .status-dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-right: 6px;
+    .modal-body { padding: 20px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; }
+    .form-group input { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; padding: 10px; border-radius: 8px; box-sizing: border-box; }
+    
+    .form-section-title { font-size: 14px; font-weight: 700; color: var(--accent); margin: 25px 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+    
+    .file-input-wrapper { display: flex; align-items: center; gap: 10px; }
+    .file-input-wrapper input[type="file"] { flex-grow: 1; padding: 6px; }
+
+    .modal-footer {
+      padding: 20px; border-top: 1px solid var(--border);
+      display: flex; justify-content: flex-end; gap: 10px;
     }
-    .status-dot.active { background: #10b981; box-shadow: 0 0 5px #10b981; }
-    .status-dot.inactive { background: #ef4444; }
+    .btn-save { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-cancel { background: transparent; color: white; border: 1px solid var(--border); padding: 10px 20px; border-radius: 8px; cursor: pointer; }
   </style>
 </head>
 <body>
 
   <!-- NAVBAR -->
   <nav class="navbar">
-    <div class="brand">BusTrack <em>Admin Console</em></div>
+    <div class="brand">BusTrack <em>Admin Platform</em></div>
     <div class="nav-right" style="display: flex; align-items: center; gap: 15px;">
       <span class="user-greeting" id="admin-name-display">Admin</span>
       <button class="logout-btn" onclick="logoutAdmin()">Logout</button>
     </div>
   </nav>
 
-  <div class="admin-container">
-    <div class="admin-grid">
-      
-      <!-- Bus Management -->
-      <div class="admin-card full-width">
-        <div class="table-header-bar">
-          <h2>Bus Management</h2>
-          <button class="btn btn-primary" onclick="openAddBusModal()">
-            <i class="fas fa-plus"></i> Add Bus
-          </button>
-        </div>
-        <div style="overflow-x: auto;">
-          <table class="data-table" id="bus-table">
-            <thead>
-              <tr>
-                <th>Bus ID</th>
-                <th>Assigned Driver</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Rendered via JS -->
-              <tr><td colspan="4" style="text-align:center;">Loading...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+  <!-- SOS BANNER -->
+  <div id="sos-banner">
+    <i class="fas fa-exclamation-triangle"></i> EMERGENCY SOS ACTIVATED BY DRIVER!
+  </div>
+
+  <!-- HEADER SECTION -->
+  <div class="admin-header">
+    <div>
+      <h1>Fleet Overview</h1>
+      <p style="color: var(--text-muted); margin: 5px 0 0; font-size: 14px;">Manage all buses, routes, and drivers in real-time.</p>
+    </div>
+    <div class="header-actions">
+      <input type="text" class="search-bar" id="searchInput" placeholder="Search buses, drivers, routes..." onkeyup="filterBuses()">
+      <button class="btn-add" onclick="openMasterModal()">
+        <i class="fas fa-plus"></i> Add Bus
+      </button>
     </div>
   </div>
 
-  <!-- Add Bus Modal -->
-  <div id="addBusModal" class="modal hidden">
+  <!-- BUS GRID -->
+  <div class="bus-grid" id="bus-grid">
+    <!-- Rendered via JS -->
+  </div>
+
+  <!-- ACTIVITY LOGS -->
+  <div class="logs-section">
+    <h3>Admin Activity Log</h3>
+    <div class="log-list" id="log-list">
+      <!-- Rendered via JS -->
+    </div>
+  </div>
+
+  <!-- MASTER EDIT MODAL -->
+  <div id="masterModal" class="modal hidden">
     <div class="modal-box">
-      <h3>Add New Bus</h3>
-      <label>Bus ID / Name:</label>
-      <input type="text" id="newBusId" placeholder="e.g. Bus 7" />
-      <div class="modal-actions">
-        <button class="btn btn-danger" onclick="closeAddBusModal()">✕ Cancel</button>
-        <button class="btn btn-primary" onclick="addNewBus()">✓ Confirm Add</button>
+      <div class="modal-header">
+        <h3 id="modalTitle">Add New Bus</h3>
+        <button class="modal-close" onclick="closeMasterModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <!-- Hidden ID -->
+        <input type="hidden" id="editBusId" value="">
+        <input type="hidden" id="isNewBus" value="true">
+
+        <div class="form-section-title">Vehicle Details</div>
+        <div class="form-group">
+          <label>Bus Name / ID (e.g. Bus 7)</label>
+          <input type="text" id="inpBusName" placeholder="Bus Name">
+        </div>
+        <div class="form-group">
+          <label>Route Name</label>
+          <input type="text" id="inpRoute" placeholder="e.g. Kottarakkara → Providence">
+        </div>
+        <div class="form-group">
+          <label>Number Plate</label>
+          <input type="text" id="inpPlate" placeholder="e.g. KL-01-AB-1234">
+        </div>
+        <div class="form-group">
+          <label>Bus Photo</label>
+          <div class="file-input-wrapper">
+            <input type="file" id="inpBusPhoto" accept="image/*">
+          </div>
+        </div>
+
+        <div class="form-section-title">Driver Details</div>
+        <div class="form-group">
+          <label>Assigned Driver Name</label>
+          <input type="text" id="inpDriverName" placeholder="Driver Name">
+        </div>
+        <div class="form-group">
+          <label>Driver Phone Number</label>
+          <input type="text" id="inpDriverPhone" placeholder="e.g. +91 9876543210">
+        </div>
+        <div class="form-group">
+          <label>Driver Profile Photo</label>
+          <div class="file-input-wrapper">
+            <input type="file" id="inpDriverPhoto" accept="image/*">
+          </div>
+        </div>
+
+        <div class="form-section-title">Driver Login Credentials</div>
+        <div class="form-group">
+          <label>Driver Username</label>
+          <input type="text" id="inpDriverUser" placeholder="e.g. driver7">
+        </div>
+        <div class="form-group">
+          <label>Driver Password</label>
+          <input type="password" id="inpDriverPass" placeholder="Leave blank to keep existing password">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeMasterModal()">Cancel</button>
+        <button class="btn-save" id="btnSaveBus" onclick="saveMasterBus()">Save Bus</button>
       </div>
     </div>
   </div>
-
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-client.js"></script>
@@ -243,7 +357,7 @@
 
     function logoutAdmin() {
       localStorage.removeItem('adminSession');
-      window.location.href = 'admin-login.html';
+      window.location.href = 'driver-login.html';
     }
   </script>
 </body>
