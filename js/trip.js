@@ -118,14 +118,18 @@ function saveLocationBackground(tripId, busId, lat, lon, speed) {
 }
 
 
+let lastComputedTime = 0;
+
 // UPDATE 18 — Realtime Update Optimization
 async function saveComputedLocationIfChanged(tripId, busId, lat, lon, speedKmh) {
     const roundedLat = parseFloat(lat.toFixed(6));
     const roundedLon = parseFloat(lon.toFixed(6));
+    const now = Date.now();
 
     if (lastComputedLat !== null) {
         const dist = haversineDistance(lastComputedLat, lastComputedLon, roundedLat, roundedLon);
-        if (dist < MIN_COMPUTED_MOVEMENT) return; // skip — not moved enough
+        // Force update every 4 seconds to keep the admin map "live", or update if moved
+        if (dist < MIN_COMPUTED_MOVEMENT && (now - lastComputedTime < 4000)) return; 
     }
 
     supabase.from('computed_locations').insert({
@@ -140,6 +144,7 @@ async function saveComputedLocationIfChanged(tripId, busId, lat, lon, speedKmh) 
 
     lastComputedLat = roundedLat;
     lastComputedLon = roundedLon;
+    lastComputedTime = now;
 }
 
 // UPDATE 15 — Stop Arrival Duplicate Protection
@@ -232,30 +237,28 @@ function shouldProcessUpdate(lat1, lon1, lat2, lon2, timeDiffSec) {
 
 // UPDATE 1 — startDriverTracking renamed to startDriverGPS
 function startDriverGPS(tripId, busId, tripType) {
-    const kalman = new KalmanFilter();
     const busLabel = busId.toLowerCase().includes('bus') ? 
                      busId.replace(/bus\s*/i, 'B').toUpperCase() : busId;
 
     watchId = navigator.geolocation.watchPosition(async (pos) => {
         const now = Date.now();
-
-        const smoothed = kalman.process(
-            pos.coords.latitude, pos.coords.longitude,
-            pos.coords.accuracy, pos.timestamp
-        );
+        
+        // Remove kalman filter (user requested straight architecture, no smart movements)
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
 
         if (typeof cacheCurrentLocation === 'function') {
-            cacheCurrentLocation(smoothed.lat, smoothed.lon, pos.coords.accuracy);
+            cacheCurrentLocation(lat, lon, pos.coords.accuracy);
         }
 
         // UPDATE 4 — Safe Speed Calculation
         if (lastLat && lastLon) {
-            const speed = calculateSafeSpeed(lastLat, lastLon, smoothed.lat, smoothed.lon, now - lastTime);
+            const speed = calculateSafeSpeed(lastLat, lastLon, lat, lon, now - lastTime);
             if (speed !== null) lastSpeedKmh = speed;
         }
         
-        lastLat = smoothed.lat; 
-        lastLon = smoothed.lon; 
+        lastLat = lat; 
+        lastLon = lon; 
         lastTime = now;
 
         // UI Updates for Driver
@@ -266,28 +269,28 @@ function startDriverGPS(tripId, busId, tripType) {
         if (locationDisplay) {
             let shouldGeocode = (now - lastReverseGeocodeTime > 25000);
             if (!shouldGeocode && lastReverseGeocodeLat !== null) {
-                const distMoved = haversineDistance(lastReverseGeocodeLat, lastReverseGeocodeLon, smoothed.lat, smoothed.lon);
+                const distMoved = haversineDistance(lastReverseGeocodeLat, lastReverseGeocodeLon, lat, lon);
                 if (distMoved > 200) shouldGeocode = true;
             }
 
             if (shouldGeocode || lastReverseGeocodeLat === null) {
-                geocodeIfNeeded(smoothed.lat, smoothed.lon).then(name => {
+                geocodeIfNeeded(lat, lon).then(name => {
                     locationDisplay.textContent = name;
                     lastReverseGeocodeTime = now;
-                    lastReverseGeocodeLat  = smoothed.lat;
-                    lastReverseGeocodeLon  = smoothed.lon;
+                    lastReverseGeocodeLat  = lat;
+                    lastReverseGeocodeLon  = lon;
                 });
             }
         }
 
-        updateBusMarker(smoothed.lat, smoothed.lon, busLabel);
+        updateBusMarker(lat, lon, busLabel);
 
-        processNewDriverLocation(tripId, busId, smoothed.lat, smoothed.lon);
-        checkStopArrivalDualRadius(smoothed.lat, smoothed.lon, tripType, tripId);
+        processNewDriverLocation(tripId, busId, lat, lon);
+        checkStopArrivalDualRadius(lat, lon, tripType, tripId);
 
     }, (err) => {
-        console.error(err);
-    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
+        console.error("GPS Watch Error:", err);
+    }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
 }
 
 function advanceStopIndex(newIndex, tripId) {
