@@ -150,12 +150,13 @@ function animateMarker(marker, fromLat, fromLon, toLat, toLon, durationMs) {
 function updateBusMarker(lat, lon, label = 'Bus') {
     if (!busMarker) {
         busMarker = L.marker([lat, lon], { icon: createBusIcon(label) }).addTo(map);
+        map.setView([lat, lon], map.getZoom());
     } else {
         const oldPos = busMarker.getLatLng();
-        animateMarker(busMarker, oldPos.lat, oldPos.lng, lat, lon, 2000);
+        animateMarker(busMarker, oldPos.lat, oldPos.lng, lat, lon, 2500);
         busMarker.setIcon(createBusIcon(label));
+        map.panTo([lat, lon], { animate: true, duration: 2.5 });
     }
-    map.panTo([lat, lon]);
 }
 
 

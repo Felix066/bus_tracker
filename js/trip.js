@@ -126,10 +126,9 @@ async function saveComputedLocationIfChanged(tripId, busId, lat, lon, speedKmh) 
     const roundedLon = parseFloat(lon.toFixed(6));
     const now = Date.now();
 
+    // STRICT RATE LIMIT: Only send to server exactly every 3 seconds
     if (lastComputedLat !== null) {
-        const dist = haversineDistance(lastComputedLat, lastComputedLon, roundedLat, roundedLon);
-        // Force update every 4 seconds to keep the admin map "live", or update if moved
-        if (dist < MIN_COMPUTED_MOVEMENT && (now - lastComputedTime < 4000)) return; 
+        if (now - lastComputedTime < 3000) return; 
     }
 
     supabase.from('computed_locations').insert({
