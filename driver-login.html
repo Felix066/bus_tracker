@@ -103,6 +103,8 @@
       } catch (err) {
         errBanner.textContent = err.message;
         errBanner.classList.remove('hidden');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
       }
     };
   </script>
