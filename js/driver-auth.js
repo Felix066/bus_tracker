@@ -48,14 +48,7 @@ async function handleDriverLogin(username, password) {
   }
 }
 
-// Ensure offline on unload
-window.addEventListener('beforeunload', () => {
-  const session = JSON.parse(localStorage.getItem('driverSession'));
-  if (session && session.assignedBus) {
-    // Fire-and-forget offline status update
-    supabase.from('driver_sessions').update({ is_online: false }).eq('bus_id', session.assignedBus).then();
-  }
-});
+
 
 async function driverLogout() {
   const session = JSON.parse(localStorage.getItem('driverSession'));

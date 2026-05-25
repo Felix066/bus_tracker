@@ -163,6 +163,27 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+
+// Ensure offline on unload and maintain heartbeat
+(function() {
+  const driverSession = JSON.parse(localStorage.getItem('driverSession'));
+  if (driverSession && driverSession.assignedBus) {
+    window.addEventListener('beforeunload', () => {
+      // Fire-and-forget offline status update
+      supabase.from('driver_sessions').update({ is_online: false }).eq('bus_id', driverSession.assignedBus).then();
+    });
+
+    // Heartbeat every 60 seconds to keep last_seen fresh
+    setInterval(() => {
+      if (navigator.onLine) {
+        supabase.from('driver_sessions').update({ 
+          is_online: true, 
+          last_seen: new Date().toISOString() 
+        }).eq('bus_id', driverSession.assignedBus).then();
+      }
+    }, 60000);
+  }
+})();
 </script>
 </body>
 </html>
