@@ -96,7 +96,7 @@
     .alerts-container {
       padding: 0 60px 80px 60px;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
       gap: 30px;
     }
 
@@ -261,15 +261,30 @@
     }
     
     @media (max-width: 768px) {
-      .navbar, .dashboard-header, .alerts-container {
-        padding-left: 24px;
-        padding-right: 24px;
+      .navbar {
+        padding: 20px 24px;
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+      }
+      .dashboard-header {
+        padding: 40px 24px 30px 24px;
+      }
+      .alerts-container {
+        padding: 0 24px 60px 24px;
+        grid-template-columns: 1fr;
       }
       .dashboard-header h1 {
-        font-size: 40px;
+        font-size: 36px;
+      }
+      .dashboard-header p {
+        font-size: 16px;
       }
       .sos-card {
-        padding: 30px;
+        padding: 24px;
+      }
+      .bus-id {
+        font-size: 28px;
       }
     }
   </style>

@@ -299,6 +299,26 @@
     .btn-save:hover { background: #2563eb; }
     .btn-cancel { background: white; color: #4b5563; border: 1px solid #d1d5db; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
     .btn-cancel:hover { background: #f3f4f6; }
+    
+    @media (max-width: 768px) {
+      .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 20px;
+        margin-top: 20px;
+      }
+      .header-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .search-bar { width: 100%; box-sizing: border-box; }
+      .btn-add { width: 100%; justify-content: center; }
+      .table-wrapper { padding: 0 20px 20px; }
+      .table-container { padding: 15px; overflow-x: auto; }
+      .logs-section { margin: 0 20px 40px; padding: 15px; }
+      .navbar { padding: 15px 20px; }
+    }
   </style>
 </head>
 <body>

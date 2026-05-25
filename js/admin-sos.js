@@ -41,6 +41,22 @@ async function loadSOSAlerts() {
     return;
   }
 
+  // Reverse geocode for readable place names
+  await Promise.all(uniqueAlerts.map(async (alert) => {
+    if (alert.latitude && alert.longitude) {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${alert.latitude}&lon=${alert.longitude}`);
+        if (!res.ok) throw new Error("Network response was not ok");
+        const data = await res.json();
+        alert.placeName = data.display_name || 'Location details unavailable';
+      } catch (e) {
+        alert.placeName = 'Location details unavailable';
+      }
+    } else {
+      alert.placeName = 'Coordinates not available';
+    }
+  }));
+
   container.innerHTML = '';
   
   uniqueAlerts.forEach(alert => {
@@ -76,10 +92,9 @@ async function loadSOSAlerts() {
         </div>
         <div class="info-item">
           <span class="info-label">Last Known Location</span>
-          <span class="info-value">
-            ${lat}, ${lng}
-            <br>
-            ${mapsLink}
+          <span class="info-value" style="display:flex; flex-direction:column; gap:8px;">
+            <span style="font-size: 15px; line-height: 1.4; color: var(--sos-gray); font-weight: 500;">${alert.placeName}</span>
+            <div>${mapsLink}</div>
           </span>
         </div>
       </div>
