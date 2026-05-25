@@ -77,7 +77,19 @@ function renderBusTable() {
     let lastSeenStr = '';
     if (!isOnline && session && session.last_seen) {
       const mins = Math.round((new Date() - new Date(session.last_seen)) / 60000);
-      lastSeenStr = `<span style="font-size: 11px; color:#9ca3af; margin-left: 8px;">(Last active: ${mins} mins ago)</span>`;
+      let formattedTime = '';
+      const hours = Math.floor(mins / 60);
+      const days = Math.floor(hours / 24);
+      const months = Math.floor(days / 30);
+      const years = Math.floor(days / 365);
+      
+      if (years > 0) formattedTime = `${years} year${years > 1 ? 's' : ''} ago`;
+      else if (months > 0) formattedTime = `${months} month${months > 1 ? 's' : ''} ago`;
+      else if (days > 0) formattedTime = `${days} day${days > 1 ? 's' : ''} ago`;
+      else if (hours > 0) formattedTime = `${hours} hour${hours > 1 ? 's' : ''} ago`;
+      else formattedTime = `${mins} min${mins !== 1 ? 's' : ''} ago`;
+
+      lastSeenStr = `<span style="font-size: 11px; color:#9ca3af; margin-left: 8px;">(Last active: ${formattedTime})</span>`;
     }
 
     const tr = document.createElement('tr');
