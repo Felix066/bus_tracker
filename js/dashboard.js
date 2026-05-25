@@ -108,4 +108,9 @@ function subscribeToStudentSync() {
 document.addEventListener('DOMContentLoaded', () => {
   loadStudentDashboard();
   subscribeToStudentSync();
+  
+  // Fallback polling in case Supabase Realtime is not enabled for these tables
+  setInterval(() => {
+    loadStudentDashboard();
+  }, 30000);
 });
