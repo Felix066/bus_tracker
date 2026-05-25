@@ -101,6 +101,8 @@
           document.getElementById('username').value,
           document.getElementById('password').value
         );
+        btn.innerHTML = originalText;
+        btn.disabled = false;
       } catch (err) {
         errBanner.textContent = err.message;
         errBanner.classList.remove('hidden');
