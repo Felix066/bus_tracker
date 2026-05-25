@@ -75,7 +75,7 @@ function renderBusCards() {
         <div style="display:flex; align-items:center; gap: 12px; margin-top: auto; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
           ${driverPhotoHtml}
           <div style="flex-grow: 1;">
-            <p style="margin: 0; font-weight: 600; font-size: 14px;">${bus.driver_name || 'No Driver'}</p>
+            <p style="margin: 0; font-weight: 600; font-size: 14px;">${bus.driver_name || (session && session.driver_name) || 'No Driver'}</p>
             <p style="margin: 0; font-size: 11px; color: #888;">${lastSeenStr}</p>
           </div>
           ${callBtnHtml}
