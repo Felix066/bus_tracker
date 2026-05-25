@@ -44,14 +44,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentTripType = trip.trip_type;
 
     // 3. Fetch Driver Details
-    const { data: driver } = await supabase
-        .from('drivers')
-        .select('username')
-        .eq('id', trip.driver_id)
-        .single();
+    let driverName = 'Unknown Driver';
+    const { data: session } = await supabase.from('driver_sessions').select('driver_name, is_online').eq('bus_id', busId).single();
+    if (session && session.driver_name) {
+        driverName = session.driver_name;
+    } else {
+        const { data: busData } = await supabase.from('buses').select('driver_name').eq('id', busId).single();
+        if (busData && busData.driver_name) driverName = busData.driver_name;
+    }
 
-    document.getElementById('driver-name-display').textContent = driver ? driver.username : 'Unknown Driver';
+    document.getElementById('driver-name-display').textContent = driverName;
     document.getElementById('assigned-bus-label').textContent = busId;
+
+    if (session && session.is_online === false) {
+        handleDriverOffline();
+    }
 
     // 4. Initialize Map and Timer
     initMap(currentTripType);
@@ -85,7 +92,40 @@ function subscribeToLiveUpdates() {
                 processNewLocation(payload.new.latitude, payload.new.longitude, payload.new.speed_kmh);
             }
         })
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'driver_sessions',
+            filter: `bus_id=eq.${busId}`
+        }, (payload) => {
+            if (payload.new.is_online === false) {
+                handleDriverOffline();
+            } else if (payload.new.is_online === true) {
+                handleDriverOnline();
+            }
+        })
         .subscribe();
+}
+
+function handleDriverOffline() {
+    const locationDisplay = document.getElementById('location-display');
+    if (locationDisplay) {
+        locationDisplay.textContent = 'Driver is currently offline';
+        locationDisplay.classList.remove('searching');
+        locationDisplay.style.color = '#ef4444'; // Red text for offline
+    }
+    const speedDisplay = document.getElementById('speed-display');
+    if (speedDisplay) speedDisplay.textContent = '0 km/h';
+    if (typeof stopTripTimer === 'function') stopTripTimer();
+}
+
+function handleDriverOnline() {
+    const locationDisplay = document.getElementById('location-display');
+    if (locationDisplay && locationDisplay.textContent === 'Driver is currently offline') {
+        locationDisplay.textContent = 'Waiting for location...';
+        locationDisplay.style.color = '';
+    }
+    // Note: Timer will not auto-resume without start time, but if they are online, a new trip might start or we get locations.
 }
 
 function processNewLocation(lat, lon, speedKmh) {
