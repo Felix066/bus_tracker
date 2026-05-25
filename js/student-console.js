@@ -65,6 +65,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 4. Initialize Map and Timer
     initMap(currentTripType);
     
+    const statusBar = document.getElementById('trip-status-bar');
+    
+    if (isTripActive && (!session || session.is_online !== false)) {
+        if (statusBar) statusBar.classList.add('visible');
+    }
+    
     if (isTripActive && trip.started_at && (!session || session.is_online !== false)) {
         const startedAt = new Date(trip.started_at).getTime();
         startTripTimer(startedAt);
@@ -125,6 +131,7 @@ function handleDriverOffline() {
     const statusDot = statusBar ? statusBar.querySelector('[class^="status-dot"]') : null;
     
     if (statusBar && statusText) {
+        statusBar.classList.add('visible'); // MAKE VISIBLE
         statusBar.style.background = 'rgba(239, 68, 68, 0.1)';
         statusBar.style.border = '1px solid rgba(239, 68, 68, 0.2)';
         statusText.textContent = 'Driver Offline — Showing last known location';
@@ -145,6 +152,7 @@ function handleTripEnded() {
     const statusDot = statusBar ? statusBar.querySelector('[class^="status-dot"]') : null;
     
     if (statusBar && statusText) {
+        statusBar.classList.add('visible'); // MAKE VISIBLE
         statusBar.style.background = 'rgba(245, 158, 11, 0.1)';
         statusBar.style.border = '1px solid rgba(245, 158, 11, 0.2)';
         statusText.textContent = 'Trip Ended — Showing last known location';
@@ -160,12 +168,27 @@ function handleTripEnded() {
 }
 
 function handleDriverOnline() {
-    const locationDisplay = document.getElementById('location-display');
-    if (locationDisplay && locationDisplay.textContent === 'Driver is currently offline') {
-        locationDisplay.textContent = 'Waiting for location...';
-        locationDisplay.style.color = '';
+    const statusBar = document.getElementById('trip-status-bar');
+    const statusText = document.getElementById('trip-status-text');
+    const statusDot = statusBar ? statusBar.querySelector('[class^="status-dot"]') : null;
+    
+    // Only restore green status if the trip hasn't ended.
+    if (activeTripId) {
+        supabase.from('trips').select('status').eq('id', activeTripId).single().then(({data}) => {
+            if (data && data.status === 'active' && statusBar && statusText) {
+                statusBar.classList.add('visible');
+                statusBar.style.background = '#F0FDF6';
+                statusBar.style.border = '1px solid #BBF0D6';
+                statusText.textContent = 'Trip active — GPS tracking live';
+                statusText.style.color = '#2A7D55';
+                if (statusDot) {
+                    statusDot.className = 'status-dot-green';
+                    statusDot.style.background = '#2A7D55';
+                    statusDot.style.boxShadow = 'none';
+                }
+            }
+        });
     }
-    // Note: Timer will not auto-resume without start time, but if they are online, a new trip might start or we get locations.
 }
 
 function processNewLocation(lat, lon, speedKmh) {
