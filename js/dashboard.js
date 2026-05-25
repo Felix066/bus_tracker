@@ -30,11 +30,19 @@ function renderBusCards() {
 
   busesData.forEach(bus => {
     const session = driverSessions.find(s => s.bus_id === bus.id);
-    const isOnline = session && session.is_online;
     
+    let isOnline = session && session.is_online;
     let lastSeenStr = 'Never active';
+
     if (session && session.last_seen) {
-      const mins = Math.round((new Date() - new Date(session.last_seen)) / 60000);
+      const timeDiffMs = new Date() - new Date(session.last_seen);
+      const mins = Math.round(timeDiffMs / 60000);
+      
+      // Safety check: if heartbeat is older than 90 seconds, force offline in UI
+      if (timeDiffMs > 90000) {
+          isOnline = false;
+      }
+      
       lastSeenStr = isOnline ? 'Active Now' : `Last active: ${mins} mins ago`;
     }
 
