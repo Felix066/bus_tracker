@@ -32,8 +32,8 @@ async function loadSOSAlerts() {
 
   if (uniqueAlerts.length === 0) {
     container.innerHTML = `
-      <div class="empty-state" style="grid-column: 1/-1;">
-        <i class="fas fa-check-circle"></i>
+      <div class="empty-state">
+        <div class="empty-icon"><i class="fas fa-check-circle"></i></div>
         <h2>All Clear</h2>
         <p>There are no active emergency alerts.</p>
       </div>
@@ -45,7 +45,7 @@ async function loadSOSAlerts() {
   
   uniqueAlerts.forEach(alert => {
     const card = document.createElement('div');
-    card.className = 'alert-card';
+    card.className = 'sos-card';
     
     const d = new Date(alert.created_at);
     const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + d.toLocaleDateString();
@@ -54,28 +54,39 @@ async function loadSOSAlerts() {
     let lng = alert.longitude ? Number(alert.longitude).toFixed(5) : 'Unknown';
     let mapsLink = '';
     if (alert.latitude && alert.longitude) {
-      mapsLink = `<a href="https://www.google.com/maps?q=${alert.latitude},${alert.longitude}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 13px;"><i class="fas fa-map-marker-alt"></i> View on Map</a>`;
+      mapsLink = `<a href="https://www.google.com/maps?q=${alert.latitude},${alert.longitude}" target="_blank" class="map-btn"><i class="fas fa-map-marker-alt"></i> View on Map</a>`;
     }
 
     card.innerHTML = `
-      <div class="alert-header">
+      <div class="card-top">
         <div>
-          <h3 class="alert-title">${alert.bus_id}</h3>
-          <div class="alert-time">${timeStr}</div>
+          <div class="bus-id">${alert.bus_id}</div>
+          <div class="time-stamp">${timeStr}</div>
         </div>
-        <div class="status-badge">ACTIVE SOS</div>
+        <div class="pulse-badge">
+          <div class="pulse-dot"></div>
+          ACTIVE SOS
+        </div>
       </div>
       
-      <div class="detail-row">
-        <div class="detail-label">Driver Name:</div>
-        <div class="detail-value">${alert.driver_name || 'N/A'}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">Location:</div>
-        <div class="detail-value">${lat}, ${lng} <br> ${mapsLink}</div>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Driver Name</span>
+          <span class="info-value">${alert.driver_name || 'N/A'}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Last Known Location</span>
+          <span class="info-value">
+            ${lat}, ${lng}
+            <br>
+            ${mapsLink}
+          </span>
+        </div>
       </div>
       
-      <button class="btn-resolve" onclick="resolveAlert('${alert.bus_id}')">Mark as Resolved</button>
+      <button class="btn-resolve" onclick="resolveAlert('${alert.bus_id}')">
+        <i class="fas fa-check"></i> Mark as Resolved
+      </button>
     `;
     
     container.appendChild(card);

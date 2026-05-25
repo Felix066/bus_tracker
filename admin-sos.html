@@ -3,186 +3,294 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Emergency SOS Alerts | BusTrack</title>
+  <title>Emergency Command Center | BusTrack</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/global.css">
-  <link rel="stylesheet" href="css/dashboard.css">
   <style>
     :root {
-      --bg: #f9fafb;
-      --surface: #ffffff;
-      --text: #111827;
-      --text-muted: #6b7280;
-      --border: #e5e7eb;
-      --danger: #ef4444;
-      --danger-hover: #dc2626;
+      --sos-red: #E63946;
+      --sos-red-light: #FF4D5B;
+      --sos-dark: #111827;
+      --sos-gray: #4B5563;
+      --sos-bg: #F0EFEC; /* match global */
     }
+    
     body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
+      background-color: var(--sos-bg);
+      font-family: var(--font-body);
+      color: var(--text-dark);
     }
+    
     .navbar {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-      padding: 15px 40px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      padding: 24px 60px;
+      background: transparent;
     }
-    .container {
-      padding: 40px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    .header {
+    
+    .brand {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
       display: flex;
       align-items: center;
-      gap: 15px;
-      margin-bottom: 30px;
+      gap: 12px;
     }
-    .header h1 {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 800;
-      color: var(--danger);
+    
+    .brand-icon {
+      background: var(--sos-red);
+      color: white;
+      width: 40px; height: 40px;
+      border-radius: 12px;
       display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(230, 57, 70, 0.4);
+    }
+
+    .brand span {
+      color: var(--sos-gray);
+      font-weight: 600;
+    }
+
+    .btn-back {
+      padding: 12px 24px;
+      background: var(--white);
+      color: var(--text-dark);
+      border-radius: 16px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
+      display: inline-flex;
       align-items: center;
       gap: 10px;
     }
-    .btn-back {
-      padding: 8px 16px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      text-decoration: none;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
+
     .btn-back:hover {
-      background: #f3f4f6;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
     }
-    .alert-grid {
+
+    .dashboard-header {
+      padding: 60px 60px 40px 60px;
+    }
+
+    .dashboard-header h1 {
+      font-size: 56px;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+      color: var(--sos-dark);
+    }
+    
+    .dashboard-header p {
+      font-size: 20px;
+      color: var(--sos-gray);
+      font-family: var(--font-tagline);
+    }
+
+    .alerts-container {
+      padding: 0 60px 80px 60px;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      gap: 30px;
     }
-    .alert-card {
-      background: var(--surface);
-      border: 1px solid var(--danger);
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+
+    .sos-card {
+      background: var(--white);
+      border-radius: 32px;
+      padding: 40px;
+      box-shadow: 0 20px 80px rgba(230, 57, 70, 0.15);
       position: relative;
       overflow: hidden;
+      border: 1px solid rgba(230, 57, 70, 0.2);
+      transition: transform 0.3s ease;
     }
-    .alert-card::before {
+
+    .sos-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .sos-card::before {
       content: '';
       position: absolute;
-      top: 0; left: 0; width: 100%; height: 4px;
-      background: var(--danger);
+      top: 0; left: 0; width: 100%; height: 6px;
+      background: linear-gradient(90deg, var(--sos-red), #FF7B85);
     }
-    .alert-header {
+
+    .card-top {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 15px;
+      margin-bottom: 30px;
     }
-    .alert-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--text);
-      margin: 0 0 5px 0;
+
+    .bus-id {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 4px;
     }
-    .alert-time {
+
+    .time-stamp {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--sos-gray);
+      font-weight: 600;
+    }
+
+    .pulse-badge {
+      background: rgba(230, 57, 70, 0.1);
+      color: var(--sos-red);
+      padding: 8px 16px;
+      border-radius: 100px;
       font-size: 12px;
-      color: var(--text-muted);
-    }
-    .status-badge {
-      background: rgba(239, 68, 68, 0.1);
-      color: var(--danger);
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      animation: pulse-badge 2s infinite;
-    }
-    @keyframes pulse-badge {
-      0% { opacity: 1; }
-      50% { opacity: 0.5; }
-      100% { opacity: 1; }
-    }
-    .detail-row {
+      font-weight: 800;
+      letter-spacing: 1px;
       display: flex;
-      margin-bottom: 10px;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pulse-dot {
+      width: 8px; height: 8px;
+      background: var(--sos-red);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(230, 57, 70, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(230, 57, 70, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(230, 57, 70, 0); }
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .info-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: #9CA3AF;
+      letter-spacing: 1px;
+    }
+
+    .info-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--sos-dark);
+    }
+
+    .map-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #F3F4F6;
+      color: var(--sos-dark);
+      padding: 8px 16px;
+      border-radius: 12px;
       font-size: 14px;
-    }
-    .detail-label {
-      width: 120px;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-    .detail-value {
-      font-weight: 500;
-      color: var(--text);
-    }
-    .btn-resolve {
-      width: 100%;
-      background: var(--surface);
-      color: var(--danger);
-      border: 1px solid var(--danger);
-      padding: 10px;
-      border-radius: 8px;
-      font-weight: 600;
-      margin-top: 15px;
-      cursor: pointer;
+      font-weight: 700;
+      text-decoration: none;
+      margin-top: 8px;
       transition: all 0.2s;
     }
-    .btn-resolve:hover {
-      background: var(--danger);
+
+    .map-btn:hover {
+      background: #E5E7EB;
+    }
+
+    .btn-resolve {
+      width: 100%;
+      background: var(--sos-dark);
       color: white;
+      height: 60px;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
     }
+
+    .btn-resolve:hover {
+      background: var(--sos-red);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(230, 57, 70, 0.3);
+    }
+    
     .empty-state {
+      grid-column: 1 / -1;
       text-align: center;
-      padding: 60px 20px;
-      background: var(--surface);
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      color: var(--text-muted);
+      padding: 100px 20px;
     }
-    .empty-state i {
-      font-size: 48px;
-      color: #10b981;
-      margin-bottom: 15px;
+
+    .empty-icon {
+      font-size: 64px;
+      color: var(--accent-green-light);
+      margin-bottom: 24px;
+    }
+
+    .empty-state h2 {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .empty-state p {
+      font-size: 18px;
+      color: var(--sos-gray);
+    }
+    
+    @media (max-width: 768px) {
+      .navbar, .dashboard-header, .alerts-container {
+        padding-left: 24px;
+        padding-right: 24px;
+      }
+      .dashboard-header h1 {
+        font-size: 40px;
+      }
+      .sos-card {
+        padding: 30px;
+      }
     }
   </style>
 </head>
 <body>
   <nav class="navbar">
-    <div class="brand" style="color:var(--text);">BusTrack <em>Emergency Center</em></div>
-    <div class="nav-right" style="display: flex; align-items: center; gap: 15px;">
-      <a href="admin-dashboard.html" class="btn-back"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    <div class="brand">
+      <div class="brand-icon"><i class="fas fa-shield-alt"></i></div>
+      BusTrack <span>Emergency Center</span>
     </div>
+    <a href="admin-dashboard.html" class="btn-back"><i class="fas fa-arrow-left"></i> Dashboard</a>
   </nav>
 
-  <div class="container">
-    <div class="header">
-      <h1><i class="fas fa-exclamation-triangle"></i> Active SOS Alerts</h1>
-    </div>
+  <div class="dashboard-header">
+    <h1>Active SOS Alerts</h1>
+    <p class="tagline">Real-time emergency monitoring and response.</p>
+  </div>
 
-    <div id="alerts-container" class="alert-grid">
-      <!-- Loading or rendered alerts -->
-      <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">
-        <i class="fas fa-spinner fa-spin"></i> Loading alerts...
-      </div>
+  <div id="alerts-container" class="alerts-container">
+    <div style="grid-column: 1/-1; text-align: center; padding: 100px; color: var(--sos-gray); font-size: 20px; font-weight: 600;">
+      <i class="fas fa-spinner fa-spin" style="margin-right: 12px;"></i> Syncing with fleet...
     </div>
   </div>
 
