@@ -22,7 +22,10 @@ async function handleStudentLogin(email, password) {
   });
 
   if (error) {
-    throw new Error('Invalid email or password.');
+    if (error.message.includes('Invalid login credentials')) {
+      throw new Error('Invalid email or password. If this is a new account, please click "Create Account" first!');
+    }
+    throw new Error(error.message);
   }
 
 
