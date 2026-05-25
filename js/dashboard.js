@@ -109,8 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
   loadStudentDashboard();
   subscribeToStudentSync();
   
-  // Fallback polling in case Supabase Realtime is not enabled for these tables
+  // Hard refresh the tab every 30 seconds as requested
   setInterval(() => {
-    loadStudentDashboard();
+    window.location.reload();
   }, 30000);
 });
