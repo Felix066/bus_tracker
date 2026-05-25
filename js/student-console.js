@@ -21,9 +21,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 2. Fetch Active Trip and Initial Location in parallel
     const [tripRes, locRes] = await Promise.all([
         supabase.from('trips')
-            .select('id, driver_id, trip_type, started_at, current_stop_index')
+            .select('id, driver_id, trip_type, started_at, status, current_stop_index')
             .eq('bus_id', busId)
-            .eq('status', 'active')
             .order('started_at', { ascending: false })
             .limit(1),
         supabase.from('computed_locations')
@@ -36,12 +35,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const trip = tripRes.data && tripRes.data.length > 0 ? tripRes.data[0] : null;
 
     if (!trip) {
-        document.getElementById('location-display').textContent = 'No active trip for ' + busId;
+        document.getElementById('location-display').textContent = 'No trip history found for ' + busId;
         return;
     }
 
     activeTripId = trip.id;
     currentTripType = trip.trip_type;
+    const isTripActive = trip.status === 'active';
 
     // 3. Fetch Driver Details
     let driverName = 'Unknown Driver';
@@ -58,12 +58,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (session && session.is_online === false) {
         handleDriverOffline();
+    } else if (!isTripActive) {
+        handleTripEnded();
     }
 
     // 4. Initialize Map and Timer
     initMap(currentTripType);
     
-    if (trip.started_at) {
+    if (isTripActive && trip.started_at && (!session || session.is_online !== false)) {
         const startedAt = new Date(trip.started_at).getTime();
         startTripTimer(startedAt);
     }
@@ -104,15 +106,37 @@ function subscribeToLiveUpdates() {
                 handleDriverOnline();
             }
         })
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'trips',
+            filter: `id=eq.${activeTripId}`
+        }, (payload) => {
+            if (payload.new.status === 'completed' || payload.new.status === 'cancelled') {
+                handleTripEnded();
+            }
+        })
         .subscribe();
 }
 
 function handleDriverOffline() {
     const locationDisplay = document.getElementById('location-display');
     if (locationDisplay) {
-        locationDisplay.textContent = 'Driver is currently offline';
+        locationDisplay.textContent = 'Driver offline - Showing last location';
         locationDisplay.classList.remove('searching');
         locationDisplay.style.color = '#ef4444'; // Red text for offline
+    }
+    const speedDisplay = document.getElementById('speed-display');
+    if (speedDisplay) speedDisplay.textContent = '0 km/h';
+    if (typeof stopTripTimer === 'function') stopTripTimer();
+}
+
+function handleTripEnded() {
+    const locationDisplay = document.getElementById('location-display');
+    if (locationDisplay) {
+        locationDisplay.textContent = 'Trip Ended - Showing last location';
+        locationDisplay.classList.remove('searching');
+        locationDisplay.style.color = '#f59e0b'; // Amber text for ended
     }
     const speedDisplay = document.getElementById('speed-display');
     if (speedDisplay) speedDisplay.textContent = '0 km/h';
