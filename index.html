@@ -67,7 +67,10 @@
 
 
 
-          <button type="submit" class="btn-primary br-14">Sign In <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 4px;"></i></button>
+          <div style="display: flex; gap: 12px; margin-top: 10px;">
+            <button type="submit" class="btn-primary br-14" style="flex: 1;">Sign In <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 4px;"></i></button>
+            <button type="button" id="btn-signup" class="btn-secondary br-14" style="flex: 1; background: rgba(0,0,0,0.05); color: #1A1A1A; border: none; font-weight: 600; cursor: pointer; border-radius: 14px;">Create Account</button>
+          </div>
         </form>
 
         <div class="bottom-link">
@@ -79,7 +82,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-client.js"></script>
-  <script src="js/auth.js?v=2"></script>
+  <script src="js/auth.js?v=3"></script>
   <script>
 
 
@@ -99,6 +102,35 @@
         const passVal = document.getElementById('password').value;
         
         await handleStudentLogin(emailVal, passVal);
+      } catch (err) {
+        errBanner.textContent = err.message;
+        errBanner.classList.remove('hidden');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    };
+
+    // Signup Button Click
+    document.getElementById('btn-signup').onclick = async (e) => {
+      const btn = e.target;
+      const originalText = btn.innerHTML;
+      const errBanner = document.getElementById('error-banner');
+      
+      const emailVal = document.getElementById('email').value.trim();
+      const passVal = document.getElementById('password').value;
+
+      if (!emailVal || !passVal) {
+          errBanner.textContent = 'Please enter an email and password to create an account.';
+          errBanner.classList.remove('hidden');
+          return;
+      }
+      
+      errBanner.classList.add('hidden');
+      btn.disabled = true;
+      btn.innerHTML = 'Creating... <i class="fas fa-spinner fa-spin"></i>';
+
+      try {
+        await handleStudentSignup(emailVal, passVal);
       } catch (err) {
         errBanner.textContent = err.message;
         errBanner.classList.remove('hidden');

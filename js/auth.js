@@ -22,35 +22,40 @@ async function handleStudentLogin(email, password) {
   });
 
   if (error) {
-    if (error.message.includes('Invalid login credentials')) {
-      // User might not exist yet. Attempt auto-registration.
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-      });
-
-      if (signUpError) {
-        if (signUpError.message.includes('already registered')) {
-          // If they are already registered, it means their password was wrong!
-          throw new Error('Invalid email or password.');
-        }
-        throw new Error(signUpError.message);
-      }
-      
-      // If sign up succeeded but no session is returned, email confirmation might be enabled
-      if (!signUpData.session) {
-        throw new Error('Registration successful! Please check your email to confirm your account before logging in.');
-      }
-      
-      data = signUpData;
-    } else if (error.message.includes('Email not confirmed')) {
-      throw new Error('Please confirm your email address before logging in.');
-    } else {
-      throw new Error(error.message);
-    }
+    throw new Error('Invalid email or password.');
   }
 
+
   // Set the session locally for compatibility with other parts of the app
+  localStorage.setItem('userSession', JSON.stringify({
+    id: data.user.id,
+    email: email,
+    role: role
+  }));
+
+  window.location.href = 'student-dashboard.html';
+}
+
+async function handleStudentSignup(email, password) {
+  const { valid, role } = validateEmailDomain(email);
+  if (!valid) throw new Error('Only @student.providence.edu.in or @providence.edu.in allowed.');
+
+  const { data, error } = await supabase.auth.signUp({
+    email: email,
+    password: password,
+  });
+
+  if (error) {
+    if (error.message.includes('already registered')) {
+        throw new Error('You already have an account! Please click Sign In instead.');
+    }
+    throw new Error(error.message);
+  }
+
+  if (!data.session) {
+    throw new Error('Account created! Please check your email to confirm your account.');
+  }
+
   localStorage.setItem('userSession', JSON.stringify({
     id: data.user.id,
     email: email,
