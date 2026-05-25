@@ -3,17 +3,21 @@
 let busesData = [];
 let driverSessions = [];
 
+let activeTripsData = [];
+
 async function loadStudentDashboard() {
   const container = document.getElementById('bus-grid');
   if (!container) return;
 
-  const [busesRes, sessionsRes] = await Promise.all([
+  const [busesRes, sessionsRes, tripsRes] = await Promise.all([
     supabase.from('buses').select('*').order('id'),
-    supabase.from('driver_sessions').select('*')
+    supabase.from('driver_sessions').select('*'),
+    supabase.from('trips').select('bus_id').eq('status', 'active')
   ]);
 
   busesData = busesRes.data || [];
   driverSessions = sessionsRes.data || [];
+  activeTripsData = tripsRes.data || [];
 
   renderBusCards();
 }
@@ -30,8 +34,10 @@ function renderBusCards() {
 
   busesData.forEach(bus => {
     const session = driverSessions.find(s => s.bus_id === bus.id);
+    const hasActiveTrip = activeTripsData.some(t => t.bus_id === bus.id);
     
-    let isOnline = session && session.is_online;
+    // Bus is only "Online" to the student if the driver is connected AND has an active trip running
+    let isOnline = session && session.is_online && hasActiveTrip;
     let lastSeenStr = 'Never active';
 
     if (session && session.last_seen) {
@@ -43,7 +49,12 @@ function renderBusCards() {
           isOnline = false;
       }
       
-      lastSeenStr = isOnline ? 'Active Now' : `Last active: ${mins} mins ago`;
+      // If they are connected but just don't have an active trip, we can still show their last connection
+      if (session.is_online && timeDiffMs <= 90000 && !hasActiveTrip) {
+          lastSeenStr = 'Connected - Idle (No active trip)';
+      } else {
+          lastSeenStr = isOnline ? 'Active Now' : `Last active: ${mins} mins ago`;
+      }
     }
 
     const busPhotoHtml = bus.bus_photo_url 
