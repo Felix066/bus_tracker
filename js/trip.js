@@ -14,6 +14,35 @@ let lastReverseGeocodeTime = 0;
 let lastReverseGeocodeLat = null;
 let lastReverseGeocodeLon = null;
 
+// Screen Wake Lock API
+let wakeLock = null;
+
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Screen Wake Lock is active. Phone will not sleep.');
+        }
+    } catch (err) {
+        console.error('Wake Lock failed:', err);
+    }
+}
+
+function releaseWakeLock() {
+    if (wakeLock !== null) {
+        wakeLock.release().then(() => {
+            wakeLock = null;
+            console.log('Screen Wake Lock released.');
+        });
+    }
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && activeTripId) {
+        requestWakeLock();
+    }
+});
+
 // Caching and validation states
 const geocodeCache = new Map();
 let stopConfirmationStart = null;
@@ -71,6 +100,7 @@ async function startTrip() {
 
     startDriverGPS(trip.id, busId, tripType);
     startTripTimer();
+    requestWakeLock(); // Request wake lock to keep screen on
 
     btn.disabled = false; // re-enable for End Trip
     btn.textContent = 'End Trip';
@@ -394,6 +424,7 @@ async function endTrip() {
     localStorage.removeItem('activeTripType');
     // DO NOT clear bustrack_last_location, so the map can instantly show a marker on next start
 
+    releaseWakeLock(); // Release wake lock
     location.reload();
 }
 
@@ -437,6 +468,7 @@ async function recoverActiveTrip() {
 
     // Resume GPS
     startDriverGPS(trip.id, trip.bus_id, trip.trip_type);
+    requestWakeLock(); // Re-acquire wake lock on recovery
 
     // Update UI
     const btn = document.getElementById('start-btn');
