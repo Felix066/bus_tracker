@@ -60,7 +60,10 @@ function renderBusCards() {
     card.style.textAlign = 'left';
     card.style.background = '#1a1a1a';
     card.style.color = '#ffffff';
-    card.style.border = '1px solid #333333';
+    card.style.border = isOnline ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid #333333';
+    if (isOnline) {
+        card.style.boxShadow = '0 8px 32px rgba(16, 185, 129, 0.1)';
+    }
     
     card.innerHTML = `
       ${busPhotoHtml}
@@ -82,7 +85,7 @@ function renderBusCards() {
         </div>
       </div>
       
-      <button style="border-radius: 0; padding: 15px; font-size: 14px; display:flex; justify-content:center; align-items:center; gap: 8px; border:none; border-top: 1px solid rgba(255,255,255,0.05);" class="track-btn ${isOnline ? '' : 'disabled'}" onclick="handleTrackClick('${bus.id}', ${isOnline})">
+      <button style="border-radius: 0; padding: 15px; font-size: 14px; display:flex; justify-content:center; align-items:center; gap: 8px; border:none; border-top: 1px solid rgba(255,255,255,0.05); background: ${isOnline ? '#10b981' : '#2a2a2a'}; color: ${isOnline ? '#ffffff' : '#888888'}; transition: background 0.2s; cursor: ${isOnline ? 'pointer' : 'default'};" class="track-btn ${isOnline ? '' : 'disabled'}" onclick="handleTrackClick('${bus.id}', ${isOnline})" onmouseover="if(${isOnline}) this.style.background='#059669'" onmouseout="if(${isOnline}) this.style.background='#10b981'">
         ${isOnline ? '<i class="fas fa-map-marker-alt"></i> Track Live Location' : '<i class="fas fa-bed"></i> Currently Offline'}
       </button>
     `;
