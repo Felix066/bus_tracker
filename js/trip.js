@@ -402,12 +402,15 @@ async function recoverActiveTrip() {
     const session = JSON.parse(localStorage.getItem('driverSession'));
     if (!session) return;
 
-    const { data: trip } = await supabase
+    const { data: tripsRes } = await supabase
         .from('trips')
         .select('id, bus_id, trip_type, started_at, current_stop_index')
         .eq('driver_id', session.driverId)
         .eq('status', 'active')
-        .single();
+        .order('started_at', { ascending: false })
+        .limit(1);
+
+    const trip = tripsRes && tripsRes.length > 0 ? tripsRes[0] : null;
 
     if (!trip) return; // No active trip to recover
 

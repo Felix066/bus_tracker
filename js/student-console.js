@@ -24,7 +24,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             .select('id, driver_id, trip_type, started_at, current_stop_index')
             .eq('bus_id', busId)
             .eq('status', 'active')
-            .single(),
+            .order('started_at', { ascending: false })
+            .limit(1),
         supabase.from('computed_locations')
             .select('latitude, longitude, speed_kmh')
             .eq('bus_id', busId)
@@ -32,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             .limit(1)
     ]);
 
-    const trip = tripRes.data;
+    const trip = tripRes.data && tripRes.data.length > 0 ? tripRes.data[0] : null;
 
     if (!trip) {
         document.getElementById('location-display').textContent = 'No active trip for ' + busId;
