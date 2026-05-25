@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emergency SOS Alerts | BusTrack</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <style>
+    :root {
+      --bg: #f9fafb;
+      --surface: #ffffff;
+      --text: #111827;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+    }
+    .navbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      padding: 15px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .container {
+      padding: 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--danger);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-back {
+      padding: 8px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-back:hover {
+      background: #f3f4f6;
+    }
+    .alert-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 20px;
+    }
+    .alert-card {
+      background: var(--surface);
+      border: 1px solid var(--danger);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    .alert-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 4px;
+      background: var(--danger);
+    }
+    .alert-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 15px;
+    }
+    .alert-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 5px 0;
+    }
+    .alert-time {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .status-badge {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      animation: pulse-badge 2s infinite;
+    }
+    @keyframes pulse-badge {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    .detail-label {
+      width: 120px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .detail-value {
+      font-weight: 500;
+      color: var(--text);
+    }
+    .btn-resolve {
+      width: 100%;
+      background: var(--surface);
+      color: var(--danger);
+      border: 1px solid var(--danger);
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 600;
+      margin-top: 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-resolve:hover {
+      background: var(--danger);
+      color: white;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      background: var(--surface);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .empty-state i {
+      font-size: 48px;
+      color: #10b981;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand" style="color:var(--text);">BusTrack <em>Emergency Center</em></div>
+    <div class="nav-right" style="display: flex; align-items: center; gap: 15px;">
+      <a href="admin-dashboard.html" class="btn-back"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="header">
+      <h1><i class="fas fa-exclamation-triangle"></i> Active SOS Alerts</h1>
+    </div>
+
+    <div id="alerts-container" class="alert-grid">
+      <!-- Loading or rendered alerts -->
+      <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">
+        <i class="fas fa-spinner fa-spin"></i> Loading alerts...
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/session-protection.js"></script>
+  <script src="js/admin-sos.js"></script>
+  <script>
+    protectRoute('admin');
+  </script>
+</body>
+</html>

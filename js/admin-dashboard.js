@@ -291,6 +291,17 @@ async function deleteBus(busId) {
 }
 
 // --- ADMIN LOGS ---
+async function clearAdminLogs() {
+  if (!confirm("Are you sure you want to clear all admin logs?")) return;
+  const { error } = await supabase.from('admin_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) {
+    alert("Error clearing logs: " + error.message);
+  } else {
+    adminLogs = [];
+    renderAdminLogs();
+  }
+}
+
 async function logAdminAction(actionText) {
   await supabase.from('admin_logs').insert({
     admin_username: adminUsername,
@@ -320,13 +331,15 @@ function renderAdminLogs() {
 
 // --- SOS ALERTS ---
 function checkSOSAlerts() {
-  const banner = document.getElementById('sos-banner');
-  if (sosAlerts.length > 0) {
-    banner.style.display = 'block';
-    const activeBuses = sosAlerts.map(s => s.bus_id).join(', ');
-    banner.innerHTML = `<i class="fas fa-exclamation-triangle"></i> EMERGENCY SOS ACTIVATED BY: <strong>${activeBuses}</strong>`;
+  const badge = document.getElementById('sos-badge');
+  if (!badge) return;
+  
+  const uniqueBuses = [...new Set(sosAlerts.map(s => s.bus_id))];
+  if (uniqueBuses.length > 0) {
+    badge.style.display = 'block';
+    badge.innerText = uniqueBuses.length;
   } else {
-    banner.style.display = 'none';
+    badge.style.display = 'none';
   }
 }
 

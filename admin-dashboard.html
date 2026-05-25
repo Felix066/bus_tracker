@@ -307,15 +307,14 @@
   <nav class="navbar">
     <div class="brand" style="color:var(--text);">BusTrack <em>Admin Platform</em></div>
     <div class="nav-right" style="display: flex; align-items: center; gap: 15px;">
+      <a href="admin-sos.html" style="position: relative; color: var(--text-muted); font-size: 20px; text-decoration: none; margin-right: 10px;">
+        <i class="fas fa-bell"></i>
+        <span id="sos-badge" style="display: none; position: absolute; top: -5px; right: -8px; background: #ef4444; color: white; font-size: 10px; font-weight: bold; border-radius: 50%; padding: 2px 6px;">0</span>
+      </a>
       <span class="user-greeting" id="admin-name-display" style="color:var(--text-muted);">Admin</span>
       <button class="logout-btn" onclick="logoutAdmin()">Logout</button>
     </div>
   </nav>
-
-  <!-- SOS BANNER -->
-  <div id="sos-banner">
-    <i class="fas fa-exclamation-triangle"></i> EMERGENCY SOS ACTIVATED BY DRIVER!
-  </div>
 
   <!-- HEADER SECTION -->
   <div class="admin-header">
@@ -352,7 +351,10 @@
 
   <!-- ACTIVITY LOGS -->
   <div class="logs-section">
-    <h3>Admin Activity Log</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <h3 style="margin: 0;">Admin Activity Log</h3>
+      <button onclick="clearAdminLogs()" style="background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='var(--text)'; this.style.borderColor='#9ca3af'" onmouseout="this.style.color='var(--text-muted)'; this.style.borderColor='var(--border)'"><i class="fas fa-trash"></i> Clear History</button>
+    </div>
     <div class="log-list" id="log-list">
       <!-- Rendered via JS -->
     </div>

@@ -1,0 +1,114 @@
+// js/admin-sos.js
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadSOSAlerts();
+  subscribeToRealtime();
+});
+
+async function loadSOSAlerts() {
+  const container = document.getElementById('alerts-container');
+  
+  const { data: alerts, error } = await supabase
+    .from('sos_alerts')
+    .select('*')
+    .eq('status', 'active')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error(error);
+    container.innerHTML = `<div style="grid-column:1/-1; color:var(--danger); text-align:center;">Failed to load alerts.</div>`;
+    return;
+  }
+
+  // Deduplicate by bus_id keeping the latest one
+  const uniqueAlerts = [];
+  const seenBuses = new Set();
+  alerts.forEach(alert => {
+    if (!seenBuses.has(alert.bus_id)) {
+      uniqueAlerts.push(alert);
+      seenBuses.add(alert.bus_id);
+    }
+  });
+
+  if (uniqueAlerts.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="grid-column: 1/-1;">
+        <i class="fas fa-check-circle"></i>
+        <h2>All Clear</h2>
+        <p>There are no active emergency alerts.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = '';
+  
+  uniqueAlerts.forEach(alert => {
+    const card = document.createElement('div');
+    card.className = 'alert-card';
+    
+    const d = new Date(alert.created_at);
+    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + d.toLocaleDateString();
+    
+    let lat = alert.latitude ? Number(alert.latitude).toFixed(5) : 'Unknown';
+    let lng = alert.longitude ? Number(alert.longitude).toFixed(5) : 'Unknown';
+    let mapsLink = '';
+    if (alert.latitude && alert.longitude) {
+      mapsLink = `<a href="https://www.google.com/maps?q=${alert.latitude},${alert.longitude}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 13px;"><i class="fas fa-map-marker-alt"></i> View on Map</a>`;
+    }
+
+    card.innerHTML = `
+      <div class="alert-header">
+        <div>
+          <h3 class="alert-title">${alert.bus_id}</h3>
+          <div class="alert-time">${timeStr}</div>
+        </div>
+        <div class="status-badge">ACTIVE SOS</div>
+      </div>
+      
+      <div class="detail-row">
+        <div class="detail-label">Driver Name:</div>
+        <div class="detail-value">${alert.driver_name || 'N/A'}</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">Location:</div>
+        <div class="detail-value">${lat}, ${lng} <br> ${mapsLink}</div>
+      </div>
+      
+      <button class="btn-resolve" onclick="resolveAlert('${alert.bus_id}')">Mark as Resolved</button>
+    `;
+    
+    container.appendChild(card);
+  });
+}
+
+async function resolveAlert(busId) {
+  if (!confirm(`Are you sure you want to resolve the SOS alert for ${busId}?`)) return;
+  
+  const { error } = await supabase
+    .from('sos_alerts')
+    .update({ status: 'resolved' })
+    .eq('bus_id', busId)
+    .eq('status', 'active');
+    
+  if (error) {
+    alert("Error resolving alert: " + error.message);
+  } else {
+    const session = JSON.parse(localStorage.getItem('adminSession'));
+    const adminName = session ? session.username : 'Admin';
+    await supabase.from('admin_logs').insert({
+      admin_username: adminName,
+      action_text: `Resolved SOS alert for ${busId}`
+    });
+    
+    loadSOSAlerts();
+  }
+}
+
+function subscribeToRealtime() {
+  supabase.channel('admin-sos-sync')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sos_alerts' }, () => {
+      loadSOSAlerts();
+    })
+    .subscribe();
+}
