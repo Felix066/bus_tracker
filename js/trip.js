@@ -239,6 +239,16 @@ function startDriverGPS(tripId, busId, tripType) {
     const busLabel = busId.toLowerCase().includes('bus') ? 
                      busId.replace(/bus\s*/i, 'B').toUpperCase() : busId;
 
+    // Aggressively grab ANY cached location instantly to prevent the 30-second blank map
+    navigator.geolocation.getCurrentPosition((pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        if (typeof cacheCurrentLocation === 'function') {
+            cacheCurrentLocation(lat, lon, pos.coords.accuracy);
+        }
+        updateBusMarker(lat, lon, busLabel);
+    }, () => {}, { maximumAge: Infinity, timeout: 3000 });
+
     watchId = navigator.geolocation.watchPosition(async (pos) => {
         const now = Date.now();
         
@@ -289,7 +299,7 @@ function startDriverGPS(tripId, busId, tripType) {
 
     }, (err) => {
         console.error("GPS Watch Error:", err);
-    }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
+    }, { enableHighAccuracy: true, maximumAge: 60000, timeout: 15000 });
 }
 
 function advanceStopIndex(newIndex, tripId) {
@@ -382,7 +392,7 @@ async function endTrip() {
     localStorage.removeItem('activeTripId');
     localStorage.removeItem('activeBusId');
     localStorage.removeItem('activeTripType');
-    localStorage.removeItem('bustrack_last_location'); // Clear map marker on end trip
+    // DO NOT clear bustrack_last_location, so the map can instantly show a marker on next start
 
     location.reload();
 }
