@@ -20,53 +20,70 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.4);
       z-index: 10000;
       align-items: center;
       justify-content: center;
-      backdrop-filter: blur(5px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
     .location-prompt-modal.active {
       display: flex;
     }
     .location-prompt-card {
-      background: var(--surface);
+      background: rgba(255, 255, 255, 0.85);
       padding: 30px;
       border-radius: 20px;
       width: 90%;
       max-width: 400px;
       text-align: center;
-      border: 1px solid var(--border);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
     .location-prompt-card h3 {
-      color: white;
+      color: #1A1A1A;
       margin-bottom: 15px;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
     }
     .location-prompt-card p {
-      color: var(--text-muted);
+      color: #4A4A4A;
       margin-bottom: 25px;
-      line-height: 1.5;
+      line-height: 1.6;
+      font-size: 14px;
     }
     .prompt-btn-group {
       display: flex;
-      gap: 10px;
+      gap: 12px;
     }
     .prompt-btn-group button {
       flex: 1;
       padding: 12px;
-      border-radius: 10px;
+      border-radius: 12px;
       font-weight: 600;
       cursor: pointer;
       border: none;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s ease;
     }
     .btn-allow {
-      background: var(--accent);
+      background: #10B981;
       color: white;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    }
+    .btn-allow:hover {
+      background: #059669;
+      transform: translateY(-1px);
     }
     .btn-deny {
-      background: transparent;
-      color: var(--text-muted);
-      border: 1px solid var(--border) !important;
+      background: rgba(0,0,0,0.05);
+      color: #4A4A4A;
+    }
+    .btn-deny:hover {
+      background: rgba(0,0,0,0.08);
     }
   </style>
 </head>
