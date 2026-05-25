@@ -23,42 +23,32 @@ async function handleStudentLogin(email, password) {
 
   if (error) {
     if (error.message.includes('Invalid login credentials')) {
-      throw new Error('Invalid email or password. If this is a new account, please click "Create Account" first!');
-    }
-    throw new Error(error.message);
-  }
+      // User might not exist yet. Attempt auto-registration silently.
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+      });
 
+      if (signUpError) {
+        if (signUpError.message.includes('already registered')) {
+          // If they are already registered, it means their password was wrong!
+          throw new Error('Invalid email or password.');
+        }
+        throw new Error(signUpError.message);
+      }
+      
+      // If sign up succeeded but no session is returned, email confirmation might be enabled
+      if (!signUpData.session) {
+        throw new Error('Please disable "Confirm email" in Supabase Auth settings to allow auto-login.');
+      }
+      
+      data = signUpData;
+    } else {
+      throw new Error('Invalid email or password.');
+    }
+  }
 
   // Set the session locally for compatibility with other parts of the app
-  localStorage.setItem('userSession', JSON.stringify({
-    id: data.user.id,
-    email: email,
-    role: role
-  }));
-
-  window.location.href = 'student-dashboard.html';
-}
-
-async function handleStudentSignup(email, password) {
-  const { valid, role } = validateEmailDomain(email);
-  if (!valid) throw new Error('Only @student.providence.edu.in or @providence.edu.in allowed.');
-
-  const { data, error } = await supabase.auth.signUp({
-    email: email,
-    password: password,
-  });
-
-  if (error) {
-    if (error.message.includes('already registered')) {
-        throw new Error('You already have an account! Please click Sign In instead.');
-    }
-    throw new Error(error.message);
-  }
-
-  if (!data.session) {
-    throw new Error('Account created! Please check your email to confirm your account.');
-  }
-
   localStorage.setItem('userSession', JSON.stringify({
     id: data.user.id,
     email: email,
