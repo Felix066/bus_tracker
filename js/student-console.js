@@ -125,6 +125,29 @@ function subscribeToLiveUpdates() {
             }
         })
         .subscribe();
+
+    // Fallback: Check driver heartbeat every 30 seconds in case they forcefully closed the app
+    // and the database wasn't updated via Realtime
+    setInterval(async () => {
+        const { data: session } = await supabase.from('driver_sessions')
+            .select('last_seen, is_online')
+            .eq('bus_id', busId)
+            .single();
+            
+        if (session) {
+            if (session.is_online === false) {
+                handleDriverOffline();
+            } else if (session.last_seen) {
+                const timeDiffMs = new Date() - new Date(session.last_seen);
+                if (timeDiffMs > 90000) { // 90 seconds timeout
+                    handleDriverOffline();
+                } else if (activeTripId) {
+                    // Only restore green status if heartbeat is fresh AND they haven't explicitly ended trip
+                    handleDriverOnline();
+                }
+            }
+        }
+    }, 30000);
 }
 
 function handleDriverOffline() {
