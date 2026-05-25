@@ -120,11 +120,19 @@ function subscribeToLiveUpdates() {
 }
 
 function handleDriverOffline() {
-    const locationDisplay = document.getElementById('location-display');
-    if (locationDisplay) {
-        locationDisplay.textContent = 'Driver offline - Showing last location';
-        locationDisplay.classList.remove('searching');
-        locationDisplay.style.color = '#ef4444'; // Red text for offline
+    const statusBar = document.getElementById('trip-status-bar');
+    const statusText = document.getElementById('trip-status-text');
+    const statusDot = statusBar ? statusBar.querySelector('[class^="status-dot"]') : null;
+    
+    if (statusBar && statusText) {
+        statusBar.style.background = 'rgba(239, 68, 68, 0.1)';
+        statusBar.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+        statusText.textContent = 'Driver Offline — Showing last known location';
+        statusText.style.color = '#ef4444';
+        if (statusDot) {
+            statusDot.style.background = '#ef4444';
+            statusDot.style.boxShadow = '0 0 8px #ef4444';
+        }
     }
     const speedDisplay = document.getElementById('speed-display');
     if (speedDisplay) speedDisplay.textContent = '0 km/h';
@@ -132,11 +140,19 @@ function handleDriverOffline() {
 }
 
 function handleTripEnded() {
-    const locationDisplay = document.getElementById('location-display');
-    if (locationDisplay) {
-        locationDisplay.textContent = 'Trip Ended - Showing last location';
-        locationDisplay.classList.remove('searching');
-        locationDisplay.style.color = '#f59e0b'; // Amber text for ended
+    const statusBar = document.getElementById('trip-status-bar');
+    const statusText = document.getElementById('trip-status-text');
+    const statusDot = statusBar ? statusBar.querySelector('[class^="status-dot"]') : null;
+    
+    if (statusBar && statusText) {
+        statusBar.style.background = 'rgba(245, 158, 11, 0.1)';
+        statusBar.style.border = '1px solid rgba(245, 158, 11, 0.2)';
+        statusText.textContent = 'Trip Ended — Showing last known location';
+        statusText.style.color = '#f59e0b';
+        if (statusDot) {
+            statusDot.style.background = '#f59e0b';
+            statusDot.style.boxShadow = '0 0 8px #f59e0b';
+        }
     }
     const speedDisplay = document.getElementById('speed-display');
     if (speedDisplay) speedDisplay.textContent = '0 km/h';
