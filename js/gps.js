@@ -7,8 +7,7 @@ function roundCoord(value) {
 function startPassengerGPS(tripId, busId, role) {
   if (passengerGpsInterval) return;
 
-  passengerGpsInterval = setInterval(() => {
-    navigator.geolocation.getCurrentPosition(async (pos) => {
+  const getAndSendLocation = async (pos) => {
       // Prevent map drift by only accepting highly accurate passenger GPS
       if (pos.coords.accuracy > 50) {
         console.log('Passenger GPS ignored — accuracy > 50m:', pos.coords.accuracy);
@@ -44,9 +43,22 @@ function startPassengerGPS(tripId, busId, role) {
       }).then(({ error }) => {
         if (error) console.error("Error inserting passenger location:", error);
       });
+  };
 
-    }, (err) => console.error(err), { enableHighAccuracy: true });
-  }, 3000);
+  // Trigger permission prompt immediately on user gesture
+  navigator.geolocation.getCurrentPosition((pos) => {
+      // First ping
+      getAndSendLocation(pos);
+      
+      // Setup interval for subsequent pings
+      if (!passengerGpsInterval) {
+          passengerGpsInterval = setInterval(() => {
+              navigator.geolocation.getCurrentPosition(getAndSendLocation, (err) => console.error(err), { enableHighAccuracy: true });
+          }, 3000);
+      }
+  }, (err) => {
+      console.error("Location permission denied or failed:", err);
+  }, { enableHighAccuracy: true });
 }
 
 function stopPassengerGPS(tripId, busId, role) {

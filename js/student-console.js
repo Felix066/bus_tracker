@@ -85,7 +85,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     subscribeToLiveUpdates();
 
     // 7. Prompt for Location Access (Optional)
-    checkLocationSharingPrompt();
+    if (isTripActive) {
+        checkLocationSharingPrompt();
+    }
 });
 
 function subscribeToLiveUpdates() {
