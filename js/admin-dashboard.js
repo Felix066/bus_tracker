@@ -13,7 +13,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadDashboardData();
   subscribeToRealtime();
+  setupFileInputListeners();
 });
+
+function setupFileInputListeners() {
+  document.getElementById('inpBusPhoto').addEventListener('change', function(e) {
+    handleFileInputChange(e.target, 'busPhotoPreview', 'btnRemoveBusPhoto');
+  });
+  document.getElementById('inpDriverPhoto').addEventListener('change', function(e) {
+    handleFileInputChange(e.target, 'driverPhotoPreview', 'btnRemoveDriverPhoto');
+  });
+}
+
+function handleFileInputChange(input, previewId, removeBtnId) {
+  const file = input.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById(previewId).src = e.target.result;
+      document.getElementById(previewId).style.display = 'block';
+      document.getElementById(removeBtnId).style.display = 'inline-block';
+    }
+    reader.readAsDataURL(file);
+  } else {
+    document.getElementById(previewId).style.display = 'none';
+    document.getElementById(removeBtnId).style.display = 'none';
+  }
+}
 
 // --- LOAD DATA ---
 async function loadDashboardData() {
@@ -110,10 +136,11 @@ function renderBusTable() {
       `;
     }
 
+    const localBusPhoto = localStorage.getItem(`bus_photo_${bus.id}`) || bus.bus_photo_url;
     tr.innerHTML = `
       <td>
         <div style="display:flex; align-items:center; gap: 12px;">
-          ${bus.bus_photo_url ? `<img src="${bus.bus_photo_url}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : ''}
+          ${localBusPhoto ? `<img src="${localBusPhoto}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : ''}
           <span>${bus.id}</span>
         </div>
       </td>
@@ -179,9 +206,13 @@ function openMasterModal(busId = null) {
   document.getElementById('inpRoute').value = '';
   document.getElementById('inpPlate').value = '';
   document.getElementById('inpBusPhoto').value = '';
+  document.getElementById('busPhotoPreview').style.display = 'none';
+  document.getElementById('btnRemoveBusPhoto').style.display = 'none';
+  document.getElementById('inpDriverPhoto').value = '';
+  document.getElementById('driverPhotoPreview').style.display = 'none';
+  document.getElementById('btnRemoveDriverPhoto').style.display = 'none';
   document.getElementById('inpDriverName').value = '';
   document.getElementById('inpDriverPhone').value = '';
-  document.getElementById('inpDriverPhoto').value = '';
   document.getElementById('inpDriverUser').value = '';
   document.getElementById('inpDriverPass').value = '';
 
@@ -199,6 +230,19 @@ function openMasterModal(busId = null) {
       document.getElementById('inpDriverName').value = bus.driver_name || '';
       document.getElementById('inpDriverPhone').value = bus.driver_phone || '';
     }
+
+    const busPhotoUrl = localStorage.getItem(`bus_photo_${busId}`) || (bus && bus.bus_photo_url);
+    if (busPhotoUrl) {
+      document.getElementById('busPhotoPreview').src = busPhotoUrl;
+      document.getElementById('busPhotoPreview').style.display = 'block';
+      document.getElementById('btnRemoveBusPhoto').style.display = 'inline-block';
+    }
+    const driverPhotoUrl = localStorage.getItem(`driver_photo_${busId}`) || (bus && bus.driver_photo_url);
+    if (driverPhotoUrl) {
+      document.getElementById('driverPhotoPreview').src = driverPhotoUrl;
+      document.getElementById('driverPhotoPreview').style.display = 'block';
+      document.getElementById('btnRemoveDriverPhoto').style.display = 'inline-block';
+    }
   } else {
     document.getElementById('modalTitle').innerText = 'Add New Bus';
     document.getElementById('isNewBus').value = 'true';
@@ -212,21 +256,64 @@ function closeMasterModal() {
 }
 
 // --- SAVE BUS & UPLOAD ---
-async function uploadFile(file, bucket, prefix) {
-  if (!file) return null;
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${prefix}_${Date.now()}.${fileExt}`;
-  const filePath = `${fileName}`;
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
-  const { data, error } = await supabase.storage.from(bucket).upload(filePath, file, { cacheControl: '3600', upsert: false });
-  if (error) {
-    console.error("Upload error:", error);
-    alert(`Failed to upload to ${bucket}: Make sure you created a public storage bucket named '${bucket}'.`);
-    return null;
+function removePhoto(type) {
+  const busId = document.getElementById('editBusId').value;
+  if (!busId) {
+    if (type === 'bus') {
+      document.getElementById('inpBusPhoto').value = '';
+      document.getElementById('busPhotoPreview').style.display = 'none';
+      document.getElementById('btnRemoveBusPhoto').style.display = 'none';
+      // If there was an existing photo in localStorage, revert to showing it? 
+      // No, they clicked trash, we should remove it permanently.
+    } else {
+      document.getElementById('inpDriverPhoto').value = '';
+      document.getElementById('driverPhotoPreview').style.display = 'none';
+      document.getElementById('btnRemoveDriverPhoto').style.display = 'none';
+    }
+    return;
   }
   
-  const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
-  return publicUrlData.publicUrl;
+  const hasLocalPhoto = localStorage.getItem(`${type}_photo_${busId}`);
+  const bus = busesData.find(b => b.id === busId);
+  const hasDbPhoto = bus && (type === 'bus' ? bus.bus_photo_url : bus.driver_photo_url);
+
+  if (!hasLocalPhoto && !hasDbPhoto) {
+    if (type === 'bus') {
+      document.getElementById('inpBusPhoto').value = '';
+      document.getElementById('busPhotoPreview').style.display = 'none';
+      document.getElementById('btnRemoveBusPhoto').style.display = 'none';
+    } else {
+      document.getElementById('inpDriverPhoto').value = '';
+      document.getElementById('driverPhotoPreview').style.display = 'none';
+      document.getElementById('btnRemoveDriverPhoto').style.display = 'none';
+    }
+    return;
+  }
+
+  if (confirm(`Are you sure you want to delete this ${type} photo permanently?`)) {
+    localStorage.removeItem(`${type}_photo_${busId}`);
+    if (type === 'bus') {
+      supabase.from('buses').update({ bus_photo_url: null }).eq('id', busId).then();
+      document.getElementById('inpBusPhoto').value = '';
+      document.getElementById('busPhotoPreview').style.display = 'none';
+      document.getElementById('btnRemoveBusPhoto').style.display = 'none';
+    } else {
+      supabase.from('buses').update({ driver_photo_url: null }).eq('id', busId).then();
+      document.getElementById('inpDriverPhoto').value = '';
+      document.getElementById('driverPhotoPreview').style.display = 'none';
+      document.getElementById('btnRemoveDriverPhoto').style.display = 'none';
+    }
+    loadDashboardData();
+  }
 }
 
 async function saveMasterBus() {
@@ -244,11 +331,14 @@ async function saveMasterBus() {
     const busFile = document.getElementById('inpBusPhoto').files[0];
     const driverFile = document.getElementById('inpDriverPhoto').files[0];
 
-    let busPhotoUrl = null;
-    let driverPhotoUrl = null;
-
-    if (busFile) busPhotoUrl = await uploadFile(busFile, 'bus-images', `bus_${busId.replace(/[^a-zA-Z0-9]/g, '')}`);
-    if (driverFile) driverPhotoUrl = await uploadFile(driverFile, 'driver-images', `driver_${busId.replace(/[^a-zA-Z0-9]/g, '')}`);
+    if (busFile) {
+      const dataUrl = await fileToDataUrl(busFile);
+      localStorage.setItem(`bus_photo_${busId}`, dataUrl);
+    }
+    if (driverFile) {
+      const dataUrl = await fileToDataUrl(driverFile);
+      localStorage.setItem(`driver_photo_${busId}`, dataUrl);
+    }
 
     const busPayload = {
       route_name: document.getElementById('inpRoute').value.trim(),
@@ -256,9 +346,6 @@ async function saveMasterBus() {
       driver_name: document.getElementById('inpDriverName').value.trim(),
       driver_phone: document.getElementById('inpDriverPhone').value.trim()
     };
-
-    if (busPhotoUrl) busPayload.bus_photo_url = busPhotoUrl;
-    if (driverPhotoUrl) busPayload.driver_photo_url = driverPhotoUrl;
 
     if (isNew) {
       busPayload.id = busId;
@@ -298,6 +385,8 @@ async function deleteBus(busId) {
   await supabase.from('driver_sessions').delete().eq('bus_id', busId);
   await supabase.from('drivers').update({ assigned_bus: null }).eq('assigned_bus', busId);
   await supabase.from('buses').delete().eq('id', busId);
+  localStorage.removeItem(`bus_photo_${busId}`);
+  localStorage.removeItem(`driver_photo_${busId}`);
   await logAdminAction(`Removed bus: ${busId}`);
   loadDashboardData();
 }

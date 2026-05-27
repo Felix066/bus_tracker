@@ -288,6 +288,8 @@
     
     .file-input-wrapper { display: flex; align-items: center; gap: 10px; }
     .file-input-wrapper input[type="file"] { flex-grow: 1; padding: 6px; border:none; background:transparent;}
+    .btn-remove-photo { background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+    .btn-remove-photo:hover { background: #dc2626; }
 
     .modal-footer {
       padding: 20px; border-top: 1px solid var(--border);
@@ -409,7 +411,9 @@
           <label>Bus Photo</label>
           <div class="file-input-wrapper">
             <input type="file" id="inpBusPhoto" accept="image/*">
+            <button class="btn-remove-photo" id="btnRemoveBusPhoto" onclick="removePhoto('bus')" style="display:none;" type="button" title="Delete Photo"><i class="fas fa-trash"></i></button>
           </div>
+          <img id="busPhotoPreview" src="" style="display:none; width:60px; height:60px; border-radius:8px; object-fit:cover; margin-top:10px;">
         </div>
 
         <div class="form-section-title">Driver Details</div>
@@ -425,7 +429,9 @@
           <label>Driver Profile Photo</label>
           <div class="file-input-wrapper">
             <input type="file" id="inpDriverPhoto" accept="image/*">
+            <button class="btn-remove-photo" id="btnRemoveDriverPhoto" onclick="removePhoto('driver')" style="display:none;" type="button" title="Delete Photo"><i class="fas fa-trash"></i></button>
           </div>
+          <img id="driverPhotoPreview" src="" style="display:none; width:60px; height:60px; border-radius:8px; object-fit:cover; margin-top:10px;">
         </div>
 
         <div class="form-section-title">Driver Login Credentials</div>
