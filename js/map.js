@@ -153,9 +153,21 @@ function updateBusMarker(lat, lon, label = 'Bus') {
         map.setView([lat, lon], map.getZoom());
     } else {
         const oldPos = busMarker.getLatLng();
-        animateMarker(busMarker, oldPos.lat, oldPos.lng, lat, lon, 2500);
-        busMarker.setIcon(createBusIcon(label));
-        map.panTo([lat, lon], { animate: true, duration: 2.5 });
+        // Use haversineDistance if available to check movement threshold (e.g., 3 meters)
+        let distance = 100; // default to rendering if haversine isn't defined
+        if (typeof haversineDistance === 'function') {
+            distance = haversineDistance(oldPos.lat, oldPos.lng, lat, lon);
+        }
+        
+        if (distance >= 3) { // 3 meters threshold
+            animateMarker(busMarker, oldPos.lat, oldPos.lng, lat, lon, 2500);
+            busMarker.setIcon(createBusIcon(label));
+            
+            // Continuous Automatic Map Pan Issue: Only pan if explicitly enabled
+            if (window.isFollowBusEnabled) {
+                map.panTo([lat, lon], { animate: true, duration: 2.5 });
+            }
+        }
     }
 }
 

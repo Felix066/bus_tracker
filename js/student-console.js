@@ -19,20 +19,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     busId = busParam.replace(/Bus/i, 'Bus '); // "Bus4" -> "Bus 4"
 
     // 2. Fetch Active Trip and Initial Location in parallel
-    const [tripRes, locRes] = await Promise.all([
-        supabase.from('trips')
-            .select('id, driver_id, trip_type, started_at, status, current_stop_index')
-            .eq('bus_id', busId)
-            .order('started_at', { ascending: false })
-            .limit(1),
-        supabase.from('computed_locations')
-            .select('latitude, longitude, speed_kmh')
-            .eq('bus_id', busId)
-            .order('computed_at', { ascending: false })
-            .limit(1)
-    ]);
-
-    const trip = tripRes.data && tripRes.data.length > 0 ? tripRes.data[0] : null;
+    const trip = await getTripInfo(busId);
+    const locData = await getBusLocation(busId);
+    
+    const locRes = { data: locData ? [locData] : null };
 
     if (!trip) {
         document.getElementById('location-display').textContent = 'No trip history found for ' + busId;
@@ -93,9 +83,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 function subscribeToLiveUpdates() {
     supabase.channel(`bus-${busId}-live`)
         .on('postgres_changes', {
-            event: 'INSERT',
+            event: '*', // Listen to INSERT and UPDATE since we are using UPSERT
             schema: 'public',
-            table: 'computed_locations',
+            table: 'current_bus_locations',
             filter: `bus_id=eq.${busId}`
         }, (payload) => {
             if (payload.new.trip_id === activeTripId) {
@@ -264,16 +254,11 @@ async function geocodeIfNeeded(lat, lon) {
 }
 
 // ---------------------------------------------
-// Optional Student Location Sharing
+// Optional Student Location Sharing (DISABLED)
 // ---------------------------------------------
 function checkLocationSharingPrompt() {
-    const hasPrompted = sessionStorage.getItem(`locationPrompted_${busId}`);
-    if (!hasPrompted) {
-        setTimeout(() => {
-            const modal = document.getElementById('locationPrompt');
-            if (modal) modal.classList.add('active');
-        }, 2000); // 2 second delay before asking
-    }
+    // Passenger GPS uploads have been disabled completely to reduce database load.
+    console.log("Passenger GPS uploads disabled.");
 }
 
 document.getElementById('btn-deny')?.addEventListener('click', () => {
@@ -285,12 +270,6 @@ document.getElementById('btn-allow')?.addEventListener('click', () => {
     sessionStorage.setItem(`locationPrompted_${busId}`, 'true');
     document.getElementById('locationPrompt').classList.remove('active');
     
-    const session = JSON.parse(localStorage.getItem('userSession'));
-    const userRole = session ? session.role : 'student';
-
-    // Call existing gps.js function
-    if (window.startPassengerGPS) {
-        localStorage.setItem('activeTripId', activeTripId);
-        window.startPassengerGPS(activeTripId, busId, userRole);
-    }
+    // GPS start disabled.
 });
+

@@ -98,6 +98,10 @@ async function startTrip() {
     activeTripId = trip.id;
     currentTripType = tripType;
 
+    // Get Auth Token for backend API
+    const userEmail = driver.email || 'driver@providence.edu.in';
+    await getAuthToken(driver.driverId, userEmail, 'driver', trip.id);
+
     startDriverGPS(trip.id, busId, tripType);
     startTripTimer();
     requestWakeLock(); // Request wake lock to keep screen on
@@ -138,13 +142,14 @@ function shouldSaveLocation(lat, lon) {
 
 // OPTIMIZATION 9 — Non-blocking Background Saves
 function saveLocationBackground(tripId, busId, lat, lon, speed) {
-    supabase.from('bus_locations').insert({
-        trip_id: tripId, bus_id: busId,
-        source_role: 'driver',
-        latitude: lat, longitude: lon,
-        speed_kmh: speed,
-        is_accepted: true
-    }).then(() => {}).catch(err => console.error('Save error:', err));
+    const driver = JSON.parse(localStorage.getItem('driverSession'));
+    const driverId = driver ? driver.driverId : 'unknown';
+    
+    submitLocationSecure(lat, lon, speed, tripId, busId, 'driver', driverId)
+      .then(result => {
+          if (!result.success) console.warn('Location submission failed:', result.error);
+      })
+      .catch(err => console.error('Save error:', err));
 }
 
 
@@ -161,16 +166,9 @@ async function saveComputedLocationIfChanged(tripId, busId, lat, lon, speedKmh) 
         if (now - lastComputedTime < 3000) return; 
     }
 
-    supabase.from('computed_locations').insert({
-        trip_id:   tripId,
-        bus_id:    busId,
-        latitude:  roundedLat,
-        longitude: roundedLon,
-        speed_kmh: speedKmh
-    }).then(({ error }) => {
-        if (error) console.error("Error saving computed location:", error);
-    });
-
+    // Handled by backend UPSERT to current_bus_locations now
+    // We can just rely on saveLocationBackground if we merge them, but we'll keep this separate if needed
+    // Actually, we'll let saveLocationBackground handle the UPSERT to current_bus_locations via backend
     lastComputedLat = roundedLat;
     lastComputedLon = roundedLon;
     lastComputedTime = now;
@@ -467,6 +465,10 @@ async function recoverActiveTrip() {
     }
 
     // Resume GPS
+    // Get Auth Token for backend API
+    const userEmail = session.email || 'driver@providence.edu.in';
+    await getAuthToken(session.driverId, userEmail, 'driver', trip.id);
+
     startDriverGPS(trip.id, trip.bus_id, trip.trip_type);
     requestWakeLock(); // Re-acquire wake lock on recovery
 
