@@ -125,48 +125,111 @@ function renderBusTable() {
       else if (hours > 0) formattedTime = `${hours} hour${hours > 1 ? 's' : ''} ago`;
       else formattedTime = `${mins} min${mins !== 1 ? 's' : ''} ago`;
 
-      lastSeenStr = '<span style="font-size: 11px; color:#9ca3af; margin-left: 8px;">(Last active: ' + formattedTime + ')</span>';
+      if (formattedTime) {
+        lastSeenStr = '(Last active: ' + formattedTime + ')';
+      }
     }
 
     const tr = document.createElement('tr');
     
-    // Inline editing logic for driver
-    let driverCellHtml = '';
-    const safeBusId = escapeHTML(bus.id);
-    const safeDriverName = escapeHTML(bus.driver_name || '');
-    if (editingDriverForBusId === bus.id) {
-      driverCellHtml = '<input type="text" class="inline-input" id="inlineDriver_' + safeBusId + '" value="' + safeDriverName + '" placeholder="Enter driver name">\n' +
-        '<button class="btn-inline-save" onclick="saveInlineDriver(\'' + safeBusId + '\')">Save Changes</button>';
-    } else {
-      driverCellHtml = '<div class="driver-name-display" onclick="enableInlineEdit(\'' + safeBusId + '\')">\n' +
-        (safeDriverName || '<span style="color:#9ca3af; font-style:italic;">No driver assigned</span>') + '\n' +
-        '<i class="fas fa-pen"></i>\n' +
-        '</div>';
-    }
+    const localBusPhoto = localStorage.getItem(`bus_photo_${bus.id}`) || bus.bus_photo_url;
 
-    const imgHtml = localBusPhoto ? '<img src="' + localBusPhoto + '" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">' : '';
-    tr.innerHTML = '<td>\n' +
-        '<div style="display:flex; align-items:center; gap: 12px;">\n' +
-        imgHtml + '\n' +
-        '<span>' + safeBusId + '</span>\n' +
-        '</div>\n' +
-      '</td>\n' +
-      '<td>\n' +
-        driverCellHtml + '\n' +
-      '</td>\n' +
-      '<td>\n' +
-        '<div class="status-cell">\n' +
-          '<div class="status-dot ' + statusClass + '"></div> \n' +
-          '<span style="text-transform: capitalize;">' + statusText + '</span>\n' +
-          lastSeenStr + '\n' +
-        '</div>\n' +
-      '</td>\n' +
-      '<td>\n' +
-        '<div class="actions-cell">\n' +
-          '<button class="btn-remove" onclick="deleteBus(\'' + safeBusId + '\')">Remove</button>\n' +
-          '<button class="btn-edit-row" onclick="openMasterModal(\'' + safeBusId + '\')"><i class="fas fa-cog"></i></button>\n' +
-        '</div>\n' +
-      '</td>';
+    // Cell 1
+    const td1 = document.createElement('td');
+    const div1 = document.createElement('div');
+    div1.style.display = 'flex';
+    div1.style.alignItems = 'center';
+    div1.style.gap = '12px';
+    if (localBusPhoto) {
+      const img = document.createElement('img');
+      img.src = localBusPhoto;
+      img.style.width = '40px';
+      img.style.height = '40px';
+      img.style.borderRadius = '8px';
+      img.style.objectFit = 'cover';
+      div1.appendChild(img);
+    }
+    const span1 = document.createElement('span');
+    span1.textContent = bus.id;
+    div1.appendChild(span1);
+    td1.appendChild(div1);
+    tr.appendChild(td1);
+
+    // Cell 2
+    const td2 = document.createElement('td');
+    if (editingDriverForBusId === bus.id) {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'inline-input';
+      input.id = 'inlineDriver_' + bus.id;
+      input.value = bus.driver_name || '';
+      input.placeholder = 'Enter driver name';
+      const btn = document.createElement('button');
+      btn.className = 'btn-inline-save';
+      btn.textContent = 'Save Changes';
+      btn.onclick = () => saveInlineDriver(bus.id);
+      td2.appendChild(input);
+      td2.appendChild(btn);
+    } else {
+      const div2 = document.createElement('div');
+      div2.className = 'driver-name-display';
+      div2.onclick = () => enableInlineEdit(bus.id);
+      if (bus.driver_name) {
+        div2.appendChild(document.createTextNode(bus.driver_name + ' '));
+      } else {
+        const spanEmpty = document.createElement('span');
+        spanEmpty.style.color = '#9ca3af';
+        spanEmpty.style.fontStyle = 'italic';
+        spanEmpty.textContent = 'No driver assigned ';
+        div2.appendChild(spanEmpty);
+      }
+      const iPen = document.createElement('i');
+      iPen.className = 'fas fa-pen';
+      div2.appendChild(iPen);
+      td2.appendChild(div2);
+    }
+    tr.appendChild(td2);
+
+    // Cell 3
+    const td3 = document.createElement('td');
+    const div3 = document.createElement('div');
+    div3.className = 'status-cell';
+    const dot = document.createElement('div');
+    dot.className = 'status-dot ' + statusClass;
+    const spanStatus = document.createElement('span');
+    spanStatus.style.textTransform = 'capitalize';
+    spanStatus.textContent = statusText;
+    div3.appendChild(dot);
+    div3.appendChild(spanStatus);
+    if (lastSeenStr) {
+      const spanLast = document.createElement('span');
+      spanLast.style.fontSize = '11px';
+      spanLast.style.color = '#9ca3af';
+      spanLast.style.marginLeft = '8px';
+      spanLast.textContent = lastSeenStr;
+      div3.appendChild(spanLast);
+    }
+    td3.appendChild(div3);
+    tr.appendChild(td3);
+
+    // Cell 4
+    const td4 = document.createElement('td');
+    const div4 = document.createElement('div');
+    div4.className = 'actions-cell';
+    const btnRem = document.createElement('button');
+    btnRem.className = 'btn-remove';
+    btnRem.textContent = 'Remove';
+    btnRem.onclick = () => deleteBus(bus.id);
+    const btnEdit = document.createElement('button');
+    btnEdit.className = 'btn-edit-row';
+    btnEdit.onclick = () => openMasterModal(bus.id);
+    const iCog = document.createElement('i');
+    iCog.className = 'fas fa-cog';
+    btnEdit.appendChild(iCog);
+    div4.appendChild(btnRem);
+    div4.appendChild(btnEdit);
+    td4.appendChild(div4);
+    tr.appendChild(td4);
     tbody.appendChild(tr);
   });
 }
@@ -428,8 +491,19 @@ function renderAdminLogs() {
     const timeStr = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     const div = document.createElement('div');
     div.className = 'log-item';
-    div.innerHTML = '<span class="log-action"><strong>' + escapeHTML(log.admin_username) + '</strong>: ' + escapeHTML(log.action_text) + '</span>\n' +
-      '<span>' + escapeHTML(d.toLocaleDateString()) + ' ' + escapeHTML(timeStr) + '</span>';
+    
+    const span1 = document.createElement('span');
+    span1.className = 'log-action';
+    const strong = document.createElement('strong');
+    strong.textContent = log.admin_username;
+    span1.appendChild(strong);
+    span1.appendChild(document.createTextNode(': ' + log.action_text));
+    
+    const span2 = document.createElement('span');
+    span2.textContent = d.toLocaleDateString() + ' ' + timeStr;
+    
+    div.appendChild(span1);
+    div.appendChild(span2);
     logList.appendChild(div);
   });
 }
