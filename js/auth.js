@@ -10,6 +10,26 @@ function validateEmailDomain(email) {
   return { valid: false, role: null };
 }
 
+// ============================================================================
+// FRONTEND AUTHORIZATION - UI VISIBILITY ONLY
+// ============================================================================
+// Frontend should NEVER make actual authorization decisions
+// Backend always validates roles
+
+const showUIForRole = (role) => {
+  // Hide all role-specific UI first
+  document.querySelectorAll('[data-role]').forEach(el => {
+    el.style.display = 'none';
+  });
+
+  // Show only UI for current role
+  document.querySelectorAll(`[data-role="${role}"]`).forEach(el => {
+    el.style.display = 'block';
+  });
+
+  console.log('UI updated for role:', role);
+};
+
 
 async function handleStudentLogin(email, password) {
   const { valid, role } = validateEmailDomain(email);
@@ -22,30 +42,7 @@ async function handleStudentLogin(email, password) {
   });
 
   if (error) {
-    if (error.message.includes('Invalid login credentials')) {
-      // User might not exist yet. Attempt auto-registration silently.
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-      });
-
-      if (signUpError) {
-        if (signUpError.message.includes('already registered')) {
-          // If they are already registered, it means their password was wrong!
-          throw new Error('Invalid email or password.');
-        }
-        throw new Error(signUpError.message);
-      }
-      
-      // If sign up succeeded but no session is returned, email confirmation might be enabled
-      if (!signUpData.session) {
-        throw new Error('Please disable "Confirm email" in Supabase Auth settings to allow auto-login.');
-      }
-      
-      data = signUpData;
-    } else {
-      throw new Error('Invalid email or password.');
-    }
+    throw new Error('Invalid email or password. Auto-registration is disabled. Please use an invitation link.');
   }
 
   // Set the session locally for compatibility with other parts of the app
@@ -54,6 +51,8 @@ async function handleStudentLogin(email, password) {
     email: email,
     role: role
   }));
+
+  showUIForRole(role);
 
   window.location.href = 'student-dashboard.html';
 }
