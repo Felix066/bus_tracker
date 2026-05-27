@@ -1,5 +1,15 @@
 // js/admin-dashboard.js
 
+function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 let busesData = [];
 let driverSessions = [];
 let adminLogs = [];
@@ -122,26 +132,28 @@ function renderBusTable() {
     
     // Inline editing logic for driver
     let driverCellHtml = '';
+    const safeBusId = escapeHTML(bus.id);
+    const safeDriverName = escapeHTML(bus.driver_name || '');
     if (editingDriverForBusId === bus.id) {
       driverCellHtml = `
-        <input type="text" class="inline-input" id="inlineDriver_${bus.id}" value="${bus.driver_name || ''}" placeholder="Enter driver name">
-        <button class="btn-inline-save" onclick="saveInlineDriver('${bus.id}')">Save Changes</button>
+        <input type="text" class="inline-input" id="inlineDriver_${safeBusId}" value="${safeDriverName}" placeholder="Enter driver name">
+        <button class="btn-inline-save" onclick="saveInlineDriver('${safeBusId}')">Save Changes</button>
       `;
     } else {
       driverCellHtml = `
-        <div class="driver-name-display" onclick="enableInlineEdit('${bus.id}')">
-          ${bus.driver_name || '<span style="color:#9ca3af; font-style:italic;">No driver assigned</span>'}
+        <div class="driver-name-display" onclick="enableInlineEdit('${safeBusId}')">
+          ${safeDriverName || '<span style="color:#9ca3af; font-style:italic;">No driver assigned</span>'}
           <i class="fas fa-pen"></i>
         </div>
       `;
     }
 
-    const localBusPhoto = localStorage.getItem(`bus_photo_${bus.id}`) || bus.bus_photo_url;
+    const localBusPhoto = escapeHTML(localStorage.getItem(`bus_photo_${bus.id}`) || bus.bus_photo_url);
     tr.innerHTML = `
       <td>
         <div style="display:flex; align-items:center; gap: 12px;">
           ${localBusPhoto ? `<img src="${localBusPhoto}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : ''}
-          <span>${bus.id}</span>
+          <span>${safeBusId}</span>
         </div>
       </td>
       <td>
@@ -156,8 +168,8 @@ function renderBusTable() {
       </td>
       <td>
         <div class="actions-cell">
-          <button class="btn-remove" onclick="deleteBus('${bus.id}')">Remove</button>
-          <button class="btn-edit-row" onclick="openMasterModal('${bus.id}')"><i class="fas fa-cog"></i></button>
+          <button class="btn-remove" onclick="deleteBus('${safeBusId}')">Remove</button>
+          <button class="btn-edit-row" onclick="openMasterModal('${safeBusId}')"><i class="fas fa-cog"></i></button>
         </div>
       </td>
     `;
@@ -423,8 +435,8 @@ function renderAdminLogs() {
     const div = document.createElement('div');
     div.className = 'log-item';
     div.innerHTML = `
-      <span class="log-action"><strong>${log.admin_username}</strong>: ${log.action_text}</span>
-      <span>${d.toLocaleDateString()} ${timeStr}</span>
+      <span class="log-action"><strong>${escapeHTML(log.admin_username)}</strong>: ${escapeHTML(log.action_text)}</span>
+      <span>${escapeHTML(d.toLocaleDateString())} ${escapeHTML(timeStr)}</span>
     `;
     logList.appendChild(div);
   });
