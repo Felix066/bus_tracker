@@ -78,12 +78,36 @@
       background: #059669;
       transform: translateY(-1px);
     }
-    .btn-deny {
-      background: rgba(0,0,0,0.05);
-      color: #4A4A4A;
-    }
     .btn-deny:hover {
       background: rgba(0,0,0,0.08);
+    }
+    
+    /* Map Controls - Follow Bus */
+    #follow-bus-button {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 1000;
+      padding: 10px 15px;
+      background: #f0f0f0;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.3s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    #follow-bus-button.active {
+      background: #10B981;
+      color: white;
+      border-color: #059669;
+    }
+    
+    #follow-bus-button:hover {
+      transform: scale(1.05);
     }
   </style>
 </head>
@@ -128,7 +152,10 @@
   </div>
 
   <!-- MAP -->
-  <div class="map-wrapper" style="margin-top: 15px;">
+  <div class="map-wrapper" style="margin-top: 15px; position: relative;">
+    <button id="follow-bus-button" onclick="toggleFollowBusMode()">
+      📍 Explore Map (click to follow)
+    </button>
     <div id="map"></div>
   </div>
 

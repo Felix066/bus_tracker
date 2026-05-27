@@ -273,3 +273,30 @@ document.getElementById('btn-allow')?.addEventListener('click', () => {
     // GPS start disabled.
 });
 
+// ============================================================================
+// FOLLOW BUS MODE - User-Controlled Map Panning
+// ============================================================================
+
+window.isFollowBusEnabled = false; // Default: user can explore map freely
+
+function toggleFollowBusMode() {
+  window.isFollowBusEnabled = !window.isFollowBusEnabled;
+  
+  const button = document.getElementById('follow-bus-button');
+  if (window.isFollowBusEnabled) {
+    button.classList.add('active');
+    button.textContent = '📍 Following Bus (click to explore)';
+    console.log('🎯 Follow mode ON - map will track bus');
+    
+    // Center immediately if possible
+    if (window.busMarker && window.map) {
+      window.map.panTo(window.busMarker.getLatLng(), { animate: true, duration: 1 });
+    }
+  } else {
+    button.classList.remove('active');
+    button.textContent = '📍 Explore Map (click to follow)';
+    console.log('🗺️ Follow mode OFF - explore freely');
+  }
+}
+window.toggleFollowBusMode = toggleFollowBusMode;
+
