@@ -6,14 +6,39 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
 const app = express();
-app.use(cors());
-app.use(express.json());
-
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
+// 1. JWT Secret Security Enforcement
 const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'your-random-secret-key-min-32-characters-long-here-1234567890' || JWT_SECRET.length < 32) {
+  console.error('\n[FATAL ERROR] Insecure or missing JWT_SECRET environment variable!');
+  console.error('You MUST set a secure JWT_SECRET of at least 32 characters in your backend/.env file before the server can start.');
+  process.exit(1);
+}
+
+// 3. Production Deployment Security Hardening (CORS)
+const allowedOrigins = [
+  process.env.FRONTEND_URL, 
+  'http://localhost:5500', 
+  'http://127.0.0.1:5500',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+].filter(Boolean);
+
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+app.use(express.json());
 
 // ============================================================================
 // AUTHORIZATION MIDDLEWARE
@@ -253,6 +278,72 @@ app.get('/api/admin/users', requireRole(['admin']), async (req, res) => {
       .select('id, email, user_metadata');
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true, users: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// DRIVER-TO-BUS VALIDATION & LOCATION ENDPOINTS
+// ============================================================================
+
+app.post('/api/auth/get-token', async (req, res) => {
+  const { user_id, email, role, trip_id } = req.body;
+  
+  if (!user_id || !email || !role) {
+    return res.status(400).json({ error: 'Missing user context' });
+  }
+
+  // Issue a 1-hour JWT for the frontend to use
+  const token = jwt.sign(
+    { user_id, email, role, trip_id }, 
+    JWT_SECRET, 
+    { expiresIn: '1h' }
+  );
+
+  res.json({ success: true, token });
+});
+
+// 2. Driver-to-Bus Ownership Validation
+app.post('/api/location/submit', requireRole(['driver']), async (req, res) => {
+  const { latitude, longitude, speed_kmh, trip_id, bus_id, source_role, source_user_id } = req.body;
+  const driver_id = req.user.user_id;
+
+  try {
+    // SECURITY CHECK: Verify this driver actually started this active trip
+    const { data: tripData, error: tripError } = await supabase
+      .from('trips')
+      .select('id, status')
+      .eq('id', trip_id)
+      .eq('driver_id', driver_id)
+      .eq('bus_id', bus_id)
+      .single();
+
+    if (tripError || !tripData) {
+      return res.status(403).json({ error: 'Forbidden: You do not have ownership of this active trip or bus.' });
+    }
+
+    if (tripData.status !== 'active') {
+      return res.status(400).json({ error: 'Trip is no longer active.' });
+    }
+
+    // Since validation passed, insert location via Service Role key (bypasses RLS)
+    const { data, error } = await supabase.from('bus_locations').insert({
+      trip_id,
+      bus_id,
+      source_role: 'driver',
+      source_user_id: driver_id,
+      latitude,
+      longitude,
+      speed_kmh,
+      is_accepted: true // Backend validates it, so it's accepted immediately
+    }).select();
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({ success: true, data: data[0] });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
