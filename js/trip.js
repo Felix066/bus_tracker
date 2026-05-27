@@ -280,9 +280,35 @@ function startDriverGPS(tripId, busId, tripType) {
     watchId = navigator.geolocation.watchPosition(async (pos) => {
         const now = Date.now();
         
-        // Remove kalman filter (user requested straight architecture, no smart movements)
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
+        const accuracy = pos.coords.accuracy;
+
+        // ==========================================
+        // GPS SPIKE FILTERING (100m+ Jump Protection)
+        // ==========================================
+        
+        // 1. Hardware Accuracy Check: Discard if the phone itself knows the location is uncertain by >100m
+        if (accuracy > 100) {
+            console.warn(`[GPS Filter] Discarding ping: Accuracy too low (${Math.round(accuracy)}m)`);
+            return;
+        }
+
+        // 2. Teleportation Check: Discard if the bus supposedly jumped an impossible distance instantly
+        if (lastLat && lastLon && lastTime) {
+            const timeDiffSec = (now - lastTime) / 1000;
+            if (timeDiffSec > 0) {
+                const distMoved = haversineDistance(lastLat, lastLon, lat, lon); // distance in meters
+                const speedMps = distMoved / timeDiffSec;
+                
+                // If the bus supposedly moved faster than 120km/h (~33 meters/second), it's a GPS glitch.
+                // We discard this ping to prevent the marker from jumping 100m+ away.
+                if (speedMps > 35) {
+                    console.warn(`[GPS Filter] Discarding glitch jump: ${Math.round(distMoved)}m in ${Math.round(timeDiffSec)}s`);
+                    return;
+                }
+            }
+        }
 
         if (typeof cacheCurrentLocation === 'function') {
             cacheCurrentLocation(lat, lon, pos.coords.accuracy);
