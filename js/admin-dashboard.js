@@ -125,7 +125,7 @@ function renderBusTable() {
       else if (hours > 0) formattedTime = `${hours} hour${hours > 1 ? 's' : ''} ago`;
       else formattedTime = `${mins} min${mins !== 1 ? 's' : ''} ago`;
 
-      lastSeenStr = `<span style="font-size: 11px; color:#9ca3af; margin-left: 8px;">(Last active: ${formattedTime})</span>`;
+      lastSeenStr = '<span style="font-size: 11px; color:#9ca3af; margin-left: 8px;">(Last active: ' + formattedTime + ')</span>';
     }
 
     const tr = document.createElement('tr');
@@ -135,44 +135,38 @@ function renderBusTable() {
     const safeBusId = escapeHTML(bus.id);
     const safeDriverName = escapeHTML(bus.driver_name || '');
     if (editingDriverForBusId === bus.id) {
-      driverCellHtml = `
-        <input type="text" class="inline-input" id="inlineDriver_${safeBusId}" value="${safeDriverName}" placeholder="Enter driver name">
-        <button class="btn-inline-save" onclick="saveInlineDriver('${safeBusId}')">Save Changes</button>
-      `;
+      driverCellHtml = '<input type="text" class="inline-input" id="inlineDriver_' + safeBusId + '" value="' + safeDriverName + '" placeholder="Enter driver name">\n' +
+        '<button class="btn-inline-save" onclick="saveInlineDriver(\'' + safeBusId + '\')">Save Changes</button>';
     } else {
-      driverCellHtml = `
-        <div class="driver-name-display" onclick="enableInlineEdit('${safeBusId}')">
-          ${safeDriverName || '<span style="color:#9ca3af; font-style:italic;">No driver assigned</span>'}
-          <i class="fas fa-pen"></i>
-        </div>
-      `;
+      driverCellHtml = '<div class="driver-name-display" onclick="enableInlineEdit(\'' + safeBusId + '\')">\n' +
+        (safeDriverName || '<span style="color:#9ca3af; font-style:italic;">No driver assigned</span>') + '\n' +
+        '<i class="fas fa-pen"></i>\n' +
+        '</div>';
     }
 
-    const localBusPhoto = escapeHTML(localStorage.getItem(`bus_photo_${bus.id}`) || bus.bus_photo_url);
-    tr.innerHTML = `
-      <td>
-        <div style="display:flex; align-items:center; gap: 12px;">
-          ${localBusPhoto ? `<img src="${localBusPhoto}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : ''}
-          <span>${safeBusId}</span>
-        </div>
-      </td>
-      <td>
-        ${driverCellHtml}
-      </td>
-      <td>
-        <div class="status-cell">
-          <div class="status-dot ${statusClass}"></div> 
-          <span style="text-transform: capitalize;">${statusText}</span>
-          ${lastSeenStr}
-        </div>
-      </td>
-      <td>
-        <div class="actions-cell">
-          <button class="btn-remove" onclick="deleteBus('${safeBusId}')">Remove</button>
-          <button class="btn-edit-row" onclick="openMasterModal('${safeBusId}')"><i class="fas fa-cog"></i></button>
-        </div>
-      </td>
-    `;
+    const imgHtml = localBusPhoto ? '<img src="' + localBusPhoto + '" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">' : '';
+    tr.innerHTML = '<td>\n' +
+        '<div style="display:flex; align-items:center; gap: 12px;">\n' +
+        imgHtml + '\n' +
+        '<span>' + safeBusId + '</span>\n' +
+        '</div>\n' +
+      '</td>\n' +
+      '<td>\n' +
+        driverCellHtml + '\n' +
+      '</td>\n' +
+      '<td>\n' +
+        '<div class="status-cell">\n' +
+          '<div class="status-dot ' + statusClass + '"></div> \n' +
+          '<span style="text-transform: capitalize;">' + statusText + '</span>\n' +
+          lastSeenStr + '\n' +
+        '</div>\n' +
+      '</td>\n' +
+      '<td>\n' +
+        '<div class="actions-cell">\n' +
+          '<button class="btn-remove" onclick="deleteBus(\'' + safeBusId + '\')">Remove</button>\n' +
+          '<button class="btn-edit-row" onclick="openMasterModal(\'' + safeBusId + '\')"><i class="fas fa-cog"></i></button>\n' +
+        '</div>\n' +
+      '</td>';
     tbody.appendChild(tr);
   });
 }
@@ -434,10 +428,8 @@ function renderAdminLogs() {
     const timeStr = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     const div = document.createElement('div');
     div.className = 'log-item';
-    div.innerHTML = `
-      <span class="log-action"><strong>${escapeHTML(log.admin_username)}</strong>: ${escapeHTML(log.action_text)}</span>
-      <span>${escapeHTML(d.toLocaleDateString())} ${escapeHTML(timeStr)}</span>
-    `;
+    div.innerHTML = '<span class="log-action"><strong>' + escapeHTML(log.admin_username) + '</strong>: ' + escapeHTML(log.action_text) + '</span>\n' +
+      '<span>' + escapeHTML(d.toLocaleDateString()) + ' ' + escapeHTML(timeStr) + '</span>';
     logList.appendChild(div);
   });
 }
