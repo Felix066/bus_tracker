@@ -327,17 +327,49 @@ app.post('/api/location/submit', requireRole(['driver']), async (req, res) => {
       return res.status(400).json({ error: 'Trip is no longer active.' });
     }
 
-    // Since validation passed, insert location via Service Role key (bypasses RLS)
-    const { data, error } = await supabase.from('bus_locations').insert({
-      trip_id,
-      bus_id,
-      source_role: 'driver',
-      source_user_id: driver_id,
-      latitude,
-      longitude,
-      speed_kmh,
-      is_accepted: true // Backend validates it, so it's accepted immediately
-    }).select();
+    // ---------------------------------------------------------
+    // THE "HOT TABLE" ARCHITECTURE IMPLEMENTATION
+    // We explicitly overwrite the current bus location rather 
+    // than inserting a new row every 3 seconds to prevent DB bloat.
+    // ---------------------------------------------------------
+
+    // First check if a location row already exists for this bus
+    const { data: existingLoc } = await supabase
+      .from('bus_locations')
+      .select('id')
+      .eq('bus_id', bus_id)
+      .single();
+
+    let data, error;
+
+    if (existingLoc) {
+      // UPDATE (Overwrite) the existing row for this bus
+      ({ data, error } = await supabase.from('bus_locations').update({
+        trip_id,
+        source_role: 'driver',
+        source_user_id: driver_id,
+        latitude,
+        longitude,
+        speed_kmh,
+        is_accepted: true,
+        submitted_at: new Date().toISOString()
+      })
+      .eq('id', existingLoc.id)
+      .select());
+    } else {
+      // INSERT the very first row for this bus if it doesn't exist yet
+      ({ data, error } = await supabase.from('bus_locations').insert({
+        trip_id,
+        bus_id,
+        source_role: 'driver',
+        source_user_id: driver_id,
+        latitude,
+        longitude,
+        speed_kmh,
+        is_accepted: true,
+        submitted_at: new Date().toISOString()
+      }).select());
+    }
 
     if (error) {
       return res.status(500).json({ error: error.message });
