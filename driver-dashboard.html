@@ -26,10 +26,6 @@
     <div class="brand">BusTrack <em>Driver Console</em></div>
     <span class="driver-label" id="driver-name-display">driver1</span>
     <span class="bus-badge" id="assigned-bus-label">Assigned Bus: Bus 4</span>
-    <select class="trip-select" id="trip-select">
-      <option value="morning">Morning</option>
-      <option value="evening">Evening</option>
-    </select>
     <button class="start-btn" id="start-btn" onclick="startTrip()">Start Trip</button>
     <button class="logout-btn" onclick="driverLogout()" style="margin-left: 10px; background: #2a2a2a; border: 1px solid #444; color: #fff; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;"><i class="fas fa-sign-out-alt"></i> Logout</button>
   </nav>
@@ -114,18 +110,7 @@
     const defaultType = 'morning';
     initMap(defaultType);
 
-    // DYNAMIC UPDATE ON SHIFT CHANGE
-    document.getElementById('trip-select').onchange = (e) => {
-      const selectedType = e.target.value;
-      localStorage.setItem('activeTripType', selectedType);
-      
-      // Update map properly
-      if (typeof map !== 'undefined' && map !== null) {
-        map.remove(); // Safely remove the old Leaflet instance
-        map = null;
-      }
-      initMap(selectedType);
-    };
+    // Removed shift change dropdown logic as it's no longer needed
 
     // Subscribe to realtime location updates for map/chart synchronization
     if (driver && (driver.assignedBus || driver.busId)) {

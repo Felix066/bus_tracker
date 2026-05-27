@@ -64,7 +64,7 @@ async function startTrip() {
     let busId = driver.assignedBus || driver.busId;
     
     const tripSelect = document.getElementById('trip-select');
-    const tripType = tripSelect.value;
+    const tripType = tripSelect ? tripSelect.value : 'morning';
     const btn = document.getElementById('start-btn');
 
     if (!busId) { alert('No bus assigned to this driver.'); return; }
@@ -500,7 +500,6 @@ window.triggerSOS = async function() {
     if (!busId) { alert("No bus assigned!"); return; }
 
     const btn = document.getElementById('sos-btn');
-    const originalHtml = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SENDING...';
     btn.disabled = true;
 
@@ -522,7 +521,7 @@ window.triggerSOS = async function() {
     } catch (err) {
         console.error(err);
         alert("Failed to send SOS! " + err.message);
-        btn.innerHTML = originalHtml;
+        btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> SOS EMERGENCY';
         btn.disabled = false;
     }
 };
