@@ -163,8 +163,6 @@ function subscribeToLiveUpdates() {
                 const timeDiffMs = Date.now() - lastGPSTime;
                 if (timeDiffMs > 90000) { 
                     handleDriverOffline();
-                } else {
-                    handleDriverOnline();
                 }
             }
         }
@@ -287,6 +285,12 @@ function processNewLocation(lat, lon, speedKmh) {
     // Reset signal check timer upon receiving fresh update
     if (deadReckonTimer) clearInterval(deadReckonTimer);
     
+    // If we just recovered from a low signal state, immediately restore UI and resume timer
+    const statusText = document.getElementById('trip-status-text');
+    if (statusText && statusText.textContent !== 'Trip active — GPS tracking live') {
+        handleDriverOnline();
+    }
+    
     // Periodically check if GPS stops updating
     deadReckonTimer = setInterval(() => {
         const elapsed = Date.now() - lastGPSTime;
@@ -300,6 +304,9 @@ function processNewLocation(lat, lon, speedKmh) {
                     statusBar.style.background = 'rgba(217, 119, 6, 0.1)';
                     statusBar.style.border = '1px solid rgba(217, 119, 6, 0.2)';
                 }
+                
+                // Pause the timer since we aren't getting fresh updates!
+                if (typeof stopTripTimer === 'function') stopTripTimer();
             }
         }
     }, 1000);
