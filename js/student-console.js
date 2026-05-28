@@ -94,7 +94,7 @@ function subscribeToLiveUpdates() {
         .on('postgres_changes', {
             event: '*', // Listen to INSERT and UPDATE since we are using UPSERT
             schema: 'public',
-            table: 'bus_locations',
+            table: 'current_bus_locations',
             filter: `bus_id=eq.${busId}`
         }, (payload) => {
             if (payload.new) {

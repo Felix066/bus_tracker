@@ -33,19 +33,18 @@ async function getAuthToken(user_id, email, role, trip_id) {
 
 async function submitLocationSecure(latitude, longitude, speed_kmh, trip_id, bus_id, source_role, source_user_id) {
   try {
-    // We only INSERT because the bus_locations table lacks an UPDATE RLS policy for clients.
-    // The student console subscription will listen for new inserts.
-    const result = await window.supabase.from('bus_locations').insert({
-      trip_id,
+    // UPSERT directly into current_bus_locations (bypassing broken backend).
+    // This table correctly has the speed_kmh column, bus_id primary key, and UPDATE policies.
+    const result = await window.supabase.from('current_bus_locations').upsert({
       bus_id,
-      source_role,
-      source_user_id,
+      trip_id,
       latitude,
       longitude,
       speed_kmh,
-      is_accepted: true,
-      submitted_at: new Date().toISOString()
-    }).select();
+      source_role,
+      source_user_id,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'bus_id' }).select();
 
     if (result.error) throw result.error;
     return { success: true, data: result.data[0] };
@@ -62,13 +61,12 @@ async function submitLocationSecure(latitude, longitude, speed_kmh, trip_id, bus
 async function getBusLocation(bus_id) {
   try {
     const { data, error } = await window.supabase
-      .from('bus_locations')
+      .from('current_bus_locations')
       .select('*')
       .eq('bus_id', bus_id)
-      .order('submitted_at', { ascending: false })
-      .limit(1);
-    if (error || !data || data.length === 0) return null;
-    return data[0];
+      .single();
+    if (error) return null;
+    return data;
   } catch (error) {
     console.error('Failed to fetch bus location:', error);
     return null;
