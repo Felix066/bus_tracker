@@ -38,8 +38,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('assigned-bus-label').textContent = busId;
 
     if (!trip) {
-        document.getElementById('location-display').textContent = 'No trip history found for ' + busId;
+        document.getElementById('location-display').textContent = 'Offline — No active trip for ' + busId;
         initMap('morning'); // Initialize with a default route so map isn't completely blank
+        
+        // Show last known location even if no active trip
+        if (locRes.data && locRes.data.length > 0 && locRes.data[0]) {
+            processNewLocation(locRes.data[0].latitude, locRes.data[0].longitude, locRes.data[0].speed_kmh);
+        }
+        
+        // Subscribe to live updates anyway so the bus appears as soon as it starts moving
+        subscribeToLiveUpdates();
         return;
     }
 
@@ -89,8 +97,13 @@ function subscribeToLiveUpdates() {
             table: 'current_bus_locations',
             filter: `bus_id=eq.${busId}`
         }, (payload) => {
-            if (payload.new.trip_id === activeTripId) {
+            if (payload.new) {
                 processNewLocation(payload.new.latitude, payload.new.longitude, payload.new.speed_kmh);
+                if (payload.new.trip_id && !activeTripId) {
+                    activeTripId = payload.new.trip_id;
+                    // Reload to fully initialize active trip UI
+                    location.reload();
+                }
             }
         })
         .on('postgres_changes', {
