@@ -341,15 +341,14 @@ function processNewLocation(lat, lon, speedKmh) {
     }
 
     // Restore standard active tracking style if we received standard update
-    const statusText = document.getElementById('trip-status-text');
-    const statusBar = document.getElementById('trip-status-bar');
-    const statusDot = statusBar ? statusBar.querySelector('[class^="status-dot"]') : null;
+    const statusBar2 = document.getElementById('trip-status-bar');
+    const statusDot = statusBar2 ? statusBar2.querySelector('[class^="status-dot"]') : null;
     if (statusText && activeTripId) {
         statusText.textContent = 'Trip active — GPS tracking live';
         statusText.style.color = '#2A7D55';
-        if (statusBar) {
-            statusBar.style.background = '#F0FDF6';
-            statusBar.style.border = '1px solid #BBF0D6';
+        if (statusBar2) {
+            statusBar2.style.background = '#F0FDF6';
+            statusBar2.style.border = '1px solid #BBF0D6';
         }
         if (statusDot) {
             statusDot.style.background = '#2A7D55';
