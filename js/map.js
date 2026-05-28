@@ -2,26 +2,28 @@ let map, busMarker, polyline;
 const stopMarkers = [];
 
 function createBusIcon(label = 'Bus') {
+  let safeLabel = '';
+  if (label !== null && label !== undefined) {
+      safeLabel = String(label).replace(/[&<>'"]/g, tag => {
+        switch (tag) {
+          case '&': return '&amp;';
+          case '<': return '&lt;';
+          case '>': return '&gt;';
+          case "'": return '&#39;';
+          case '"': return '&quot;';
+          default: return tag;
+        }
+      });
+  } else {
+      safeLabel = 'BUS';
+  }
+
   return L.divIcon({
     className: 'custom-bus-icon',
-    html: `
-      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-        <div style="font-size: 32px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); line-height: 1;">🚌</div>
-        <div style="
-          background: #1e40af; 
-          color: white; 
-          font-weight: 800; 
-          font-size: 11px; 
-          padding: 2px 6px; 
-          border-radius: 12px; 
-          border: 2px solid white; 
-          margin-top: -8px; 
-          white-space: nowrap;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-          text-transform: uppercase;
-        ">${label}</div>
-      </div>
-    `,
+    html: '<div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">' +
+          '<div style="font-size: 32px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); line-height: 1;">🚌</div>' +
+          '<div style="background: #1e40af; color: white; font-weight: 800; font-size: 11px; padding: 2px 6px; border-radius: 12px; border: 2px solid white; margin-top: -8px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); text-transform: uppercase;">' + 
+          safeLabel + '</div></div>',
     iconSize: [45, 45],
     iconAnchor: [22, 22]
   });
@@ -187,11 +189,11 @@ function markStopVisited(index) {
   }
 
   // Turn all stops up to the reached index green
-  for (let i = 0; i <= maxReachedStopIndex; i++) {
-    if (stopMarkers[i]) {
-      stopMarkers[i].setStyle({ fillColor: '#10B981', color: '#047857' });
+  stopMarkers.forEach((marker, i) => {
+    if (i <= maxReachedStopIndex && marker) {
+      marker.setStyle({ fillColor: '#10B981', color: '#047857' });
     }
-  }
+  });
 }
 
 window.initMap = initMap;

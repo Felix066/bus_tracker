@@ -65,19 +65,12 @@ async function loadSOSAlerts() {
     
     const d = new Date(alert.created_at);
     const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + d.toLocaleDateString();
-    
-    let lat = alert.latitude ? Number(alert.latitude).toFixed(5) : 'Unknown';
-    let lng = alert.longitude ? Number(alert.longitude).toFixed(5) : 'Unknown';
-    let mapsLink = '';
-    if (alert.latitude && alert.longitude) {
-      mapsLink = `<a href="https://www.google.com/maps?q=${alert.latitude},${alert.longitude}" target="_blank" class="map-btn"><i class="fas fa-map-marker-alt"></i> View on Map</a>`;
-    }
 
     card.innerHTML = `
       <div class="card-top">
         <div>
-          <div class="bus-id">${alert.bus_id}</div>
-          <div class="time-stamp">${timeStr}</div>
+          <div class="bus-id"></div>
+          <div class="time-stamp"></div>
         </div>
         <div class="pulse-badge">
           <div class="pulse-dot"></div>
@@ -88,21 +81,37 @@ async function loadSOSAlerts() {
       <div class="info-grid">
         <div class="info-item">
           <span class="info-label">Driver Name</span>
-          <span class="info-value">${alert.driver_name || 'N/A'}</span>
+          <span class="info-value driver-name-val"></span>
         </div>
         <div class="info-item">
           <span class="info-label">Last Known Location</span>
           <span class="info-value" style="display:flex; flex-direction:column; gap:8px;">
-            <span style="font-size: 15px; line-height: 1.4; color: var(--sos-gray); font-weight: 500;">${alert.placeName}</span>
-            <div>${mapsLink}</div>
+            <span class="place-name-val" style="font-size: 15px; line-height: 1.4; color: var(--sos-gray); font-weight: 500;"></span>
+            <div class="map-link-container"></div>
           </span>
         </div>
       </div>
       
-      <button class="btn-resolve" onclick="resolveAlert('${alert.bus_id}')">
+      <button class="btn-resolve">
         <i class="fas fa-check"></i> Mark as Resolved
       </button>
     `;
+
+    card.querySelector('.bus-id').textContent = alert.bus_id;
+    card.querySelector('.time-stamp').textContent = timeStr;
+    card.querySelector('.driver-name-val').textContent = alert.driver_name || 'N/A';
+    card.querySelector('.place-name-val').textContent = alert.placeName;
+
+    if (alert.latitude && alert.longitude) {
+      const mapLink = document.createElement('a');
+      mapLink.href = `https://www.google.com/maps?q=${encodeURIComponent(alert.latitude)},${encodeURIComponent(alert.longitude)}`;
+      mapLink.target = '_blank';
+      mapLink.className = 'map-btn';
+      mapLink.innerHTML = '<i class="fas fa-map-marker-alt"></i> View on Map';
+      card.querySelector('.map-link-container').appendChild(mapLink);
+    }
+    
+    card.querySelector('.btn-resolve').addEventListener('click', () => resolveAlert(alert.bus_id));
     
     container.appendChild(card);
   });

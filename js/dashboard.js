@@ -69,18 +69,6 @@ function renderBusCards() {
       }
     }
 
-    const busPhotoHtml = bus.bus_photo_url 
-      ? `<div style="height: 140px; background: url('${bus.bus_photo_url}') center/cover; position: relative;"></div>`
-      : `<div style="height: 140px; background: #2a2a2a; display:flex; align-items:center; justify-content:center; font-size:32px; color:#555;"><i class="fas fa-bus"></i></div>`;
-
-    const driverPhotoHtml = bus.driver_photo_url
-      ? `<div style="width: 40px; height: 40px; border-radius: 50%; background: url('${bus.driver_photo_url}') center/cover; flex-shrink: 0;"></div>`
-      : `<div style="width: 40px; height: 40px; border-radius: 50%; background: #333; display:flex; align-items:center; justify-content:center; color:#888;"><i class="fas fa-user"></i></div>`;
-
-    const callBtnHtml = bus.driver_phone
-      ? `<a href="tel:${bus.driver_phone.replace(/\s+/g,'')}" style="background: #10b981; color: white; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 600; display:flex; align-items:center; gap: 6px;"><i class="fas fa-phone"></i> Call Driver</a>`
-      : '';
-
     const card = document.createElement('div');
     card.className = `bus-card ${isOnline ? 'online' : 'offline'}`;
     // Using inline styles to override legacy card styles rapidly to match V3 requested premium UI without needing huge CSS edits
@@ -97,29 +85,88 @@ function renderBusCards() {
     }
     
     card.innerHTML = `
-      ${busPhotoHtml}
-      <div style="position: absolute; top: 10px; right: 10px; background: ${isOnline ? 'rgba(16,185,129,0.9)' : 'rgba(239,68,68,0.9)'}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight:bold; box-shadow: 0 2px 10px rgba(0,0,0,0.5);">
-        ${isOnline ? 'ONLINE' : 'OFFLINE'}
+      <div class="bus-photo-container" style="height: 140px; position: relative; background: #2a2a2a; display:flex; align-items:center; justify-content:center; font-size:32px; color:#555;">
+        <i class="fas fa-bus bus-icon"></i>
+      </div>
+      <div style="position: absolute; top: 10px; right: 10px; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight:bold; box-shadow: 0 2px 10px rgba(0,0,0,0.5);" class="status-badge">
       </div>
       
       <div style="padding: 20px; flex-grow: 1; display:flex; flex-direction:column;">
-        <h2 style="margin: 0; font-size: 20px; font-weight: 700;">${bus.id}</h2>
-        <p style="color: #aaa; font-size: 13px; font-weight: 500; margin: 4px 0 10px;"><i class="fas fa-route"></i> ${bus.route_name || 'No route assigned'}</p>
+        <h2 style="margin: 0; font-size: 20px; font-weight: 700;" class="bus-id-val"></h2>
+        <p style="color: #aaa; font-size: 13px; font-weight: 500; margin: 4px 0 10px;"><i class="fas fa-route"></i> <span class="route-name-val"></span></p>
         
         <div style="display:flex; align-items:center; gap: 12px; margin-top: auto; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
-          ${driverPhotoHtml}
-          <div style="flex-grow: 1;">
-            <p style="margin: 0; font-weight: 600; font-size: 14px;">${bus.driver_name || (session && session.driver_name) || 'No Driver'}</p>
-            <p style="margin: 0; font-size: 11px; color: #888;">${lastSeenStr}</p>
+          <div class="driver-photo-container" style="width: 40px; height: 40px; border-radius: 50%; background: #333; display:flex; align-items:center; justify-content:center; color:#888; flex-shrink: 0;">
+            <i class="fas fa-user driver-icon"></i>
           </div>
-          ${callBtnHtml}
+          <div style="flex-grow: 1;">
+            <p style="margin: 0; font-weight: 600; font-size: 14px;" class="driver-name-val"></p>
+            <p style="margin: 0; font-size: 11px; color: #888;" class="last-seen-val"></p>
+          </div>
+          <div class="call-btn-container"></div>
         </div>
       </div>
       
-      <button style="border-radius: 0; padding: 15px; font-size: 14px; display:flex; justify-content:center; align-items:center; gap: 8px; border:none; border-top: 1px solid rgba(255,255,255,0.05); background: ${isOnline ? '#10b981' : '#2a2a2a'}; color: ${isOnline ? '#ffffff' : '#888888'}; transition: background 0.2s; cursor: ${isOnline ? 'pointer' : 'default'};" class="track-btn ${isOnline ? '' : 'disabled'}" onclick="handleTrackClick('${bus.id}', ${isOnline})" onmouseover="if(${isOnline}) this.style.background='#059669'" onmouseout="if(${isOnline}) this.style.background='#10b981'">
-        ${isOnline ? '<i class="fas fa-map-marker-alt"></i> Track Live Location' : '<i class="fas fa-bed"></i> Currently Offline'}
+      <button style="border-radius: 0; padding: 15px; font-size: 14px; display:flex; justify-content:center; align-items:center; gap: 8px; border:none; border-top: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" class="track-btn">
       </button>
     `;
+
+    if (bus.bus_photo_url) {
+        // Strip out single quotes or double quotes to prevent CSS injection via url()
+        const safeUrl = bus.bus_photo_url.replace(/['"]/g, '');
+        card.querySelector('.bus-photo-container').style.backgroundImage = `url('${encodeURI(safeUrl)}')`;
+        card.querySelector('.bus-photo-container').style.backgroundPosition = 'center';
+        card.querySelector('.bus-photo-container').style.backgroundSize = 'cover';
+        card.querySelector('.bus-icon').style.display = 'none';
+    }
+    
+    const badge = card.querySelector('.status-badge');
+    badge.style.background = isOnline ? 'rgba(16,185,129,0.9)' : 'rgba(239,68,68,0.9)';
+    badge.textContent = isOnline ? 'ONLINE' : 'OFFLINE';
+    
+    card.querySelector('.bus-id-val').textContent = bus.id;
+    card.querySelector('.route-name-val').textContent = bus.route_name || 'No route assigned';
+    
+    if (bus.driver_photo_url) {
+        const safeDriverUrl = bus.driver_photo_url.replace(/['"]/g, '');
+        card.querySelector('.driver-photo-container').style.backgroundImage = `url('${encodeURI(safeDriverUrl)}')`;
+        card.querySelector('.driver-photo-container').style.backgroundPosition = 'center';
+        card.querySelector('.driver-photo-container').style.backgroundSize = 'cover';
+        card.querySelector('.driver-icon').style.display = 'none';
+    }
+    
+    card.querySelector('.driver-name-val').textContent = bus.driver_name || (session && session.driver_name) || 'No Driver';
+    card.querySelector('.last-seen-val').textContent = lastSeenStr;
+    
+    if (bus.driver_phone) {
+        const callBtn = document.createElement('a');
+        callBtn.href = `tel:${bus.driver_phone.replace(/\s+/g,'')}`;
+        callBtn.style.background = '#10b981';
+        callBtn.style.color = 'white';
+        callBtn.style.padding = '6px 12px';
+        callBtn.style.borderRadius = '8px';
+        callBtn.style.textDecoration = 'none';
+        callBtn.style.fontSize = '12px';
+        callBtn.style.fontWeight = '600';
+        callBtn.style.display = 'flex';
+        callBtn.style.alignItems = 'center';
+        callBtn.style.gap = '6px';
+        callBtn.innerHTML = '<i class="fas fa-phone"></i> Call Driver';
+        card.querySelector('.call-btn-container').appendChild(callBtn);
+    }
+    
+    const trackBtn = card.querySelector('.track-btn');
+    trackBtn.style.background = isOnline ? '#10b981' : '#2a2a2a';
+    trackBtn.style.color = isOnline ? '#ffffff' : '#888888';
+    trackBtn.style.cursor = isOnline ? 'pointer' : 'default';
+    if (!isOnline) trackBtn.classList.add('disabled');
+    trackBtn.innerHTML = isOnline ? '<i class="fas fa-map-marker-alt"></i> Track Live Location' : '<i class="fas fa-bed"></i> Currently Offline';
+    
+    if (isOnline) {
+        trackBtn.addEventListener('click', () => handleTrackClick(bus.id, isOnline));
+        trackBtn.addEventListener('mouseover', () => trackBtn.style.background = '#059669');
+        trackBtn.addEventListener('mouseout', () => trackBtn.style.background = '#10b981');
+    }
     container.appendChild(card);
   });
 }

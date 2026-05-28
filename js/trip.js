@@ -13,6 +13,7 @@ let currentTripType = null;
 let lastReverseGeocodeTime = 0;
 let lastReverseGeocodeLat = null;
 let lastReverseGeocodeLon = null;
+let driverKalman = null;
 
 // Screen Wake Lock API
 let wakeLock = null;
@@ -267,6 +268,10 @@ function startDriverGPS(tripId, busId, tripType) {
     const busLabel = busId.toLowerCase().includes('bus') ? 
                      busId.replace(/bus\s*/i, 'B').toUpperCase() : busId;
 
+    if (window.KalmanFilter) {
+        driverKalman = new window.KalmanFilter();
+    }
+
     // Aggressively grab ANY cached location instantly to prevent the 30-second blank map
     navigator.geolocation.getCurrentPosition((pos) => {
         const lat = pos.coords.latitude;
@@ -280,16 +285,16 @@ function startDriverGPS(tripId, busId, tripType) {
     watchId = navigator.geolocation.watchPosition(async (pos) => {
         const now = Date.now();
         
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
+        let lat = pos.coords.latitude;
+        let lon = pos.coords.longitude;
         const accuracy = pos.coords.accuracy;
 
         // ==========================================
         // GPS SPIKE FILTERING (100m+ Jump Protection)
         // ==========================================
         
-        // 1. Hardware Accuracy Check: Discard if the phone itself knows the location is uncertain by >100m
-        if (accuracy > 100) {
+        // 1. Hardware Accuracy Check: Relaxed for testing (allows desktop IP location up to 500m)
+        if (accuracy >= 500) {
             console.warn(`[GPS Filter] Discarding ping: Accuracy too low (${Math.round(accuracy)}m)`);
             return;
         }
@@ -310,8 +315,15 @@ function startDriverGPS(tripId, busId, tripType) {
             }
         }
 
+        // Run through Kalman Filter for mathematical smoothing
+        if (driverKalman) {
+            const smoothed = driverKalman.process(lat, lon, accuracy, now);
+            lat = smoothed.lat;
+            lon = smoothed.lon;
+        }
+
         if (typeof cacheCurrentLocation === 'function') {
-            cacheCurrentLocation(lat, lon, pos.coords.accuracy);
+            cacheCurrentLocation(lat, lon, accuracy);
         }
 
         // UPDATE 4 — Safe Speed Calculation

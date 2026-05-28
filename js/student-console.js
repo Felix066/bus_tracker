@@ -24,16 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     const locRes = { data: locData ? [locData] : null };
 
-    if (!trip) {
-        document.getElementById('location-display').textContent = 'No trip history found for ' + busId;
-        return;
-    }
-
-    activeTripId = trip.id;
-    currentTripType = trip.trip_type;
-    const isTripActive = trip.status === 'active';
-
-    // 3. Fetch Driver Details
+    // 3. Fetch Driver Details (Do this early so the UI updates)
     let driverName = 'Unknown Driver';
     const { data: session } = await supabase.from('driver_sessions').select('driver_name, is_online').eq('bus_id', busId).single();
     if (session && session.driver_name) {
@@ -45,6 +36,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('driver-name-display').textContent = driverName;
     document.getElementById('assigned-bus-label').textContent = busId;
+
+    if (!trip) {
+        document.getElementById('location-display').textContent = 'No trip history found for ' + busId;
+        initMap('morning'); // Initialize with a default route so map isn't completely blank
+        return;
+    }
+
+    activeTripId = trip.id;
+    currentTripType = trip.trip_type;
+    const isTripActive = trip.status === 'active';
 
     if (session && session.is_online === false) {
         handleDriverOffline();
@@ -206,7 +207,150 @@ function handleDriverOnline() {
     }
 }
 
+let lastGPSLat = null;
+let lastGPSLon = null;
+let lastGPSTime = 0;
+let lastGPSSpeedKmh = 30;
+let deadReckonTimer = null;
+const MAX_DEAD_RECKON_TIME_MS = 60000; // 60 seconds safety cap (larger/longer bridges/tunnels)
+
+function predictRouteLocation(startLat, startLon, speedKmh, timeElapsedSec) {
+    const route = typeof getRoute === 'function' ? getRoute(currentTripType, busId) : null;
+    if (!route || route.length < 2) return null;
+
+    // 1. Snapping: Find the closest segment on the route
+    let minD = Infinity;
+    let segmentIndex = 0;
+    let fraction = 0;
+    let snappedLat = startLat;
+    let snappedLon = startLon;
+
+    for (let i = 0; i < route.length - 1; i++) {
+        const p1 = route.at(i);
+        const p2 = route.at(i+1);
+        
+        const x1 = p1.lat, y1 = p1.lon;
+        const x2 = p2.lat, y2 = p2.lon;
+        const px = startLat, py = startLon;
+        
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const lenSq = dx*dx + dy*dy;
+        
+        let t = 0;
+        if (lenSq > 0) {
+            t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+            t = Math.max(0, Math.min(1, t));
+        }
+        
+        const projLat = x1 + t * dx;
+        const projLon = y1 + t * dy;
+        const dist = haversineDistance(projLat, projLon, px, py);
+        
+        if (dist < minD) {
+            minD = dist;
+            segmentIndex = i;
+            fraction = t;
+            snappedLat = projLat;
+            snappedLon = projLon;
+        }
+    }
+
+    // 2. Advance along segment(s)
+    let speedMps = speedKmh / 3.6;
+    let distanceToTravel = speedMps * timeElapsedSec;
+    let currSeg = segmentIndex;
+    let currFrac = fraction;
+
+    while (distanceToTravel > 0 && currSeg < route.length - 1) {
+        const p1 = route.at(currSeg);
+        const p2 = route.at(currSeg+1);
+        const segLen = haversineDistance(p1.lat, p1.lon, p2.lat, p2.lon);
+        
+        const distDone = currFrac * segLen;
+        const distRemaining = segLen - distDone;
+
+        if (distanceToTravel <= distRemaining) {
+            currFrac = (distDone + distanceToTravel) / segLen;
+            distanceToTravel = 0;
+        } else {
+            distanceToTravel -= distRemaining;
+            currSeg++;
+            currFrac = 0;
+        }
+    }
+
+    // Interpolate final coordinates
+    if (currSeg >= route.length - 1) {
+        const lastStop = route.at(route.length - 1);
+        return { lat: lastStop.lat, lon: lastStop.lon };
+    } else {
+        const p1 = route.at(currSeg);
+        const p2 = route.at(currSeg+1);
+        const finalLat = p1.lat + currFrac * (p2.lat - p1.lat);
+        const finalLon = p1.lon + currFrac * (p2.lon - p1.lon);
+        return { lat: finalLat, lon: finalLon };
+    }
+}
+
 function processNewLocation(lat, lon, speedKmh) {
+    // Save last received GPS coordinate and timestamp
+    lastGPSLat = lat;
+    lastGPSLon = lon;
+    lastGPSTime = Date.now();
+    if (speedKmh && speedKmh > 5) {
+        lastGPSSpeedKmh = speedKmh;
+    } else {
+        lastGPSSpeedKmh = 30; // fallback default
+    }
+
+    // Reset dead reckoning timer upon receiving fresh update
+    if (deadReckonTimer) clearInterval(deadReckonTimer);
+    
+    // Periodically run predictive visual updates if GPS stops updating
+    deadReckonTimer = setInterval(() => {
+        const elapsed = Date.now() - lastGPSTime;
+        if (elapsed >= 3500) { // If no real update in 3.5 seconds
+            if (elapsed <= MAX_DEAD_RECKON_TIME_MS) {
+                // Predict location smoothly snaps and travels along route segments
+                const predicted = predictRouteLocation(lastGPSLat, lastGPSLon, lastGPSSpeedKmh, elapsed / 1000);
+                if (predicted) {
+                    const busLabel = busId.replace(/bus\s*/i, 'B').toUpperCase();
+                    if (typeof updateBusMarker === 'function') {
+                        updateBusMarker(predicted.lat, predicted.lon, busLabel + " (Est)");
+                    }
+                    
+                    const statusText = document.getElementById('trip-status-text');
+                    const statusBar = document.getElementById('trip-status-bar');
+                    if (statusText && activeTripId) {
+                        statusText.textContent = `Trip active — Predicting Route Position (No GPS Signal for ${Math.round(elapsed/1000)}s)`;
+                        statusText.style.color = '#d97706'; // warning yellow/orange
+                        if (statusBar) {
+                            statusBar.style.background = 'rgba(217, 119, 6, 0.1)';
+                            statusBar.style.border = '1px solid rgba(217, 119, 6, 0.2)';
+                        }
+                    }
+                }
+            } else {
+                // Limit exceeded: stop predicting to prevent artificial runaways
+                const statusText = document.getElementById('trip-status-text');
+                const statusBar = document.getElementById('trip-status-bar');
+                if (statusText && activeTripId) {
+                    statusText.textContent = 'GPS Signal Lost — Showing last known location';
+                    statusText.style.color = '#ef4444'; // error red
+                    if (statusBar) {
+                        statusBar.style.background = 'rgba(239, 68, 68, 0.1)';
+                        statusBar.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                    }
+                }
+                const busLabel = busId.replace(/bus\s*/i, 'B').toUpperCase();
+                if (typeof updateBusMarker === 'function') {
+                    updateBusMarker(lastGPSLat, lastGPSLon, busLabel);
+                }
+            }
+        }
+    }, 1000);
+
     // A. Update Speed Card
     const speedDisplay = document.getElementById('speed-display');
     if (speedDisplay && speedKmh !== null) {
@@ -233,6 +377,23 @@ function processNewLocation(lat, lon, speedKmh) {
                 lastReverseGeocodeLat  = lat;
                 lastReverseGeocodeLon  = lon;
             });
+        }
+    }
+
+    // Restore standard active tracking style if we received standard update
+    const statusText = document.getElementById('trip-status-text');
+    const statusBar = document.getElementById('trip-status-bar');
+    const statusDot = statusBar ? statusBar.querySelector('[class^="status-dot"]') : null;
+    if (statusText && activeTripId) {
+        statusText.textContent = 'Trip active — GPS tracking live';
+        statusText.style.color = '#2A7D55';
+        if (statusBar) {
+            statusBar.style.background = '#F0FDF6';
+            statusBar.style.border = '1px solid #BBF0D6';
+        }
+        if (statusDot) {
+            statusDot.style.background = '#2A7D55';
+            statusDot.style.boxShadow = 'none';
         }
     }
 
