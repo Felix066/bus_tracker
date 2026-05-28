@@ -8,6 +8,8 @@ let lastReverseGeocodeTime = 0;
 let lastReverseGeocodeLat = null;
 let lastReverseGeocodeLon = null;
 
+let globalTripStartTime = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Get Bus ID from URL
     const params = new URLSearchParams(window.location.search);
@@ -71,8 +73,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     if (isTripActive && trip.started_at && (!session || session.is_online !== false)) {
-        const startedAt = new Date(trip.started_at).getTime();
-        startTripTimer(startedAt);
+        globalTripStartTime = new Date(trip.started_at).getTime();
+        startTripTimer(globalTripStartTime);
     }
 
     // 5. Display Initial Location Immediately
@@ -176,9 +178,6 @@ function handleDriverOffline() {
     const speedDisplay = document.getElementById('speed-display');
     if (speedDisplay) speedDisplay.textContent = '0 km/h';
     
-    const durationDisplay = document.getElementById('trip-duration-display');
-    if (durationDisplay) durationDisplay.textContent = '00:00:00';
-    
     if (typeof stopTripTimer === 'function') stopTripTimer();
     
     const locationDisplay = document.getElementById('location-display');
@@ -211,9 +210,6 @@ function handleTripEnded() {
     const speedDisplay = document.getElementById('speed-display');
     if (speedDisplay) speedDisplay.textContent = '0 km/h';
     
-    const durationDisplay = document.getElementById('trip-duration-display');
-    if (durationDisplay) durationDisplay.textContent = '00:00:00';
-    
     if (typeof stopTripTimer === 'function') stopTripTimer();
     
     const locationDisplay = document.getElementById('location-display');
@@ -233,16 +229,23 @@ function handleDriverOnline() {
     // Only restore green status if the trip hasn't ended.
     if (activeTripId) {
         supabase.from('trips').select('status').eq('id', activeTripId).single().then(({data}) => {
-            if (data && data.status === 'active' && statusBar && statusText) {
-                statusBar.classList.add('visible');
-                statusBar.style.background = '#F0FDF6';
-                statusBar.style.border = '1px solid #BBF0D6';
-                statusText.textContent = 'Trip active — GPS tracking live';
-                statusText.style.color = '#2A7D55';
-                if (statusDot) {
-                    statusDot.className = 'status-dot-green';
-                    statusDot.style.background = '#2A7D55';
-                    statusDot.style.boxShadow = 'none';
+            if (data && data.status === 'active') {
+                if (statusBar && statusText) {
+                    statusBar.classList.add('visible');
+                    statusBar.style.background = '#F0FDF6';
+                    statusBar.style.border = '1px solid #BBF0D6';
+                    statusText.textContent = 'Trip active — GPS tracking live';
+                    statusText.style.color = '#2A7D55';
+                    if (statusDot) {
+                        statusDot.className = 'status-dot-green';
+                        statusDot.style.background = '#2A7D55';
+                        statusDot.style.boxShadow = 'none';
+                    }
+                }
+                
+                // Restart timer synchronized with actual trip start time
+                if (globalTripStartTime && typeof startTripTimer === 'function') {
+                    startTripTimer(globalTripStartTime);
                 }
             }
         });
