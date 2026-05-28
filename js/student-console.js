@@ -166,7 +166,7 @@ function handleDriverOffline() {
         statusBar.classList.add('visible'); // MAKE VISIBLE
         statusBar.style.background = 'rgba(239, 68, 68, 0.1)';
         statusBar.style.border = '1px solid rgba(239, 68, 68, 0.2)';
-        statusText.textContent = 'Driver Offline — Showing last known location';
+        statusText.textContent = 'Driver Offline';
         statusText.style.color = '#ef4444';
         if (statusDot) {
             statusDot.style.background = '#ef4444';
@@ -175,7 +175,19 @@ function handleDriverOffline() {
     }
     const speedDisplay = document.getElementById('speed-display');
     if (speedDisplay) speedDisplay.textContent = '0 km/h';
+    
+    const durationDisplay = document.getElementById('trip-duration-display');
+    if (durationDisplay) durationDisplay.textContent = '00:00:00';
+    
     if (typeof stopTripTimer === 'function') stopTripTimer();
+    
+    const locationDisplay = document.getElementById('location-display');
+    if (locationDisplay) locationDisplay.textContent = '-';
+    
+    if (window.busMarker && window.map) {
+        window.map.removeLayer(window.busMarker);
+        window.busMarker = null;
+    }
 }
 
 function handleTripEnded() {
@@ -189,7 +201,7 @@ function handleTripEnded() {
         statusBar.classList.add('visible'); // MAKE VISIBLE
         statusBar.style.background = 'rgba(245, 158, 11, 0.1)';
         statusBar.style.border = '1px solid rgba(245, 158, 11, 0.2)';
-        statusText.textContent = 'Trip Ended — Showing last known location';
+        statusText.textContent = 'Trip Ended';
         statusText.style.color = '#f59e0b';
         if (statusDot) {
             statusDot.style.background = '#f59e0b';
@@ -198,7 +210,19 @@ function handleTripEnded() {
     }
     const speedDisplay = document.getElementById('speed-display');
     if (speedDisplay) speedDisplay.textContent = '0 km/h';
+    
+    const durationDisplay = document.getElementById('trip-duration-display');
+    if (durationDisplay) durationDisplay.textContent = '00:00:00';
+    
     if (typeof stopTripTimer === 'function') stopTripTimer();
+    
+    const locationDisplay = document.getElementById('location-display');
+    if (locationDisplay) locationDisplay.textContent = '-';
+    
+    if (window.busMarker && window.map) {
+        window.map.removeLayer(window.busMarker);
+        window.busMarker = null;
+    }
 }
 
 function handleDriverOnline() {
