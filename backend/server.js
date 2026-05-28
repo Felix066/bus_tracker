@@ -284,6 +284,46 @@ app.get('/api/admin/users', requireRole(['admin']), async (req, res) => {
 });
 
 // ============================================================================
+// PUBLIC ENDPOINTS FOR STUDENT PORTAL / LIVE MAPS
+// ============================================================================
+
+app.get('/api/trip/:bus_id', async (req, res) => {
+  try {
+    const { bus_id } = req.params;
+    const { data, error } = await supabase
+      .from('trips')
+      .select('*')
+      .eq('bus_id', bus_id)
+      .eq('status', 'active')
+      .order('started_at', { ascending: false })
+      .limit(1);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, trip: data && data.length > 0 ? data[0] : null });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/location/bus/:bus_id', async (req, res) => {
+  try {
+    const { bus_id } = req.params;
+    const { data, error } = await supabase
+      .from('bus_locations')
+      .select('*')
+      .eq('bus_id', bus_id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      return res.status(500).json({ error: error.message });
+    }
+    res.json({ success: true, location: data || null });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
 // DRIVER-TO-BUS VALIDATION & LOCATION ENDPOINTS
 // ============================================================================
 
