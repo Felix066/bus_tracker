@@ -132,20 +132,34 @@ function subscribeToLiveUpdates() {
         })
         .subscribe();
 
-    // Fallback: Check driver heartbeat every 30 seconds in case they forcefully closed the app
-    // and the database wasn't updated via Realtime
+    // Fallback: Check driver and trip status every 3 seconds
+    // This guarantees instant updates even if Supabase Realtime is not enabled for these tables
     setInterval(async () => {
+        // 1. Check if driver logged out
         const { data: session } = await supabase.from('driver_sessions')
             .select('is_online')
             .eq('bus_id', busId)
             .single();
             
-        if (session) {
-            if (session.is_online === false) {
-                handleDriverOffline();
-            } else if (activeTripId && lastGPSTime > 0) {
-                // If trip is active, use the last GPS ping as the true heartbeat.
-                // If no ping for 90 seconds, assume they forcefully closed the app.
+        if (session && session.is_online === false) {
+            handleDriverOffline();
+            return;
+        }
+
+        // 2. Check if trip ended
+        if (activeTripId) {
+            const { data: trip } = await supabase.from('trips')
+                .select('status')
+                .eq('id', activeTripId)
+                .single();
+                
+            if (trip && (trip.status === 'completed' || trip.status === 'cancelled')) {
+                handleTripEnded();
+                return;
+            }
+
+            // 3. Check for app crash / forced close (no GPS for 90s)
+            if (lastGPSTime > 0) {
                 const timeDiffMs = Date.now() - lastGPSTime;
                 if (timeDiffMs > 90000) { 
                     handleDriverOffline();
@@ -154,7 +168,7 @@ function subscribeToLiveUpdates() {
                 }
             }
         }
-    }, 30000);
+    }, 3000);
 }
 
 function handleDriverOffline() {
