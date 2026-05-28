@@ -134,19 +134,20 @@ function subscribeToLiveUpdates() {
     // and the database wasn't updated via Realtime
     setInterval(async () => {
         const { data: session } = await supabase.from('driver_sessions')
-            .select('last_seen, is_online')
+            .select('is_online')
             .eq('bus_id', busId)
             .single();
             
         if (session) {
             if (session.is_online === false) {
                 handleDriverOffline();
-            } else if (session.last_seen) {
-                const timeDiffMs = new Date() - new Date(session.last_seen);
-                if (timeDiffMs > 90000) { // 90 seconds timeout
+            } else if (activeTripId && lastGPSTime > 0) {
+                // If trip is active, use the last GPS ping as the true heartbeat.
+                // If no ping for 90 seconds, assume they forcefully closed the app.
+                const timeDiffMs = Date.now() - lastGPSTime;
+                if (timeDiffMs > 90000) { 
                     handleDriverOffline();
-                } else if (activeTripId) {
-                    // Only restore green status if heartbeat is fresh AND they haven't explicitly ended trip
+                } else {
                     handleDriverOnline();
                 }
             }
@@ -155,6 +156,8 @@ function subscribeToLiveUpdates() {
 }
 
 function handleDriverOffline() {
+    if (deadReckonTimer) clearInterval(deadReckonTimer);
+    
     const statusBar = document.getElementById('trip-status-bar');
     const statusText = document.getElementById('trip-status-text');
     const statusDot = statusBar ? statusBar.querySelector('[class^="status-dot"]') : null;
@@ -176,6 +179,8 @@ function handleDriverOffline() {
 }
 
 function handleTripEnded() {
+    if (deadReckonTimer) clearInterval(deadReckonTimer);
+
     const statusBar = document.getElementById('trip-status-bar');
     const statusText = document.getElementById('trip-status-text');
     const statusDot = statusBar ? statusBar.querySelector('[class^="status-dot"]') : null;
