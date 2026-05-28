@@ -22,33 +22,9 @@ window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let authToken = null;
 
 async function getAuthToken(user_id, email, role, trip_id) {
-  try {
-    const response = await fetch(`${BACKEND_URL}/api/auth/get-token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        user_id,
-        email,
-        role,
-        trip_id
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to get auth token');
-    }
-
-    const data = await response.json();
-    authToken = data.token;
-    
-    console.log('✅ Auth token obtained (expires in 1 hour)');
-    return authToken;
-  } catch (error) {
-    console.error('❌ Failed to get token:', error);
-    return null;
-  }
+  console.log('✅ Auth token bypassed (direct Supabase access)');
+  authToken = 'dummy-token';
+  return authToken;
 }
 
 // ============================================================================
@@ -56,42 +32,41 @@ async function getAuthToken(user_id, email, role, trip_id) {
 // ============================================================================
 
 async function submitLocationSecure(latitude, longitude, speed_kmh, trip_id, bus_id, source_role, source_user_id) {
-  if (!authToken) {
-    console.error('❌ No auth token. Call getAuthToken() first.');
-    return { success: false, error: 'Not authenticated' };
-  }
-
   try {
-    const response = await fetch(`${BACKEND_URL}/api/location/submit`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
-      },
-      body: JSON.stringify({
+    const { data: existingLoc } = await window.supabase
+      .from('bus_locations')
+      .select('id')
+      .eq('bus_id', bus_id)
+      .single();
+
+    let result;
+    if (existingLoc) {
+      result = await window.supabase.from('bus_locations').update({
+        trip_id,
+        source_role,
+        source_user_id,
         latitude,
         longitude,
         speed_kmh,
+        is_accepted: true,
+        submitted_at: new Date().toISOString()
+      }).eq('id', existingLoc.id).select();
+    } else {
+      result = await window.supabase.from('bus_locations').insert({
         trip_id,
         bus_id,
         source_role,
-        source_user_id
-      })
-    });
-
-    if (response.status === 429) {
-      console.warn('⏱️ Rate limited: Please wait before next submission');
-      return { success: false, error: 'Rate limited. Try again in 2.5 seconds.' };
+        source_user_id,
+        latitude,
+        longitude,
+        speed_kmh,
+        is_accepted: true,
+        submitted_at: new Date().toISOString()
+      }).select();
     }
 
-    if (!response.ok) {
-      const error = await response.json();
-      return { success: false, error: error.error };
-    }
-
-    const data = await response.json();
-    return { success: true, data: data.data };
-
+    if (result.error) throw result.error;
+    return { success: true, data: result.data[0] };
   } catch (error) {
     console.error('❌ Location submission failed:', error);
     return { success: false, error: error.message };
@@ -104,10 +79,13 @@ async function submitLocationSecure(latitude, longitude, speed_kmh, trip_id, bus
 
 async function getBusLocation(bus_id) {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/location/bus/${bus_id}`);
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data.location;
+    const { data, error } = await window.supabase
+      .from('bus_locations')
+      .select('*')
+      .eq('bus_id', bus_id)
+      .single();
+    if (error) return null;
+    return data;
   } catch (error) {
     console.error('Failed to fetch bus location:', error);
     return null;
@@ -116,10 +94,15 @@ async function getBusLocation(bus_id) {
 
 async function getTripInfo(bus_id) {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/trip/${bus_id}`);
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data.trip;
+    const { data, error } = await window.supabase
+      .from('trips')
+      .select('*')
+      .eq('bus_id', bus_id)
+      .eq('status', 'active')
+      .order('started_at', { ascending: false })
+      .limit(1);
+    if (error || !data || data.length === 0) return null;
+    return data[0];
   } catch (error) {
     console.error('Failed to fetch trip info:', error);
     return null;
