@@ -33,37 +33,19 @@ async function getAuthToken(user_id, email, role, trip_id) {
 
 async function submitLocationSecure(latitude, longitude, speed_kmh, trip_id, bus_id, source_role, source_user_id) {
   try {
-    const { data: existingLoc } = await window.supabase
-      .from('bus_locations')
-      .select('id')
-      .eq('bus_id', bus_id)
-      .single();
-
-    let result;
-    if (existingLoc) {
-      result = await window.supabase.from('bus_locations').update({
-        trip_id,
-        source_role,
-        source_user_id,
-        latitude,
-        longitude,
-        speed_kmh,
-        is_accepted: true,
-        submitted_at: new Date().toISOString()
-      }).eq('id', existingLoc.id).select();
-    } else {
-      result = await window.supabase.from('bus_locations').insert({
-        trip_id,
-        bus_id,
-        source_role,
-        source_user_id,
-        latitude,
-        longitude,
-        speed_kmh,
-        is_accepted: true,
-        submitted_at: new Date().toISOString()
-      }).select();
-    }
+    // We only INSERT because the bus_locations table lacks an UPDATE RLS policy for clients.
+    // The student console subscription will listen for new inserts.
+    const result = await window.supabase.from('bus_locations').insert({
+      trip_id,
+      bus_id,
+      source_role,
+      source_user_id,
+      latitude,
+      longitude,
+      speed_kmh,
+      is_accepted: true,
+      submitted_at: new Date().toISOString()
+    }).select();
 
     if (result.error) throw result.error;
     return { success: true, data: result.data[0] };
@@ -83,9 +65,10 @@ async function getBusLocation(bus_id) {
       .from('bus_locations')
       .select('*')
       .eq('bus_id', bus_id)
-      .single();
-    if (error) return null;
-    return data;
+      .order('submitted_at', { ascending: false })
+      .limit(1);
+    if (error || !data || data.length === 0) return null;
+    return data[0];
   } catch (error) {
     console.error('Failed to fetch bus location:', error);
     return null;
