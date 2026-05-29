@@ -356,8 +356,7 @@ app.post('/api/trip/end', requireRole(['driver']), async (req, res) => {
     const { data, error } = await supabase
       .from('trips')
       .update({
-        status: 'completed',
-        ended_at: new Date().toISOString()
+        status: 'completed'
       })
       .eq('id', trip_id)
       .select();
