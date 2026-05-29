@@ -287,8 +287,8 @@ function startDriverGPS(tripId, busId, tripType) {
         // GPS SPIKE FILTERING (100m+ Jump Protection)
         // ==========================================
         
-        // 1. Hardware Accuracy Check: Relaxed for testing (allows desktop IP location up to 500m)
-        if (accuracy >= 500) {
+        // 1. Hardware Accuracy Check: Relaxed for testing (allows desktop IP location up to 20000m)
+        if (accuracy >= 20000) {
             console.warn(`[GPS Filter] Discarding ping: Accuracy too low (${Math.round(accuracy)}m)`);
             return;
         }
