@@ -5,8 +5,8 @@
 // ============================================================================
 
 // Configuration
-// Change this to your actual Render backend URL (e.g., 'https://bustrack-backend.onrender.com')
-const BACKEND_URL = 'https://your-backend.onrender.com';
+// Make sure your backend is running locally on port 3001 (e.g., node backend/server.js)
+const BACKEND_URL = 'http://localhost:3001';
 // Note: We use a placeholder or read from environment if possible, but the original code 
 // used a hardcoded ANON KEY which is now secured by RLS and rate limiting on the backend.
 const SUPABASE_URL = 'https://qlzqymdeguhzlxnfawiq.supabase.co';

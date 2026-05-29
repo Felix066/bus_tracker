@@ -254,10 +254,17 @@ async function saveInlineDriver(busId) {
   if (!input) return;
   const newName = input.value.trim();
 
-  // Update Supabase
-  const { error } = await supabase.from('buses').update({ driver_name: newName }).eq('id', busId);
-  if (error) {
-    alert("Error updating driver: " + error.message);
+  // Update via backend API
+  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const res = await fetch(`${BACKEND_URL}/api/admin/buses`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ id: busId, isNew: false, busPayload: { driver_name: newName } })
+  });
+  
+  if (!res.ok) {
+    const errData = await res.json();
+    alert("Error updating driver: " + errData.error);
   } else {
     await logAdminAction(`Updated assigned driver for ${busId} to "${newName}"`);
     editingDriverForBusId = null; // Exit edit mode
@@ -416,14 +423,21 @@ async function saveMasterBus() {
       driver_phone: document.getElementById('inpDriverPhone').value.trim()
     };
 
+    const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+    const busRes = await fetch(`${BACKEND_URL}/api/admin/buses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ id: busId, isNew, busPayload })
+    });
+
+    if (!busRes.ok) {
+      const errData = await busRes.json();
+      throw new Error("Save Error: " + errData.error);
+    }
+
     if (isNew) {
-      busPayload.id = busId;
-      const { error: busErr } = await supabase.from('buses').insert(busPayload);
-      if (busErr) throw new Error("Insert Error: " + busErr.message);
       await logAdminAction(`Added new bus: ${busId}`);
     } else {
-      const { error: busErr } = await supabase.from('buses').update(busPayload).eq('id', busId);
-      if (busErr) throw new Error("Update Error: " + busErr.message);
       await logAdminAction(`Updated details for bus: ${busId}`);
     }
 
@@ -469,9 +483,16 @@ async function saveMasterBus() {
 
 async function deleteBus(busId) {
   if (!confirm(`Are you absolutely sure you want to remove ${busId}? This will remove driver assignments as well.`)) return;
-  await supabase.from('driver_sessions').delete().eq('bus_id', busId);
-  await supabase.from('drivers').update({ assigned_bus: null }).eq('assigned_bus', busId);
-  await supabase.from('buses').delete().eq('id', busId);
+  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const res = await fetch(`${BACKEND_URL}/api/admin/buses/${busId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) {
+    const errData = await res.json();
+    alert("Error deleting bus: " + errData.error);
+    return;
+  }
   localStorage.removeItem(`bus_photo_${busId}`);
   localStorage.removeItem(`driver_photo_${busId}`);
   await logAdminAction(`Removed bus: ${busId}`);
@@ -481,9 +502,14 @@ async function deleteBus(busId) {
 // --- ADMIN LOGS ---
 async function clearAdminLogs() {
   if (!confirm("Are you sure you want to clear all admin logs?")) return;
-  const { error } = await supabase.from('admin_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  if (error) {
-    alert("Error clearing logs: " + error.message);
+  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const res = await fetch(`${BACKEND_URL}/api/admin/logs`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) {
+    const errData = await res.json();
+    alert("Error clearing logs: " + errData.error);
   } else {
     adminLogs = [];
     renderAdminLogs();
@@ -491,9 +517,11 @@ async function clearAdminLogs() {
 }
 
 async function logAdminAction(actionText) {
-  await supabase.from('admin_logs').insert({
-    admin_username: adminUsername,
-    action_text: actionText
+  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  await fetch(`${BACKEND_URL}/api/admin/logs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ action_text: actionText })
   });
 }
 

@@ -530,6 +530,118 @@ app.post('/api/location/submit', requireRole(['driver']), async (req, res) => {
   }
 });
 
+// ============================================================================
+// ADMIN MIGRATED ENDPOINTS (Replaces Direct Supabase Frontend Mutations)
+// ============================================================================
+
+app.post('/api/admin/buses', requireRole(['admin']), async (req, res) => {
+  try {
+    const { id, isNew, busPayload } = req.body;
+    let data, error;
+    if (isNew) {
+      busPayload.id = id;
+      ({ data, error } = await supabase.from('buses').insert(busPayload).select());
+    } else {
+      ({ data, error } = await supabase.from('buses').update(busPayload).eq('id', id).select());
+    }
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/admin/buses/:id', requireRole(['admin']), async (req, res) => {
+  try {
+    const busId = req.params.id;
+    // Handle cascading deletions securely via backend
+    await supabase.from('driver_sessions').delete().eq('bus_id', busId);
+    await supabase.from('drivers').update({ assigned_bus: null }).eq('assigned_bus', busId);
+    const { data, error } = await supabase.from('buses').delete().eq('id', busId);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/logs', requireRole(['admin']), async (req, res) => {
+  try {
+    const { action_text } = req.body;
+    const admin_username = req.user.username;
+    const { data, error } = await supabase.from('admin_logs').insert({ admin_username, action_text }).select();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/admin/logs', requireRole(['admin']), async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('admin_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================================
+// DRIVER MIGRATED ENDPOINTS (Replaces Direct Supabase Frontend Mutations)
+// ============================================================================
+
+app.post('/api/trip/sos', requireRole(['driver']), async (req, res) => {
+  try {
+    const { bus_id, latitude, longitude } = req.body;
+    const driver_name = req.user.username;
+    const { data, error } = await supabase.from('sos_alerts').insert({
+      bus_id, driver_name, latitude, longitude, status: 'active'
+    }).select();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/trip/stop-arrival', requireRole(['driver']), async (req, res) => {
+  try {
+    const { trip_id, stop_name, stop_index } = req.body;
+    
+    // Check if exists
+    const { data: existing } = await supabase.from('stop_arrivals').select('id').eq('trip_id', trip_id).eq('stop_index', stop_index).single();
+    if (existing) {
+      return res.json({ success: true, message: 'Already recorded' });
+    }
+
+    const { data, error } = await supabase.from('stop_arrivals').insert({
+      trip_id, stop_name, stop_index
+    }).select();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/trip/stop-index', requireRole(['driver']), async (req, res) => {
+  try {
+    const { trip_id, stop_index } = req.body;
+    const driver_id = req.user.user_id;
+    
+    // Check ownership
+    const { data: trip } = await supabase.from('trips').select('id').eq('id', trip_id).eq('driver_id', driver_id).single();
+    if (!trip) return res.status(403).json({ error: 'Not your trip' });
+
+    const { data, error } = await supabase.from('trips').update({ current_stop_index: stop_index }).eq('id', trip_id).select();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

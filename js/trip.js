@@ -79,18 +79,19 @@ async function startTrip() {
     btn.disabled = true;
     btn.textContent = 'Starting...';
 
-    const { data: trip, error } = await supabase.from('trips').insert({
-        bus_id: busId,
-        driver_id: driver.driverId,
-        trip_type: tripType,
-        status: 'active',
-        started_at: new Date().toISOString()
-    }).select().single();
-
-    if (error) { 
-        console.error(error); 
-        return; 
+    const token = JSON.parse(localStorage.getItem('driverSession'))?.token;
+    const res = await fetch(`${BACKEND_URL}/api/trip/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ bus_id: busId, trip_type: tripType })
+    });
+    
+    if (!res.ok) {
+        const errData = await res.json();
+        console.error("Start trip error:", errData.error);
+        return;
     }
+    const { trip } = await res.json();
 
     localStorage.setItem('activeTripId', trip.id);
     localStorage.setItem('activeBusId', busId);
@@ -177,25 +178,15 @@ async function saveComputedLocationIfChanged(tripId, busId, lat, lon, speedKmh) 
 
 // UPDATE 15 — Stop Arrival Duplicate Protection
 async function recordStopArrival(tripId, stopName, stopIndex) {
-    const { data: existing } = await supabase
-        .from('stop_arrivals')
-        .select('id')
-        .eq('trip_id', tripId)
-        .eq('stop_index', stopIndex)
-        .single();
-
-    if (existing) {
-        console.log('Stop already recorded — skipping duplicate:', stopName);
-        return;
-    }
-
-    supabase.from('stop_arrivals').insert({
-        trip_id:    tripId,
-        stop_name:  stopName,
-        stop_index: stopIndex
-    }).then(({ error }) => {
-        if (error) console.error("Error recording stop arrival:", error);
+    const token = JSON.parse(localStorage.getItem('driverSession'))?.token;
+    const res = await fetch(`${BACKEND_URL}/api/trip/stop-arrival`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ trip_id: tripId, stop_name: stopName, stop_index: stopIndex })
     });
+    if (!res.ok) {
+        console.error("Error recording stop arrival");
+    }
 }
 
 // UPDATE 19 — Student-Assisted Location Improvement (The Core Hub)
@@ -372,12 +363,14 @@ function advanceStopIndex(newIndex, tripId) {
     if (newIndex > currentStopIndex) {
         currentStopIndex = newIndex;
         // Point 8 — Forward only stop progression — stop index must never decrease
-        supabase.from('trips')
-            .update({ current_stop_index: currentStopIndex })
-            .eq('id', tripId)
-            .then(({ error }) => {
-                if (error) console.error("Error updating stop index in DB:", error);
-            });
+        const token = JSON.parse(localStorage.getItem('driverSession'))?.token;
+        fetch(`${BACKEND_URL}/api/trip/stop-index`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ trip_id: tripId, stop_index: currentStopIndex })
+        }).then(async res => {
+            if (!res.ok) console.error("Error updating stop index in DB:", await res.text());
+        });
     }
 }
 
@@ -444,9 +437,12 @@ async function endTrip() {
     btn.disabled = true;
     btn.textContent = 'Ending...';
 
-    await supabase.from('trips')
-        .update({ status: 'completed', completed_at: new Date().toISOString() })
-        .eq('id', tripId);
+    const token = JSON.parse(localStorage.getItem('driverSession'))?.token;
+    await fetch(`${BACKEND_URL}/api/trip/end`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ trip_id: tripId })
+    });
 
     if (watchId !== null) {
         clearTimeout(watchId);
@@ -542,16 +538,13 @@ window.triggerSOS = async function() {
     btn.disabled = true;
 
     try {
-        const payload = {
-            bus_id: busId,
-            driver_name: driver.username,
-            latitude: lastLat || null,
-            longitude: lastLon || null,
-            status: 'active'
-        };
-
-        const { error } = await supabase.from('sos_alerts').insert(payload);
-        if (error) throw error;
+        const token = JSON.parse(localStorage.getItem('driverSession'))?.token;
+        const res = await fetch(`${BACKEND_URL}/api/trip/sos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ bus_id: busId, latitude: lastLat || null, longitude: lastLon || null })
+        });
+        if (!res.ok) throw new Error("Failed to send SOS via backend");
 
         btn.innerHTML = '<i class="fas fa-check"></i> SOS SENT!';
         btn.style.background = '#991b1b'; // Darker red to indicate it is active
