@@ -2,7 +2,7 @@ async function protectRoute(requiredRole) {
   if (requiredRole === 'admin') {
     const session = JSON.parse(localStorage.getItem('adminSession'));
     if (!session || session.role !== 'admin' || !session.token) {
-      window.location.href = 'admin-login.html';
+      window.location.href = 'driver-login.html';
       return;
     }
     // Verify token with backend
@@ -13,10 +13,10 @@ async function protectRoute(requiredRole) {
       const data = await res.json();
       if (!data.valid || data.user.role !== 'admin') {
         localStorage.removeItem('adminSession');
-        window.location.href = 'admin-login.html';
+        window.location.href = 'driver-login.html';
       }
     } catch(e) {
-      window.location.href = 'admin-login.html';
+      window.location.href = 'driver-login.html';
     }
   } else if (requiredRole === 'driver') {
     const session = JSON.parse(localStorage.getItem('driverSession'));
