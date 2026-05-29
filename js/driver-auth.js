@@ -30,7 +30,7 @@ async function handleDriverLogin(username, password) {
 
     const session = {
       role: 'driver',
-      driverId: driverData.driver.username, // Using username as ID for simplicity
+      driverId: driverData.driver.id, // Use actual UUID, not username
       assignedBus: driverData.driver.assignedBus,
       username: driverData.driver.username,
       token: driverData.token
