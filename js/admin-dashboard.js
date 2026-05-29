@@ -54,8 +54,8 @@ function handleFileInputChange(input, previewId, removeBtnId) {
 // --- LOAD DATA ---
 async function loadDashboardData() {
   const [busesRes, sessionsRes, logsRes, sosRes] = await Promise.all([
-    supabase.from('buses').select('*').order('id'),
-    supabase.from('driver_sessions').select('*'),
+    supabase.from('buses').select('*').order('id').limit(100),
+    supabase.from('driver_sessions').select('*').limit(100),
     supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(50),
     supabase.from('sos_alerts').select('*').eq('status', 'active')
   ]);
@@ -432,11 +432,29 @@ async function saveMasterBus() {
     const password = document.getElementById('inpDriverPass').value.trim();
 
     if (username) {
-      const driverPayload = { username: username, assigned_bus: busId, driver_name: busPayload.driver_name };
-      if (password) driverPayload.password_hash = password; 
+      if (!isNew && !password) {
+        // If it's not a new bus and no password provided, just update driver assignment 
+        // using the backend or directly if allowed, but wait, the RLS will block direct edits of drivers.
+        // For security, all driver credential management goes through the backend API.
+      }
       
-      const { error: drvErr } = await supabase.from('drivers').upsert(driverPayload, { onConflict: 'username' });
-      if (drvErr) console.warn("Driver upsert issue:", drvErr);
+      if (password) {
+        // Register driver via secure backend API
+        const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+        const driverRes = await fetch(`${BACKEND_URL}/api/auth/register-driver`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ username, password, busId })
+        });
+        
+        if (!driverRes.ok) {
+          const errData = await driverRes.json();
+          console.warn("Driver creation issue:", errData.error);
+        }
+      }
     }
 
     closeMasterModal();

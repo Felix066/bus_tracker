@@ -4,6 +4,9 @@ const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const bcrypt = require('bcrypt');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const supabase = createClient(
@@ -38,6 +41,17 @@ app.use(cors({
   },
   credentials: true
 }));
+
+app.use(helmet());
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', apiLimiter);
+
 app.use(express.json());
 
 // ============================================================================
@@ -164,6 +178,101 @@ app.post('/api/auth/register-with-token', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/auth/register-driver', requireRole(['admin']), async (req, res) => {
+  try {
+    const { username, password, busId } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Missing username or password' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+
+    const driverPayload = { username, password_hash, assigned_bus: busId };
+    const { data, error } = await supabase.from('drivers').upsert(driverPayload, { onConflict: 'username' });
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({ success: true, message: 'Driver registered successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/auth/login-admin', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const { data: isAdmin, error } = await supabase.rpc('admin_login', {
+      p_username: username,
+      p_password: password
+    });
+
+    if (error) throw new Error(error.message);
+    if (!isAdmin) {
+      return res.status(401).json({ error: 'Invalid admin credentials' });
+    }
+
+    const token = jwt.sign(
+      { user_id: username, username, role: 'admin' }, 
+      JWT_SECRET, 
+      { expiresIn: '12h' }
+    );
+    res.json({ success: true, token, username });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/auth/login-driver', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    // Check credentials against the hashed password
+    const { data: driverData, error: driverError } = await supabase
+      .from('drivers')
+      .select('username, password_hash, assigned_bus')
+      .eq('username', username)
+      .single();
+
+    if (driverError || !driverData) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    const validPassword = await bcrypt.compare(password, driverData.password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    const token = jwt.sign(
+      { user_id: username, username, role: 'driver', assignedBus: driverData.assigned_bus }, 
+      JWT_SECRET, 
+      { expiresIn: '12h' }
+    );
+
+    res.json({ 
+      success: true, 
+      token, 
+      driver: { username, assignedBus: driverData.assigned_bus } 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/auth/verify', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ valid: false });
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    res.json({ valid: true, user: decoded });
+  } catch (error) {
+    res.status(401).json({ valid: false });
   }
 });
 

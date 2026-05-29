@@ -1,41 +1,48 @@
 async function handleDriverLogin(username, password) {
   try {
-    // 1. Attempt Admin Login via secure database RPC (No static hardcoded admin passwords)
-    const { data: isAdmin, error: adminErr } = await supabase.rpc('admin_login', {
-      p_username: username,
-      p_password: password
-    });
-
-    if (isAdmin) {
-      const session = { role: 'admin', username: username };
-      localStorage.setItem('adminSession', JSON.stringify(session));
-      window.location.href = 'admin-dashboard.html';
-      return;
+    // 1. Attempt Admin Login via secure backend API
+    try {
+      const adminRes = await fetch(`${BACKEND_URL}/api/auth/login-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (adminRes.ok) {
+        const adminData = await adminRes.json();
+        const session = { role: 'admin', username: username, token: adminData.token };
+        localStorage.setItem('adminSession', JSON.stringify(session));
+        window.location.href = 'admin-dashboard.html';
+        return;
+      }
+    } catch (adminErr) {
+      console.warn("Admin login failed, falling back to driver", adminErr);
     }
 
-    // 2. Fallback to Driver Login
-    const { data, error } = await supabase.rpc('verify_driver', {
-      input_username: username,
-      input_password: password
+    // 2. Fallback to Driver Login via secure backend API
+    const driverRes = await fetch(`${BACKEND_URL}/api/auth/login-driver`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
     });
-
-    if (error) throw new Error('Database function error: ' + error.message);
-    if (!data.success) throw new Error('Invalid username or password');
+    
+    const driverData = await driverRes.json();
+    if (!driverRes.ok) throw new Error(driverData.error || 'Invalid username or password');
 
     const session = {
       role: 'driver',
-      driverId: data.driver.driverId,
-      assignedBus: data.driver.assignedBus,
-      username: data.driver.username
+      driverId: driverData.driver.username, // Using username as ID for simplicity
+      assignedBus: driverData.driver.assignedBus,
+      username: driverData.driver.username,
+      token: driverData.token
     };
 
     localStorage.setItem('driverSession', JSON.stringify(session));
 
     // Register driver session in realtime
-    if (data.driver.assignedBus) {
+    if (driverData.driver.assignedBus) {
       await supabase.from('driver_sessions').upsert({
-        bus_id: data.driver.assignedBus,
-        driver_name: data.driver.username,
+        bus_id: driverData.driver.assignedBus,
+        driver_name: driverData.driver.username,
         is_online: true,
         last_seen: new Date().toISOString()
       }, { onConflict: 'bus_id' });
