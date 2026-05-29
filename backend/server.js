@@ -54,6 +54,10 @@ app.use('/api/', apiLimiter);
 
 app.use(express.json());
 
+// Serve static frontend files from the parent directory
+const path = require('path');
+app.use(express.static(path.join(__dirname, '../')));
+
 // ============================================================================
 // AUTHORIZATION MIDDLEWARE
 // ============================================================================
