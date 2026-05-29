@@ -6,7 +6,7 @@
 
 // Configuration
 // We use a relative path so it works perfectly when deployed on Render as a Web Service
-const BACKEND_URL = '';
+const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '') ? 'http://localhost:3001' : '';
 // Note: We use a placeholder or read from environment if possible, but the original code 
 // used a hardcoded ANON KEY which is now secured by RLS and rate limiting on the backend.
 const SUPABASE_URL = 'https://qlzqymdeguhzlxnfawiq.supabase.co';
