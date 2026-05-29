@@ -21,6 +21,7 @@ async function protectRoute(requiredRole) {
   } else if (requiredRole === 'driver') {
     const session = JSON.parse(localStorage.getItem('driverSession'));
     if (!session || !session.driverId || !session.token) {
+      alert('Kicked out: Missing session data in localStorage. driverId=' + (session ? session.driverId : 'null') + ', token=' + (session ? !!session.token : 'null'));
       window.location.href = 'driver-login.html';
       return;
     }
@@ -31,10 +32,12 @@ async function protectRoute(requiredRole) {
       });
       const data = await res.json();
       if (!data.valid || data.user.role !== 'driver') {
+        alert('Kicked out: Token validation failed on backend. valid=' + data.valid + ', role=' + (data.user ? data.user.role : 'undefined'));
         localStorage.removeItem('driverSession');
         window.location.href = 'driver-login.html';
       }
     } catch(e) {
+      alert('Kicked out: fetch to /api/auth/verify threw an error: ' + e.message);
       window.location.href = 'driver-login.html';
     }
   } else {
