@@ -89,6 +89,9 @@ async function startTrip() {
     if (!res.ok) {
         const errData = await res.json();
         console.error("Start trip error:", errData.error);
+        alert("Failed to start trip: " + (errData.error || "Unknown error"));
+        btn.textContent = originalText;
+        btn.disabled = false;
         return;
     }
     const { trip } = await res.json();

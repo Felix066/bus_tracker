@@ -316,13 +316,14 @@ app.get('/api/auth/validate-token/:token', async (req, res) => {
 
 app.post('/api/trip/start', requireRole(['driver']), async (req, res) => {
   try {
-    const { bus_id } = req.body;
+    const { bus_id, trip_type } = req.body;
     const driver_id = req.user.user_id;
 
     const { data, error } = await supabase
       .from('trips')
       .insert({
         bus_id,
+        trip_type,
         driver_id,
         status: 'active',
         started_at: new Date().toISOString()
