@@ -441,14 +441,31 @@ async function endTrip() {
     btn.textContent = 'Ending...';
 
     const token = JSON.parse(localStorage.getItem('driverSession'))?.token;
-    await fetch(`${BACKEND_URL}/api/trip/end`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ trip_id: tripId })
-    });
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/trip/end`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ trip_id: tripId })
+        });
+        
+        if (!res.ok) {
+            const errData = await res.json();
+            console.error("End trip error:", errData.error);
+            alert("Failed to end trip: " + (errData.error || "Unknown error"));
+            btn.textContent = 'End Trip';
+            btn.disabled = false;
+            return;
+        }
+    } catch (err) {
+        console.error("Network error ending trip:", err);
+        alert("Failed to end trip due to network error.");
+        btn.textContent = 'End Trip';
+        btn.disabled = false;
+        return;
+    }
 
     if (watchId !== null) {
-        clearTimeout(watchId);
+        navigator.geolocation.clearWatch(watchId);
         watchId = null;
     }
     
