@@ -42,7 +42,9 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
