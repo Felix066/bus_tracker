@@ -255,7 +255,7 @@ app.post('/api/auth/login-driver', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { user_id: username, username, role: 'driver', assignedBus: driverData.assigned_bus }, 
+      { user_id: driverData.id, username, role: 'driver', assignedBus: driverData.assigned_bus }, 
       JWT_SECRET, 
       { expiresIn: '12h' }
     );
@@ -263,7 +263,7 @@ app.post('/api/auth/login-driver', async (req, res) => {
     res.json({ 
       success: true, 
       token, 
-      driver: { username, assignedBus: driverData.assigned_bus } 
+      driver: { id: driverData.id, username, assignedBus: driverData.assigned_bus } 
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
