@@ -43,7 +43,19 @@ app.use(cors({
 }));
 
 app.use(helmet({
-  contentSecurityPolicy: false
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://cdnjs.cloudflare.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://unpkg.com"],
+      fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https://*.tile.openstreetmap.org", "https://unpkg.com"],
+      connectSrc: ["'self'", "https://*.supabase.co", "https://nominatim.openstreetmap.org"],
+      workerSrc: ["'self'", "blob:"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"]
+    }
+  }
 }));
 
 const apiLimiter = rateLimit({
@@ -213,13 +225,20 @@ app.post('/api/auth/register-driver', requireRole(['admin']), async (req, res) =
 app.post('/api/auth/login-admin', async (req, res) => {
   try {
     const { username, password } = req.body;
-    const { data: isAdmin, error } = await supabase.rpc('admin_login', {
-      p_username: username,
-      p_password: password
-    });
+    
+    // Check credentials against the hashed password
+    const { data: adminData, error: adminError } = await supabase
+      .from('admins')
+      .select('id, username, password_hash')
+      .eq('username', username)
+      .single();
 
-    if (error) throw new Error(error.message);
-    if (!isAdmin) {
+    if (adminError || !adminData) {
+      return res.status(401).json({ error: 'Invalid admin credentials' });
+    }
+
+    const validPassword = await bcrypt.compare(password, adminData.password_hash);
+    if (!validPassword) {
       return res.status(401).json({ error: 'Invalid admin credentials' });
     }
 
