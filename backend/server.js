@@ -239,7 +239,7 @@ app.post('/api/auth/login-driver', async (req, res) => {
     // Check credentials against the hashed password
     const { data: driverData, error: driverError } = await supabase
       .from('drivers')
-      .select('username, password_hash, assigned_bus')
+      .select('id, username, password_hash, assigned_bus')
       .eq('username', username)
       .single();
 
