@@ -113,6 +113,8 @@ async function loadSOSAlerts() {
     card.querySelector('.btn-resolve').addEventListener('click', () => resolveAlert(alert.bus_id));
     
     container.appendChild(card);
+  });
+  
   } catch (err) {
     console.error(err);
     container.innerHTML = `<div style="grid-column:1/-1; color:var(--danger); text-align:center;">Failed to load alerts.</div>`;
