@@ -416,13 +416,16 @@ async function saveMasterBus() {
     const busFile = document.getElementById('inpBusPhoto').files[0];
     const driverFile = document.getElementById('inpDriverPhoto').files[0];
 
+    let busDataUrl = localStorage.getItem(`bus_photo_${busId}`);
+    let driverDataUrl = localStorage.getItem(`driver_photo_${busId}`);
+
     if (busFile) {
-      const dataUrl = await fileToDataUrl(busFile);
-      localStorage.setItem(`bus_photo_${busId}`, dataUrl);
+      busDataUrl = await fileToDataUrl(busFile);
+      localStorage.setItem(`bus_photo_${busId}`, busDataUrl);
     }
     if (driverFile) {
-      const dataUrl = await fileToDataUrl(driverFile);
-      localStorage.setItem(`driver_photo_${busId}`, dataUrl);
+      driverDataUrl = await fileToDataUrl(driverFile);
+      localStorage.setItem(`driver_photo_${busId}`, driverDataUrl);
     }
 
     const busPayload = {
@@ -431,6 +434,10 @@ async function saveMasterBus() {
       driver_name: document.getElementById('inpDriverName').value.trim(),
       driver_phone: document.getElementById('inpDriverPhone').value.trim()
     };
+    
+    // Add photos to payload if they exist so they save to the database
+    if (busDataUrl) busPayload.bus_photo_url = busDataUrl;
+    if (driverDataUrl) busPayload.driver_photo_url = driverDataUrl;
 
     const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
     const busRes = await fetch(`${BACKEND_URL}/api/admin/buses`, {

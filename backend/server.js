@@ -57,7 +57,7 @@ const apiLimiter = rateLimit({
 });
 app.use('/api/', apiLimiter);
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Serve static frontend files from the parent directory
 const path = require('path');
