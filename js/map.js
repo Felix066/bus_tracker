@@ -31,8 +31,8 @@ function createBusIcon(label = 'Bus') {
 
 function initMap(tripType) {
   map = L.map('map').setView([9.1500, 76.7200], 11);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors',
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
     maxZoom: 19
   }).addTo(map);
 
@@ -73,7 +73,7 @@ function prewarmTileCache(map) {
     div.style.display = 'none';
     document.body.appendChild(div);
     const tempMap = L.map(div).setView(boundsCenter, zoom);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '',
       maxZoom: 14,
       minZoom: 10

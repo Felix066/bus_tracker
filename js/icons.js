@@ -94,24 +94,46 @@ function replaceIconsInNode(node) {
   });
 }
 
-// Initial replacements
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => replaceIconsInNode(document.body));
-} else {
-  replaceIconsInNode(document.body);
-}
+// Safe initialization helper
+function initIconsObserver() {
+  // Run initial replacement for whatever is already loaded
+  if (document.body) {
+    replaceIconsInNode(document.body);
+  }
 
-// Set up MutationObserver to automatically swap new dynamic icons (like in ajax/tables)
-const observer = new MutationObserver((mutations) => {
-  mutations.forEach(mutation => {
-    mutation.addedNodes.forEach(node => {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        replaceIconsInNode(node);
-      }
+  // Set up MutationObserver to automatically swap new dynamic icons (like in ajax/tables)
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach(mutation => {
+      mutation.addedNodes.forEach(node => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          // If the added node is an 'i' tag itself, process it and its children
+          if (node.tagName === 'I') {
+            replaceIconsInNode(node.parentNode || node);
+          } else {
+            replaceIconsInNode(node);
+          }
+        }
+      });
     });
   });
+
+  // Observe the entire document element (which is always non-null immediately)
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+}
+
+// Start observing as early as possible
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initIconsObserver);
+} else {
+  initIconsObserver();
+}
+
+// Also run an immediate check on DOMContentLoaded to guarantee coverage
+document.addEventListener('DOMContentLoaded', () => {
+  if (document.body) replaceIconsInNode(document.body);
 });
-observer.observe(document.body, { childList: true, subtree: true });
 
 // Export global function just in case
-window.replaceIconsManual = () => replaceIconsInNode(document.body);
+window.replaceIconsManual = () => {
+  if (document.body) replaceIconsInNode(document.body);
+};
