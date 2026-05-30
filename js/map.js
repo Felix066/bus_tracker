@@ -31,29 +31,55 @@ function createBusIcon(label = 'Bus') {
 
 function initMap(tripType) {
   map = L.map('map').setView([9.1500, 76.7200], 11);
-  // Primary tile layer using a direct domain (bypassing subdomain wildcard blocks like a.*, b.*)
-  const primaryTiles = L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    maxZoom: 19
-  });
 
-  // Automatically fall back to standard direct-domain OSM if the primary tile server fails
-  let hasFailedOver = false;
-  primaryTiles.on('tileerror', function() {
-    if (!hasFailedOver) {
-      hasFailedOver = true;
-      console.warn('[Map] CartoDB tiles failed. Falling back to standard direct OpenStreetMap...');
-      map.removeLayer(primaryTiles);
-      
-      const fallbackTiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19
-      });
-      fallbackTiles.addTo(map);
+  // Multiple tile server URLs to try, in order of preference
+  var tileServers = [
+    { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap contributors' },
+    { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap contributors' },
+    { url: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap &copy; CARTO' },
+    { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap &copy; CARTO' },
+    { url: 'https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap &copy; Stadia' }
+  ];
+
+  var currentIdx = 0;
+  var errorCount = 0;
+  var currentLayer = null;
+  var switched = false; // prevents rapid looping
+
+  function tryTileServer(idx) {
+    if (idx >= tileServers.length) {
+      console.error('[Map] All tile servers exhausted.');
+      return;
     }
-  });
+    currentIdx = idx;
+    errorCount = 0;
+    switched = false;
+    var srv = tileServers[idx];
+    console.log('[Map] Trying tile server ' + idx + ': ' + srv.url);
 
-  primaryTiles.addTo(map);
+    if (currentLayer) {
+      try { map.removeLayer(currentLayer); } catch(e) {}
+    }
+
+    currentLayer = L.tileLayer(srv.url, {
+      attribution: srv.attr,
+      maxZoom: 19
+    });
+
+    currentLayer.on('tileerror', function() {
+      errorCount++;
+      // If more than 3 tiles fail, switch to the next server
+      if (errorCount > 3 && !switched) {
+        switched = true;
+        console.warn('[Map] Tile server ' + idx + ' failed (' + errorCount + ' errors). Trying next...');
+        tryTileServer(idx + 1);
+      }
+    });
+
+    currentLayer.addTo(map);
+  }
+
+  tryTileServer(0);
 
   const route = getRoute(tripType);
   const coords = route.map(s => [s.lat, s.lon]);
@@ -79,29 +105,8 @@ function initMap(tripType) {
 }
 
 function prewarmTileCache(map) {
-  const routeBounds = L.latLngBounds(
-    [8.9900, 76.6200],
-    [9.3400, 76.8100]
-  );
-
-  const boundsCenter = routeBounds.getCenter();
-  console.log('[Cache] Tile pre-warming started for Bus 4 route area');
-
-  [10, 11, 12].forEach(zoom => {
-    const div = document.createElement('div');
-    div.style.display = 'none';
-    document.body.appendChild(div);
-    const tempMap = L.map(div).setView(boundsCenter, zoom);
-    L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
-      attribution: '',
-      maxZoom: 14,
-      minZoom: 10
-    }).addTo(tempMap);
-    setTimeout(() => {
-      tempMap.remove();
-      document.body.removeChild(div);
-    }, 5000);
-  });
+  // Pre-warming disabled — was creating hidden map instances that fail on blocked networks
+  console.log('[Cache] Tile pre-warming skipped (uses live tile server)');
 }
 
 const LOCATION_CACHE_KEY = 'bustrack_last_location';
