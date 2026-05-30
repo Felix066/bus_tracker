@@ -32,13 +32,18 @@ function createBusIcon(label = 'Bus') {
 function initMap(tripType) {
   map = L.map('map').setView([9.1500, 76.7200], 11);
 
-  // Multiple tile server URLs to try, in order of preference
+  // Multiple tile server URLs to try, in order of preference.
+  // The first entry is a LOCAL PROXY running on the backend server —
+  // it fetches tiles server-side (bypassing firewall blocks on the browser).
+  var backendBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '')
+    ? 'http://localhost:3001'
+    : '';
   var tileServers = [
+    { url: backendBase + '/tiles/{z}/{x}/{y}', attr: '&copy; OpenStreetMap contributors (via proxy)' },
     { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap contributors' },
     { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap contributors' },
     { url: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap &copy; CARTO' },
-    { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap &copy; CARTO' },
-    { url: 'https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap &copy; Stadia' }
+    { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap &copy; CARTO' }
   ];
 
   var currentIdx = 0;

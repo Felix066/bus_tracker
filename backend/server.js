@@ -64,6 +64,62 @@ const path = require('path');
 app.use(express.static(path.join(__dirname, '../')));
 
 // ============================================================================
+// MAP TILE PROXY — bypasses firewall restrictions on tile servers
+// Requests come from the server (not the browser), so they are not blocked.
+// Usage: /tiles/:z/:x/:y  =>  proxies https://tile.openstreetmap.org/{z}/{x}/{y}.png
+// ============================================================================
+const https = require('https');
+const http = require('http');
+
+app.get('/tiles/:z/:x/:y', (req, res) => {
+  const { z, x, y } = req.params;
+
+  // Validate params to prevent path traversal / abuse
+  if (!/^\d+$/.test(z) || !/^\d+$/.test(x) || !/^\d+$/.test(y)) {
+    return res.status(400).send('Invalid tile coords');
+  }
+  if (parseInt(z) > 19 || parseInt(z) < 0) {
+    return res.status(400).send('Zoom out of range');
+  }
+
+  // Try OSM first, fall back to CartoDB
+  const tileUrls = [
+    `https://tile.openstreetmap.org/${z}/${x}/${y}.png`,
+    `https://basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`
+  ];
+
+  function fetchTile(urlIndex) {
+    if (urlIndex >= tileUrls.length) {
+      return res.status(502).send('All tile sources failed');
+    }
+    const tileUrl = tileUrls[urlIndex];
+    const client = tileUrl.startsWith('https') ? https : http;
+
+    const request = client.get(tileUrl, {
+      headers: {
+        'User-Agent': 'BusTrack/1.0 (School Bus Tracking System)',
+        'Accept': 'image/png,image/*'
+      },
+      timeout: 8000
+    }, (upstream) => {
+      if (upstream.statusCode !== 200) {
+        upstream.resume();
+        return fetchTile(urlIndex + 1);
+      }
+      res.setHeader('Content-Type', upstream.headers['content-type'] || 'image/png');
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // cache tiles for 24h
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      upstream.pipe(res);
+    });
+
+    request.on('error', () => fetchTile(urlIndex + 1));
+    request.on('timeout', () => { request.destroy(); fetchTile(urlIndex + 1); });
+  }
+
+  fetchTile(0);
+});
+
+// ============================================================================
 // AUTHORIZATION MIDDLEWARE
 // ============================================================================
 async function verifyRole(req, res, next) {
