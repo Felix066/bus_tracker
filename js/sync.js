@@ -7,6 +7,7 @@ function shouldUpdateMapRender(newLat, newLon) {
 }
 
 function subscribeToBus(busId, tripType) {
+  if (!window.supabase) return;
   const busLabel = busId.toLowerCase().includes('bus') ? 
                    busId.replace(/bus\s*/i, 'B').toUpperCase() : busId;
 

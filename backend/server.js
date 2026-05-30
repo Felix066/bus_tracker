@@ -282,6 +282,16 @@ app.post('/api/auth/login-driver', async (req, res) => {
       { expiresIn: '12h' }
     );
 
+    // Register driver session in realtime SECURELY on the backend
+    if (driverData.assigned_bus) {
+      await supabase.from('driver_sessions').upsert({
+        bus_id: driverData.assigned_bus,
+        driver_name: username,
+        is_online: true,
+        last_seen: new Date().toISOString()
+      }, { onConflict: 'bus_id' });
+    }
+
     res.json({ 
       success: true, 
       token, 
@@ -289,6 +299,21 @@ app.post('/api/auth/login-driver', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/auth/logout-driver', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ success: false });
+    
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (decoded.assignedBus) {
+      await supabase.from('driver_sessions').update({ is_online: false }).eq('bus_id', decoded.assignedBus);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(401).json({ success: false });
   }
 });
 
@@ -610,6 +635,30 @@ app.delete('/api/admin/logs', requireRole(['admin']), async (req, res) => {
     const { data, error } = await supabase.from('admin_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/dashboard-data', requireRole(['admin']), async (req, res) => {
+  try {
+    // Fetch all admin dashboard data in one go securely via Service Role
+    const [busesRes, sessionsRes, logsRes, sosRes] = await Promise.all([
+      supabase.from('buses').select('*').order('id').limit(100),
+      supabase.from('driver_sessions').select('*').limit(100),
+      supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(50),
+      supabase.from('sos_alerts').select('*').eq('status', 'active')
+    ]);
+
+    if (busesRes.error) throw busesRes.error;
+
+    res.json({
+      success: true,
+      buses: busesRes.data || [],
+      sessions: sessionsRes.data || [],
+      logs: logsRes.data || [],
+      sosAlerts: sosRes.data || []
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

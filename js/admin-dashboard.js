@@ -53,17 +53,26 @@ function handleFileInputChange(input, previewId, removeBtnId) {
 
 // --- LOAD DATA ---
 async function loadDashboardData() {
-  const [busesRes, sessionsRes, logsRes, sosRes] = await Promise.all([
-    supabase.from('buses').select('*').order('id').limit(100),
-    supabase.from('driver_sessions').select('*').limit(100),
-    supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(50),
-    supabase.from('sos_alerts').select('*').eq('status', 'active')
-  ]);
+  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  if (!token) return;
 
-  if (busesRes.data) busesData = busesRes.data;
-  if (sessionsRes.data) driverSessions = sessionsRes.data;
-  if (logsRes.data) adminLogs = logsRes.data;
-  if (sosRes.data) sosAlerts = sosRes.data;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/dashboard-data`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        busesData = data.buses || [];
+        driverSessions = data.sessions || [];
+        adminLogs = data.logs || [];
+        sosAlerts = data.sosAlerts || [];
+      }
+    }
+  } catch (err) {
+    console.warn("Failed to load dashboard data from backend", err);
+  }
 
   renderBusTable();
   renderAdminLogs();
@@ -570,6 +579,7 @@ function checkSOSAlerts() {
 
 // --- REALTIME ---
 function subscribeToRealtime() {
+  if (!window.supabase) return;
   supabase.channel('admin-master-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'buses' }, () => {
       // Don't auto-reload data if currently inline editing, could lose focus

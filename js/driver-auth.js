@@ -38,15 +38,8 @@ async function handleDriverLogin(username, password) {
 
     localStorage.setItem('driverSession', JSON.stringify(session));
 
-    // Register driver session in realtime
-    if (driverData.driver.assignedBus) {
-      await supabase.from('driver_sessions').upsert({
-        bus_id: driverData.driver.assignedBus,
-        driver_name: driverData.driver.username,
-        is_online: true,
-        last_seen: new Date().toISOString()
-      }, { onConflict: 'bus_id' });
-    }
+    // The backend now automatically handles registering the driver session in realtime
+    // via the /api/auth/login-driver endpoint.
 
     window.location.href = 'driver-dashboard.html';
     
@@ -59,8 +52,15 @@ async function handleDriverLogin(username, password) {
 
 async function driverLogout() {
   const session = JSON.parse(localStorage.getItem('driverSession'));
-  if (session && session.assignedBus) {
-    await supabase.from('driver_sessions').update({ is_online: false }).eq('bus_id', session.assignedBus);
+  if (session && session.token) {
+    try {
+      await fetch(`${BACKEND_URL}/api/auth/logout-driver`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.token}` }
+      });
+    } catch(e) {
+      console.warn("Logout ping failed", e);
+    }
   }
   localStorage.removeItem('driverSession');
   window.location.href = 'driver-login.html';
