@@ -162,9 +162,24 @@ function subscribeToLiveUpdates() {
                     return;
                 }
             }
+            
+            // 3. Fetch live location as fallback for Realtime
+            const locRes = await fetch(`${BACKEND_URL}/api/location/bus/${busId}`);
+            if (locRes.ok) {
+                const locData = await locRes.json();
+                if (locData.success && locData.location) {
+                    const loc = locData.location;
+                    if (loc.latitude && loc.longitude) {
+                        // Only process if it actually changed to avoid jitter
+                        if (loc.latitude !== lastGPSLat || loc.longitude !== lastGPSLon) {
+                            processNewLocation(loc.latitude, loc.longitude, loc.speed_kmh);
+                        }
+                    }
+                }
+            }
         } catch(e) {}
 
-        // 3. Check for app crash / forced close (no GPS for 90s)
+        // 4. Check for app crash / forced close (no GPS for 90s)
         if (lastGPSTime > 0) {
             const timeDiffMs = Date.now() - lastGPSTime;
             if (timeDiffMs > 90000) { 

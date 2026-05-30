@@ -109,6 +109,19 @@
     // Init map defaults
     const defaultType = 'morning';
     initMap(defaultType);
+    
+    // Get immediate location so the map isn't empty before starting the trip
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            const busLabel = driver.assignedBus ? driver.assignedBus.replace(/bus\s*/i, 'B').toUpperCase() : 'BUS';
+            if (typeof updateBusMarker === 'function') {
+                updateBusMarker(lat, lon, busLabel);
+                map.setView([lat, lon], 14);
+            }
+        }, () => {}, { timeout: 10000 });
+    }
 
     // Removed shift change dropdown logic as it's no longer needed
 
