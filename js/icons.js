@@ -70,7 +70,7 @@ function replaceIconsInNode(node) {
   iconElements.forEach(i => {
     let matched = false;
     for (const className of i.classList) {
-      if (SVG_ICONS[className]) {
+      if (Object.prototype.hasOwnProperty.call(SVG_ICONS, className)) {
         // Replace <i> element with SVG element
         const parser = new DOMParser();
         const doc = parser.parseFromString(SVG_ICONS[className], 'image/svg+xml');
@@ -91,7 +91,9 @@ function replaceIconsInNode(node) {
           }
         });
 
-        i.parentNode.replaceChild(svgEl, i);
+        if (i.parentNode) {
+          i.parentNode.replaceChild(svgEl, i);
+        }
         matched = true;
         break;
       }
@@ -101,7 +103,12 @@ function replaceIconsInNode(node) {
     if (!matched && (i.classList.contains('fas') || i.classList.contains('fa') || i.classList.contains('far'))) {
       const classStr = Array.from(i.classList).join(' ');
       if (classStr.includes('spin') || classStr.includes('spinner')) {
-        i.outerHTML = SVG_ICONS['fa-spinner'];
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(SVG_ICONS['fa-spinner'], 'image/svg+xml');
+        const svgEl = doc.documentElement;
+        if (i.parentNode) {
+          i.parentNode.replaceChild(svgEl, i);
+        }
       }
     }
   });
