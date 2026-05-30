@@ -106,36 +106,35 @@ function renderBusTable() {
     // Status Logic
     let statusText = 'Offline';
     let statusClass = 'offline';
+    let lastSeenStr = '';
     
-    if (isOnline) {
-      statusText = 'Active';
-      statusClass = 'active';
-    } else if (session) {
-      // If there is a session but not online, maybe Idle? Let's say if they were seen in last hour it's Idle
+    if (session) {
       const mins = Math.round((new Date() - new Date(session.last_seen)) / 60000);
-      if (mins < 60) {
+      
+      if (isOnline && mins <= 5) {
+        statusText = 'Active';
+        statusClass = 'active';
+      } else if (mins < 60) {
         statusText = 'Idle';
         statusClass = 'idle';
       }
-    }
-    
-    let lastSeenStr = '';
-    if (!isOnline && session && session.last_seen) {
-      const mins = Math.round((new Date() - new Date(session.last_seen)) / 60000);
-      let formattedTime = '';
-      const hours = Math.floor(mins / 60);
-      const days = Math.floor(hours / 24);
-      const months = Math.floor(days / 30);
-      const years = Math.floor(days / 365);
       
-      if (years > 0) formattedTime = `${years} year${years > 1 ? 's' : ''} ago`;
-      else if (months > 0) formattedTime = `${months} month${months > 1 ? 's' : ''} ago`;
-      else if (days > 0) formattedTime = `${days} day${days > 1 ? 's' : ''} ago`;
-      else if (hours > 0) formattedTime = `${hours} hour${hours > 1 ? 's' : ''} ago`;
-      else formattedTime = `${mins} min${mins !== 1 ? 's' : ''} ago`;
+      if (session.last_seen && (statusText !== 'Active')) {
+        let formattedTime = '';
+        const hours = Math.floor(mins / 60);
+        const days = Math.floor(hours / 24);
+        const months = Math.floor(days / 30);
+        const years = Math.floor(days / 365);
+        
+        if (years > 0) formattedTime = `${years} year${years > 1 ? 's' : ''} ago`;
+        else if (months > 0) formattedTime = `${months} month${months > 1 ? 's' : ''} ago`;
+        else if (days > 0) formattedTime = `${days} day${days > 1 ? 's' : ''} ago`;
+        else if (hours > 0) formattedTime = `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        else formattedTime = `${mins} min${mins !== 1 ? 's' : ''} ago`;
 
-      if (formattedTime) {
-        lastSeenStr = '(Last active: ' + formattedTime + ')';
+        if (formattedTime) {
+          lastSeenStr = '(Last active: ' + formattedTime + ')';
+        }
       }
     }
 

@@ -297,7 +297,12 @@ app.post('/api/auth/logout-driver', async (req, res) => {
     
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded.assignedBus) {
+      // 1. Mark driver session offline
       await supabase.from('driver_sessions').update({ is_online: false }).eq('bus_id', decoded.assignedBus);
+      // 2. End any active trip for this bus
+      await supabase.from('trips').update({ status: 'completed' })
+        .eq('bus_id', decoded.assignedBus)
+        .eq('status', 'active');
     }
     res.json({ success: true });
   } catch (error) {
