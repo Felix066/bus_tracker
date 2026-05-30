@@ -2,7 +2,20 @@
 
 let resolvedToday = 0;
 
+function initResolvedCounter() {
+  const storedDate = localStorage.getItem('sos_resolved_date');
+  const today = new Date().toDateString();
+  if (storedDate === today) {
+    resolvedToday = parseInt(localStorage.getItem('sos_resolved_count') || '0', 10);
+  } else {
+    resolvedToday = 0;
+    localStorage.setItem('sos_resolved_date', today);
+    localStorage.setItem('sos_resolved_count', '0');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  initResolvedCounter();
   loadSOSAlerts();
   subscribeToRealtime();
 });
@@ -33,7 +46,6 @@ async function loadSOSAlerts() {
 
     // Update stats
     document.getElementById('stat-active').textContent = uniqueAlerts.length;
-    document.getElementById('stat-buses').textContent = uniqueAlerts.length > 0 ? uniqueAlerts.length : '0';
     document.getElementById('stat-resolved').textContent = resolvedToday;
 
     if (uniqueAlerts.length === 0) {
@@ -157,6 +169,9 @@ async function resolveAlert(busId) {
     }
 
     resolvedToday++;
+    localStorage.setItem('sos_resolved_count', resolvedToday.toString());
+    localStorage.setItem('sos_resolved_date', new Date().toDateString());
+    
     loadSOSAlerts();
   } catch (e) {
     alert('Error resolving alert: ' + e.message);
