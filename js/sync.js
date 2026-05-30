@@ -42,3 +42,4 @@ function subscribeToBus(busId, tripType) {
 
 
 window.subscribeToBus = subscribeToBus;
+``

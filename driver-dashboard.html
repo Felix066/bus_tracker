@@ -155,19 +155,24 @@ if ('serviceWorker' in navigator) {
 (function() {
   const driverSession = JSON.parse(localStorage.getItem('driverSession'));
   const activeBus = driverSession ? (driverSession.assignedBus || driverSession.busId) : null;
+  const token = driverSession ? driverSession.token : null;
   
-  if (driverSession && activeBus) {
+  if (driverSession && activeBus && token) {
     window.addEventListener('beforeunload', () => {
       // Fire-and-forget offline status update
-      supabase.from('driver_sessions').update({ is_online: false }).eq('bus_id', activeBus).then();
+      fetch(`${BACKEND_URL}/api/auth/logout-driver`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
     });
 
     const sendHeartbeat = () => {
       if (navigator.onLine) {
-        supabase.from('driver_sessions').update({ 
-          is_online: true, 
-          last_seen: new Date().toISOString() 
-        }).eq('bus_id', activeBus).then();
+        fetch(`${BACKEND_URL}/api/trip/heartbeat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ bus_id: activeBus })
+        });
       }
     };
 

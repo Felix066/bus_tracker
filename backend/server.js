@@ -46,19 +46,7 @@ app.use(helmet({
   crossOriginResourcePolicy: false,
   crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: false,
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://cdnjs.cloudflare.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://unpkg.com"],
-      fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https://*.tile.openstreetmap.org", "https://*.supabase.co", "https://unpkg.com"],
-      connectSrc: ["'self'", "https://*.supabase.co", "wss://*.supabase.co", "https://nominatim.openstreetmap.org"],
-      workerSrc: ["'self'", "blob:"],
-      frameSrc: ["'none'"],
-      objectSrc: ["'none'"]
-    }
-  }
+  contentSecurityPolicy: false
 }));
 
 const apiLimiter = rateLimit({
@@ -471,7 +459,7 @@ app.get('/api/location/bus/:bus_id', async (req, res) => {
   try {
     const { bus_id } = req.params;
     const { data, error } = await supabase
-      .from('bus_locations')
+      .from('current_bus_locations')
       .select('*')
       .eq('bus_id', bus_id)
       .single();
@@ -480,6 +468,53 @@ app.get('/api/location/bus/:bus_id', async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
     res.json({ success: true, location: data || null });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/public/buses', async (req, res) => {
+  try {
+    const [busesRes, sessionsRes, tripsRes] = await Promise.all([
+      supabase.from('buses').select('*').order('id'),
+      supabase.from('driver_sessions').select('*'),
+      supabase.from('trips').select('bus_id').eq('status', 'active')
+    ]);
+
+    res.json({
+      success: true,
+      buses: busesRes.data || [],
+      sessions: sessionsRes.data || [],
+      activeTrips: tripsRes.data || []
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/public/bus-status/:bus_id', async (req, res) => {
+  try {
+    const { bus_id } = req.params;
+    const { trip_id } = req.query; // optional
+
+    const [busRes, sessionRes] = await Promise.all([
+      supabase.from('buses').select('driver_name').eq('id', bus_id).single(),
+      supabase.from('driver_sessions').select('driver_name, is_online').eq('bus_id', bus_id).single()
+    ]);
+
+    let tripStatus = null;
+    if (trip_id) {
+      const { data } = await supabase.from('trips').select('status').eq('id', trip_id).single();
+      tripStatus = data ? data.status : null;
+    }
+
+    res.json({
+      success: true,
+      bus_driver: busRes.data ? busRes.data.driver_name : null,
+      session_driver: sessionRes.data ? sessionRes.data.driver_name : null,
+      is_online: sessionRes.data ? sessionRes.data.is_online : false,
+      trip_status: tripStatus
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -537,8 +572,8 @@ app.post('/api/location/submit', requireRole(['driver']), async (req, res) => {
 
     // First check if a location row already exists for this bus
     const { data: existingLoc } = await supabase
-      .from('bus_locations')
-      .select('id')
+      .from('current_bus_locations')
+      .select('bus_id')
       .eq('bus_id', bus_id)
       .single();
 
@@ -546,21 +581,20 @@ app.post('/api/location/submit', requireRole(['driver']), async (req, res) => {
 
     if (existingLoc) {
       // UPDATE (Overwrite) the existing row for this bus
-      ({ data, error } = await supabase.from('bus_locations').update({
+      ({ data, error } = await supabase.from('current_bus_locations').update({
         trip_id,
         source_role: 'driver',
         source_user_id: driver_id,
         latitude,
         longitude,
         speed_kmh,
-        is_accepted: true,
-        submitted_at: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
-      .eq('id', existingLoc.id)
+      .eq('bus_id', bus_id)
       .select());
     } else {
       // INSERT the very first row for this bus if it doesn't exist yet
-      ({ data, error } = await supabase.from('bus_locations').insert({
+      ({ data, error } = await supabase.from('current_bus_locations').insert({
         trip_id,
         bus_id,
         source_role: 'driver',
@@ -568,8 +602,7 @@ app.post('/api/location/submit', requireRole(['driver']), async (req, res) => {
         latitude,
         longitude,
         speed_kmh,
-        is_accepted: true,
-        submitted_at: new Date().toISOString()
+        updated_at: new Date().toISOString()
       }).select());
     }
 
@@ -668,6 +701,20 @@ app.get('/api/admin/dashboard-data', requireRole(['admin']), async (req, res) =>
 // DRIVER MIGRATED ENDPOINTS (Replaces Direct Supabase Frontend Mutations)
 // ============================================================================
 
+app.post('/api/trip/heartbeat', requireRole(['driver']), async (req, res) => {
+  try {
+    const { bus_id } = req.body;
+    const { error } = await supabase.from('driver_sessions').update({ 
+      is_online: true, 
+      last_seen: new Date().toISOString() 
+    }).eq('bus_id', bus_id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/trip/sos', requireRole(['driver']), async (req, res) => {
   try {
     const { bus_id, latitude, longitude } = req.body;
@@ -677,6 +724,42 @@ app.post('/api/trip/sos', requireRole(['driver']), async (req, res) => {
     }).select();
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/sos-alerts', requireRole(['admin']), async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('sos_alerts')
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/admin/sos-alerts/:bus_id/resolve', requireRole(['admin']), async (req, res) => {
+  try {
+    const busId = req.params.bus_id;
+    const { error } = await supabase
+      .from('sos_alerts')
+      .update({ status: 'resolved' })
+      .eq('bus_id', busId)
+      .eq('status', 'active');
+      
+    if (error) return res.status(500).json({ error: error.message });
+    
+    await supabase.from('admin_logs').insert({
+      admin_username: req.user.username,
+      action_text: `Resolved SOS alert for ${busId}`
+    });
+    
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

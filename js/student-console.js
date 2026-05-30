@@ -28,13 +28,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 3. Fetch Driver Details (Do this early so the UI updates)
     let driverName = 'Unknown Driver';
-    const { data: session } = await supabase.from('driver_sessions').select('driver_name, is_online').eq('bus_id', busId).single();
-    if (session && session.driver_name) {
-        driverName = session.driver_name;
-    } else {
-        const { data: busData } = await supabase.from('buses').select('driver_name').eq('id', busId).single();
-        if (busData && busData.driver_name) driverName = busData.driver_name;
-    }
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/public/bus-status/${busId}`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.session_driver) driverName = data.session_driver;
+            else if (data.bus_driver) driverName = data.bus_driver;
+        }
+    } catch(e) {}
 
     document.getElementById('driver-name-display').textContent = driverName;
     document.getElementById('assigned-bus-label').textContent = busId;
@@ -57,22 +58,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentTripType = trip.trip_type;
     const isTripActive = trip.status === 'active';
 
-    if (session && session.is_online === false) {
-        handleDriverOffline();
-    } else if (!isTripActive) {
-        handleTripEnded();
-    }
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/public/bus-status/${busId}`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.is_online === false) {
+                handleDriverOffline();
+            } else if (!isTripActive) {
+                handleTripEnded();
+            }
+        }
+    } catch(e) {}
 
     // 4. Initialize Map and Timer
     initMap(currentTripType);
     
     const statusBar = document.getElementById('trip-status-bar');
     
-    if (isTripActive && (!session || session.is_online !== false)) {
+    if (isTripActive) {
         if (statusBar) statusBar.classList.add('visible');
     }
     
-    if (isTripActive && trip.started_at && (!session || session.is_online !== false)) {
+    if (isTripActive && trip.started_at) {
         globalTripStartTime = new Date(trip.started_at).getTime();
         startTripTimer(globalTripStartTime);
     }
@@ -135,35 +142,33 @@ function subscribeToLiveUpdates() {
     // Fallback: Check driver and trip status every 3 seconds
     // This guarantees instant updates even if Supabase Realtime is not enabled for these tables
     setInterval(async () => {
-        // 1. Check if driver logged out
-        const { data: session } = await supabase.from('driver_sessions')
-            .select('is_online')
-            .eq('bus_id', busId)
-            .single();
-            
-        if (session && session.is_online === false) {
-            handleDriverOffline();
-            return;
-        }
-
-        // 2. Check if trip ended
-        if (activeTripId) {
-            const { data: trip } = await supabase.from('trips')
-                .select('status')
-                .eq('id', activeTripId)
-                .single();
+        try {
+            const queryUrl = activeTripId 
+                ? `${BACKEND_URL}/api/public/bus-status/${busId}?trip_id=${activeTripId}`
+                : `${BACKEND_URL}/api/public/bus-status/${busId}`;
+            const res = await fetch(queryUrl);
+            if (res.ok) {
+                const data = await res.json();
                 
-            if (trip && (trip.status === 'completed' || trip.status === 'cancelled')) {
-                handleTripEnded();
-                return;
-            }
-
-            // 3. Check for app crash / forced close (no GPS for 90s)
-            if (lastGPSTime > 0) {
-                const timeDiffMs = Date.now() - lastGPSTime;
-                if (timeDiffMs > 90000) { 
+                // 1. Check if driver logged out
+                if (data.is_online === false) {
                     handleDriverOffline();
+                    return;
                 }
+                
+                // 2. Check if trip ended
+                if (activeTripId && (data.trip_status === 'completed' || data.trip_status === 'cancelled')) {
+                    handleTripEnded();
+                    return;
+                }
+            }
+        } catch(e) {}
+
+        // 3. Check for app crash / forced close (no GPS for 90s)
+        if (lastGPSTime > 0) {
+            const timeDiffMs = Date.now() - lastGPSTime;
+            if (timeDiffMs > 90000) { 
+                handleDriverOffline();
             }
         }
     }, 3000);
@@ -240,27 +245,29 @@ function handleDriverOnline() {
     
     // Only restore green status if the trip hasn't ended.
     if (activeTripId) {
-        supabase.from('trips').select('status').eq('id', activeTripId).single().then(({data}) => {
-            if (data && data.status === 'active') {
-                if (statusBar && statusText) {
-                    statusBar.classList.add('visible');
-                    statusBar.style.background = '#F0FDF6';
-                    statusBar.style.border = '1px solid #BBF0D6';
-                    statusText.textContent = 'Trip active — GPS tracking live';
-                    statusText.style.color = '#2A7D55';
-                    if (statusDot) {
-                        statusDot.className = 'status-dot-green';
-                        statusDot.style.background = '#2A7D55';
-                        statusDot.style.boxShadow = 'none';
+        fetch(`${BACKEND_URL}/api/public/bus-status/${busId}?trip_id=${activeTripId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.trip_status === 'active') {
+                    if (statusBar && statusText) {
+                        statusBar.classList.add('visible');
+                        statusBar.style.background = '#F0FDF6';
+                        statusBar.style.border = '1px solid #BBF0D6';
+                        statusText.textContent = 'Trip active — GPS tracking live';
+                        statusText.style.color = '#2A7D55';
+                        if (statusDot) {
+                            statusDot.className = 'status-dot-green';
+                            statusDot.style.background = '#2A7D55';
+                            statusDot.style.boxShadow = 'none';
+                        }
+                    }
+                    
+                    // Restart timer synchronized with actual trip start time
+                    if (globalTripStartTime && typeof startTripTimer === 'function') {
+                        startTripTimer(globalTripStartTime);
                     }
                 }
-                
-                // Restart timer synchronized with actual trip start time
-                if (globalTripStartTime && typeof startTripTimer === 'function') {
-                    startTripTimer(globalTripStartTime);
-                }
-            }
-        });
+            }).catch(e => console.error(e));
     }
 }
 

@@ -8,17 +8,16 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadSOSAlerts() {
   const container = document.getElementById('alerts-container');
   
-  const { data: alerts, error } = await supabase
-    .from('sos_alerts')
-    .select('*')
-    .eq('status', 'active')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error(error);
-    container.innerHTML = `<div style="grid-column:1/-1; color:var(--danger); text-align:center;">Failed to load alerts.</div>`;
-    return;
-  }
+  try {
+    const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+    const res = await fetch(`${BACKEND_URL}/api/admin/sos-alerts`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!res.ok) throw new Error("Failed to load alerts from backend");
+    
+    const data = await res.json();
+    const alerts = data.data || [];
 
   // Deduplicate by bus_id keeping the latest one
   const uniqueAlerts = [];
@@ -114,33 +113,35 @@ async function loadSOSAlerts() {
     card.querySelector('.btn-resolve').addEventListener('click', () => resolveAlert(alert.bus_id));
     
     container.appendChild(card);
-  });
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = `<div style="grid-column:1/-1; color:var(--danger); text-align:center;">Failed to load alerts.</div>`;
+  }
 }
 
 async function resolveAlert(busId) {
   if (!confirm(`Are you sure you want to resolve the SOS alert for ${busId}?`)) return;
   
-  const { error } = await supabase
-    .from('sos_alerts')
-    .update({ status: 'resolved' })
-    .eq('bus_id', busId)
-    .eq('status', 'active');
-    
-  if (error) {
-    alert("Error resolving alert: " + error.message);
-  } else {
-    const session = JSON.parse(localStorage.getItem('adminSession'));
-    const adminName = session ? session.username : 'Admin';
-    await supabase.from('admin_logs').insert({
-      admin_username: adminName,
-      action_text: `Resolved SOS alert for ${busId}`
+  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/sos-alerts/${busId}/resolve`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` }
     });
     
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Failed to resolve alert");
+    }
+    
     loadSOSAlerts();
+  } catch(e) {
+    alert("Error resolving alert: " + e.message);
   }
 }
 
 function subscribeToRealtime() {
+  if (!window.supabase) return;
   supabase.channel('admin-sos-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'sos_alerts' }, () => {
       loadSOSAlerts();

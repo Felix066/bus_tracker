@@ -51,21 +51,26 @@ async function getAuthToken(user_id, email, role, trip_id) {
 
 async function submitLocationSecure(latitude, longitude, speed_kmh, trip_id, bus_id, source_role, source_user_id) {
   try {
-    // UPSERT directly into current_bus_locations (bypassing broken backend).
-    // This table correctly has the speed_kmh column, bus_id primary key, and UPDATE policies.
-    const result = await window.supabase.from('current_bus_locations').upsert({
-      bus_id,
-      trip_id,
-      latitude,
-      longitude,
-      speed_kmh,
-      source_role,
-      source_user_id,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'bus_id' }).select();
-
-    if (result.error) throw result.error;
-    return { success: true, data: result.data[0] };
+    const token = JSON.parse(localStorage.getItem('driverSession'))?.token;
+    const response = await fetch(`${BACKEND_URL}/api/location/submit`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` 
+      },
+      body: JSON.stringify({
+        latitude,
+        longitude,
+        speed_kmh,
+        trip_id,
+        bus_id,
+        source_role,
+        source_user_id
+      })
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error);
+    return { success: true, data: result.data };
   } catch (error) {
     console.error('❌ Location submission failed:', error);
     return { success: false, error: error.message };

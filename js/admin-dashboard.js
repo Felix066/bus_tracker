@@ -386,13 +386,14 @@ function removePhoto(type) {
 
   if (confirm(`Are you sure you want to delete this ${type} photo permanently?`)) {
     localStorage.removeItem(`${type}_photo_${busId}`);
+    const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
     if (type === 'bus') {
-      supabase.from('buses').update({ bus_photo_url: null }).eq('id', busId).then();
+      fetch(`${BACKEND_URL}/api/admin/buses`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ id: busId, isNew: false, busPayload: { bus_photo_url: null } }) });
       document.getElementById('inpBusPhoto').value = '';
       document.getElementById('busPhotoPreview').style.display = 'none';
       document.getElementById('btnRemoveBusPhoto').style.display = 'none';
     } else {
-      supabase.from('buses').update({ driver_photo_url: null }).eq('id', busId).then();
+      fetch(`${BACKEND_URL}/api/admin/buses`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ id: busId, isNew: false, busPayload: { driver_photo_url: null } }) });
       document.getElementById('inpDriverPhoto').value = '';
       document.getElementById('driverPhotoPreview').style.display = 'none';
       document.getElementById('btnRemoveDriverPhoto').style.display = 'none';

@@ -9,15 +9,19 @@ async function loadStudentDashboard() {
   const container = document.getElementById('bus-grid');
   if (!container) return;
 
-  const [busesRes, sessionsRes, tripsRes] = await Promise.all([
-    supabase.from('buses').select('*').order('id'),
-    supabase.from('driver_sessions').select('*'),
-    supabase.from('trips').select('bus_id').eq('status', 'active')
-  ]);
-
-  busesData = busesRes.data || [];
-  driverSessions = sessionsRes.data || [];
-  activeTripsData = tripsRes.data || [];
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/public/buses`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        busesData = data.buses || [];
+        driverSessions = data.sessions || [];
+        activeTripsData = data.activeTrips || [];
+      }
+    }
+  } catch (err) {
+    console.error("Failed to load dashboard from backend", err);
+  }
 
   renderBusCards();
 }
@@ -179,6 +183,7 @@ function handleTrackClick(busId, isOnline) {
 
 // Setup Realtime 
 function subscribeToStudentSync() {
+  if (!window.supabase) return;
   supabase.channel('student-dashboard-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'buses' }, () => loadStudentDashboard())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_sessions' }, () => loadStudentDashboard())
