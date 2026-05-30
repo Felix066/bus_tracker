@@ -40,7 +40,7 @@ async function loadSOSAlerts() {
       container.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
               <polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
@@ -65,17 +65,14 @@ async function loadSOSAlerts() {
       card.innerHTML = `
         <div class="card-header">
           <div class="card-header-left">
-            <div class="bus-label">Emergency Alert</div>
+            <div class="time-stamp">${timeStr} · ${dateStr}</div>
             <div class="bus-id"></div>
-            <div class="time-stamp"></div>
           </div>
           <div class="active-badge">
             <div class="pulse-ring"></div>
             SOS ACTIVE
           </div>
         </div>
-
-        <div class="card-divider"></div>
 
         <div class="info-rows">
           <div class="info-row">
@@ -107,7 +104,6 @@ async function loadSOSAlerts() {
 
       // Safely set text content (prevents XSS)
       card.querySelector('.bus-id').textContent = alert.bus_id || 'Unknown Bus';
-      card.querySelector('.time-stamp').textContent = `${timeStr} · ${dateStr}`;
       card.querySelector('.driver-name-val').textContent = alert.driver_name || 'N/A';
 
       // Map link
@@ -135,8 +131,8 @@ async function loadSOSAlerts() {
     console.error('[SOS] Load error:', err);
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon-wrap" style="background: rgba(255,59,92,0.1); border-color: rgba(255,59,92,0.2); color: var(--red);">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+        <div class="empty-icon-wrap" style="background: var(--red-dim); border-color: var(--red-border); color: var(--red);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
         </div>
         <h2>Connection Error</h2>
         <p>Could not load alerts. Check your connection and backend server.</p>
