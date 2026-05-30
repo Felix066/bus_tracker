@@ -33,7 +33,11 @@ const showUIForRole = (role) => {
 
 async function handleStudentLogin(email, password) {
   const { valid, role } = validateEmailDomain(email);
-  if (!valid) throw new Error('Only @student.providence.edu.in or @providence.edu.in allowed.');
+  if (!valid) throw new Error('Incorrect username or password');
+
+  if (!supabase || !supabase.auth) {
+    throw new Error('Incorrect username or password');
+  }
 
   // Attempt to sign in with Supabase Auth
   let { data, error } = await supabase.auth.signInWithPassword({
@@ -42,7 +46,7 @@ async function handleStudentLogin(email, password) {
   });
 
   if (error) {
-    throw new Error('Invalid email or password. Auto-registration is disabled. Please use an invitation link.');
+    throw new Error('Incorrect username or password');
   }
 
   // Set the session locally for compatibility with other parts of the app
