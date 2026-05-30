@@ -34,8 +34,7 @@ function initMap(tripType) {
   // Primary tile layer using a direct domain (bypassing subdomain wildcard blocks like a.*, b.*)
   const primaryTiles = L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    maxZoom: 19,
-    crossOrigin: true
+    maxZoom: 19
   });
 
   // Automatically fall back to standard direct-domain OSM if the primary tile server fails
@@ -48,8 +47,7 @@ function initMap(tripType) {
       
       const fallbackTiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19,
-        crossOrigin: true
+        maxZoom: 19
       });
       fallbackTiles.addTo(map);
     }
@@ -94,7 +92,7 @@ function prewarmTileCache(map) {
     div.style.display = 'none';
     document.body.appendChild(div);
     const tempMap = L.map(div).setView(boundsCenter, zoom);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
       attribution: '',
       maxZoom: 14,
       minZoom: 10
