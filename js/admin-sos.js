@@ -40,21 +40,10 @@ async function loadSOSAlerts() {
     return;
   }
 
-  // Reverse geocode for readable place names
-  await Promise.all(uniqueAlerts.map(async (alert) => {
-    if (alert.latitude && alert.longitude) {
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${alert.latitude}&lon=${alert.longitude}`);
-        if (!res.ok) throw new Error("Network response was not ok");
-        const data = await res.json();
-        alert.placeName = data.display_name || 'Location details unavailable';
-      } catch (e) {
-        alert.placeName = 'Location details unavailable';
-      }
-    } else {
-      alert.placeName = 'Coordinates not available';
-    }
-  }));
+  // Reverse geocode removed to prevent hanging and API rate limits
+  uniqueAlerts.forEach((alert) => {
+    alert.placeName = 'Click "View on Map" for exact location';
+  });
 
   container.innerHTML = '';
   
