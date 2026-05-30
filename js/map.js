@@ -31,10 +31,31 @@ function createBusIcon(label = 'Bus') {
 
 function initMap(tripType) {
   map = L.map('map').setView([9.1500, 76.7200], 11);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  // Primary tile layer using a direct domain (bypassing subdomain wildcard blocks like a.*, b.*)
+  const primaryTiles = L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    maxZoom: 19
-  }).addTo(map);
+    maxZoom: 19,
+    crossOrigin: true
+  });
+
+  // Automatically fall back to standard direct-domain OSM if the primary tile server fails
+  let hasFailedOver = false;
+  primaryTiles.on('tileerror', function() {
+    if (!hasFailedOver) {
+      hasFailedOver = true;
+      console.warn('[Map] CartoDB tiles failed. Falling back to standard direct OpenStreetMap...');
+      map.removeLayer(primaryTiles);
+      
+      const fallbackTiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19,
+        crossOrigin: true
+      });
+      fallbackTiles.addTo(map);
+    }
+  });
+
+  primaryTiles.addTo(map);
 
   const route = getRoute(tripType);
   const coords = route.map(s => [s.lat, s.lon]);
