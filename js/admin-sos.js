@@ -77,7 +77,7 @@ async function loadSOSAlerts() {
       card.innerHTML = `
         <div class="card-header">
           <div class="card-header-left">
-            <div class="time-stamp">${timeStr} · ${dateStr}</div>
+            <div class="time-stamp"></div>
             <div class="bus-id"></div>
           </div>
           <div class="active-badge">
@@ -115,6 +115,7 @@ async function loadSOSAlerts() {
       `;
 
       // Safely set text content (prevents XSS)
+      card.querySelector('.time-stamp').textContent = `${timeStr} · ${dateStr}`;
       card.querySelector('.bus-id').textContent = alert.bus_id || 'Unknown Bus';
       card.querySelector('.driver-name-val').textContent = alert.driver_name || 'N/A';
 
