@@ -45,17 +45,39 @@ app.use(cors({
 app.use(helmet({
   crossOriginResourcePolicy: false,
   crossOriginEmbedderPolicy: false,
-  crossOriginOpenerPolicy: false,
-  contentSecurityPolicy: false
+  crossOriginOpenerPolicy: { policy: 'same-origin' },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      connectSrc: ["'self'", "https://qlzqymdeguhzlxnfawiq.supabase.co", "wss://qlzqymdeguhzlxnfawiq.supabase.co", "https://nominatim.openstreetmap.org"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"]
+    }
+  }
 }));
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5000, // Increased from 100 to 5000 to prevent 429 Too Many Requests errors for legitimate users behind NAT
+  max: 5000,
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use('/api/', apiLimiter);
+
+// Stricter rate limiter for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' }
+});
+app.use('/api/auth/', authLimiter);
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -272,6 +294,13 @@ app.post('/api/auth/register-driver', requireRole(['admin']), async (req, res) =
 app.post('/api/auth/login-admin', async (req, res) => {
   try {
     const { username, password } = req.body;
+
+    // Input validation
+    if (!username || !password ||
+        typeof username !== 'string' || typeof password !== 'string' ||
+        username.length > 64 || password.length > 128) {
+      return res.status(401).json({ error: 'Invalid admin credentials' });
+    }
     
     // Check credentials against the hashed password
     const { data: adminData, error: adminError } = await supabase
@@ -296,13 +325,21 @@ app.post('/api/auth/login-admin', async (req, res) => {
     );
     res.json({ success: true, token, username });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('[login-admin] Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 app.post('/api/auth/login-driver', async (req, res) => {
   try {
     const { username, password } = req.body;
+
+    // Input validation
+    if (!username || !password ||
+        typeof username !== 'string' || typeof password !== 'string' ||
+        username.length > 64 || password.length > 128) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
     
     // Check credentials against the hashed password
     const { data: driverData, error: driverError } = await supabase
@@ -342,7 +379,8 @@ app.post('/api/auth/login-driver', async (req, res) => {
       driver: { id: driverData.id, username, assignedBus: driverData.assigned_bus } 
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('[login-driver] Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -362,6 +400,7 @@ app.post('/api/auth/logout-driver', async (req, res) => {
     }
     res.json({ success: true });
   } catch (error) {
+    console.error('[logout-driver] Error:', error);
     res.status(401).json({ success: false });
   }
 });
@@ -585,22 +624,8 @@ app.get('/api/public/bus-status/:bus_id', async (req, res) => {
 // DRIVER-TO-BUS VALIDATION & LOCATION ENDPOINTS
 // ============================================================================
 
-app.post('/api/auth/get-token', async (req, res) => {
-  const { user_id, email, role, trip_id } = req.body;
-  
-  if (!user_id || !email || !role) {
-    return res.status(400).json({ error: 'Missing user context' });
-  }
-
-  // Issue a 1-hour JWT for the frontend to use
-  const token = jwt.sign(
-    { user_id, email, role, trip_id }, 
-    JWT_SECRET, 
-    { expiresIn: '1h' }
-  );
-
-  res.json({ success: true, token });
-});
+// NOTE: /api/auth/get-token has been removed — it allowed unauthenticated JWT issuance (CRITICAL vulnerability).
+// Drivers use the token issued at /api/auth/login-driver directly for all protected calls.
 
 // 2. Driver-to-Bus Ownership Validation
 app.post('/api/location/submit', requireRole(['driver']), async (req, res) => {
@@ -765,28 +790,45 @@ app.get('/api/admin/dashboard-data', requireRole(['admin']), async (req, res) =>
 app.post('/api/trip/heartbeat', requireRole(['driver']), async (req, res) => {
   try {
     const { bus_id } = req.body;
+
+    // Ownership check: driver can only heartbeat their own assigned bus
+    if (req.user.assignedBus && bus_id !== req.user.assignedBus) {
+      return res.status(403).json({ error: 'Forbidden: Bus does not belong to this driver.' });
+    }
+
     const { error } = await supabase.from('driver_sessions').update({ 
       is_online: true, 
       last_seen: new Date().toISOString() 
     }).eq('bus_id', bus_id);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return res.status(500).json({ error: 'Internal server error' });
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[heartbeat] Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 app.post('/api/trip/sos', requireRole(['driver']), async (req, res) => {
   try {
     const { bus_id, latitude, longitude } = req.body;
+
+    // Input validation on coordinates
+    if (latitude !== null && latitude !== undefined && (typeof latitude !== 'number' || latitude < -90 || latitude > 90)) {
+      return res.status(400).json({ error: 'Invalid latitude value.' });
+    }
+    if (longitude !== null && longitude !== undefined && (typeof longitude !== 'number' || longitude < -180 || longitude > 180)) {
+      return res.status(400).json({ error: 'Invalid longitude value.' });
+    }
+
     const driver_name = req.user.username;
     const { data, error } = await supabase.from('sos_alerts').insert({
       bus_id, driver_name, latitude, longitude, status: 'active'
     }).select();
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return res.status(500).json({ error: 'Internal server error' });
     res.json({ success: true, data });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[sos] Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

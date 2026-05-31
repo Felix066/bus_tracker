@@ -155,7 +155,7 @@ async function loadSOSAlerts() {
 }
 
 async function resolveAlert(busId) {
-  if (!confirm(`Resolve the SOS alert for ${busId}?`)) return;
+  if (!confirm(`Resolve the SOS alert for ${String(busId)}?`)) return;
 
   const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
   try {

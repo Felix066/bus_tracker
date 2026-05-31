@@ -27,7 +27,7 @@ const showUIForRole = (role) => {
     el.style.display = 'block';
   });
 
-  console.log('UI updated for role:', role);
+
 };
 
 

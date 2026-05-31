@@ -24,26 +24,7 @@ if (typeof supabase !== 'undefined') {
 // TOKEN MANAGEMENT
 // ============================================================================
 
-let authToken = null;
 
-async function getAuthToken(user_id, email, role, trip_id) {
-  try {
-    const response = await fetch(`${BACKEND_URL}/api/auth/get-token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id, email, role, trip_id })
-    });
-    const data = await response.json();
-    if (data.success) {
-      authToken = data.token;
-      return authToken;
-    }
-    throw new Error('Failed to get token');
-  } catch (error) {
-    console.error('Auth error:', error);
-    return null;
-  }
-}
 
 // ============================================================================
 // SECURE LOCATION SUBMISSION
@@ -117,7 +98,7 @@ async function getTripInfo(bus_id) {
 // EXPORTS
 // ============================================================================
 
-window.getAuthToken = getAuthToken;
+
 window.submitLocationSecure = submitLocationSecure;
 window.getBusLocation = getBusLocation;
 window.getTripInfo = getTripInfo;

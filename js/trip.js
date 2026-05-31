@@ -103,9 +103,6 @@ async function startTrip() {
     activeTripId = trip.id;
     currentTripType = tripType;
 
-    // Get Auth Token for backend API
-    const userEmail = driver.email || 'driver@providence.edu.in';
-    await getAuthToken(driver.driverId, userEmail, 'driver', trip.id);
 
     startDriverGPS(trip.id, busId, tripType);
     startTripTimer();
@@ -519,9 +516,6 @@ async function recoverActiveTrip() {
     }
 
     // Resume GPS
-    // Get Auth Token for backend API
-    const userEmail = session.email || 'driver@providence.edu.in';
-    await getAuthToken(session.driverId, userEmail, 'driver', trip.id);
 
     startDriverGPS(trip.id, trip.bus_id, trip.trip_type);
     requestWakeLock(); // Re-acquire wake lock on recovery
