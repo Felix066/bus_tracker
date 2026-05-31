@@ -25,7 +25,18 @@ async function handleDriverLogin(username, password) {
       body: JSON.stringify({ username, password })
     });
     
-    const driverData = await driverRes.json();
+    let driverData;
+    const textRes = await driverRes.text();
+    try {
+      driverData = JSON.parse(textRes);
+    } catch (e) {
+      if (!driverRes.ok) {
+        throw new Error(textRes || 'Login failed with status ' + driverRes.status);
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    }
+    
     if (!driverRes.ok) throw new Error(driverData.error || 'Invalid username or password');
 
     const session = {

@@ -51,7 +51,7 @@ app.use(helmet({
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 5000, // Increased from 100 to 5000 to prevent 429 Too Many Requests errors for legitimate users behind NAT
   standardHeaders: true,
   legacyHeaders: false,
 });
