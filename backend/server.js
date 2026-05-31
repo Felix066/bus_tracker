@@ -322,7 +322,7 @@ app.post('/api/auth/login-admin', async (req, res) => {
     const token = jwt.sign(
       { user_id: username, username, role: 'admin' }, 
       JWT_SECRET, 
-      { expiresIn: '12h' }
+      { expiresIn: '7d' }
     );
     res.json({ success: true, token, username });
   } catch (error) {
@@ -361,7 +361,7 @@ app.post('/api/auth/login-driver', async (req, res) => {
     const token = jwt.sign(
       { user_id: driverData.id, username, role: 'driver', assignedBus: driverData.assigned_bus }, 
       JWT_SECRET, 
-      { expiresIn: '12h' }
+      { expiresIn: '7d' }
     );
 
     // Register driver session in realtime SECURELY on the backend
