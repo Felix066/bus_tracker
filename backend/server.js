@@ -418,6 +418,58 @@ app.get('/api/auth/verify', async (req, res) => {
   }
 });
 
+// REGISTER / UPDATE DRIVER CREDENTIALS (Admin only)
+app.post('/api/auth/register-driver', requireRole(['admin']), async (req, res) => {
+  try {
+    const { username, password, busId } = req.body;
+
+    if (!username || !password || !busId) {
+      return res.status(400).json({ error: 'username, password, and busId are required.' });
+    }
+    if (typeof username !== 'string' || username.length > 64) {
+      return res.status(400).json({ error: 'Invalid username.' });
+    }
+    if (typeof password !== 'string' || password.length < 6 || password.length > 128) {
+      return res.status(400).json({ error: 'Password must be 6–128 characters.' });
+    }
+
+    const password_hash = await bcrypt.hash(password, 12);
+
+    // Check if a driver for this bus already exists
+    const { data: existing } = await supabase
+      .from('drivers')
+      .select('id')
+      .eq('assigned_bus', busId)
+      .single();
+
+    let result;
+    if (existing) {
+      // Update existing driver's credentials
+      result = await supabase
+        .from('drivers')
+        .update({ username, password_hash })
+        .eq('assigned_bus', busId)
+        .select();
+    } else {
+      // Insert new driver record
+      result = await supabase
+        .from('drivers')
+        .insert({ username, password_hash, assigned_bus: busId })
+        .select();
+    }
+
+    if (result.error) {
+      console.error('[register-driver] Supabase error:', result.error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[register-driver] Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // VALIDATE INVITATION TOKEN
 app.get('/api/auth/validate-token/:token', async (req, res) => {
   try {
