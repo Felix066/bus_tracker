@@ -238,8 +238,12 @@ Areas of Interest:
 ---
 
 «Building technology that solves real-world operational challenges through intelligent, secure, and scalable software systems.»
+<img width="1401" height="857" alt="image" src="https://github.com/user-attachments/assets/12860509-87c1-4d91-81a8-50c3cc1a92ae" />
+
 <img width="1432" height="862" alt="image" src="https://github.com/user-attachments/assets/bf7d3cd5-6280-482d-b4aa-f8a453f68982" />
 <img width="1912" height="952" alt="image" src="https://github.com/user-attachments/assets/e2755a22-476a-4dd9-b6d9-19740a0f525b" />
+<img width="1906" height="915" alt="image" src="https://github.com/user-attachments/assets/049f9cd0-ceda-42d4-8d1e-86d35904674e" />
+
 <img width="1911" height="902" alt="image" src="https://github.com/user-attachments/assets/952c1c50-d6e3-4f33-a6eb-eb091e1f8f8b" />
 <img width="1266" height="911" alt="image" src="https://github.com/user-attachments/assets/0de37ed2-3417-40ae-96d8-8ffa79433c56" />
 
