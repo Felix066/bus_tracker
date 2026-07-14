@@ -14,6 +14,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="BusTrack">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="theme-student">
 <div id="offline-indicator" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1A1A1A; color:white; padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; font-family:Inter,sans-serif; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.3); align-items:center; gap:8px;">
@@ -55,27 +56,24 @@
 
         <div id="error-banner" class="error-banner hidden"></div>
 
-        <form id="login-form">
-          <div class="form-group">
-            <label>College Email</label>
-            <div class="input-wrapper">
-              <i class="far fa-envelope"></i>
-              <input type="email" id="email" placeholder="Enter your email" autocomplete="off" required>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <div class="input-wrapper" style="position: relative;">
-              <i class="fas fa-lock"></i>
-              <input type="password" id="password" placeholder="••••••••" autocomplete="off" required>
-              <i class="fas fa-eye toggle-password" style="position: absolute; left: auto; right: 16px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #9CA3AF; z-index: 10; pointer-events: auto;" onclick="togglePasswordVisibility('password', this)"></i>
-            </div>
-          </div>
+        <div id="g_id_onload"
+             data-client_id="dummy-client-id-for-testing.apps.googleusercontent.com"
+             data-context="signin"
+             data-ux_mode="popup"
+             data-callback="handleGoogleSignIn"
+             data-auto_prompt="false">
+        </div>
 
+        <div class="g_id_signin"
+             data-type="standard"
+             data-shape="rectangular"
+             data-theme="outline"
+             data-text="signin_with"
+             data-size="large"
+             data-logo_alignment="left"
+             style="margin-bottom: 20px;">
+        </div>
 
-
-          <button type="submit" class="btn-primary br-14">Sign In <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 4px;"></i></button>
-        </form>
 
         <div class="bottom-link">
           Are you a driver? <a href="driver-login.html">Sign in here →</a>
@@ -88,33 +86,8 @@
   <script src="js/supabase-client.js"></script>
   <script src="js/auth.js?v=4"></script>
   <script>
-
-
-    // Login Form Submission
-    document.getElementById('login-form').onsubmit = async (e) => {
-      e.preventDefault();
-      const btn = e.target.querySelector('button[type="submit"]');
-      const originalText = btn.innerHTML;
-      const errBanner = document.getElementById('error-banner');
-      
-      errBanner.classList.add('hidden');
-      btn.disabled = true;
-      btn.innerHTML = 'Verifying... <i class="fas fa-spinner fa-spin"></i>';
-
-      try {
-        const emailVal = document.getElementById('email').value.trim();
-        const passVal = document.getElementById('password').value;
-        
-        await handleStudentLogin(emailVal, passVal);
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-      } catch (err) {
-        errBanner.textContent = err.message;
-        errBanner.classList.remove('hidden');
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-      }
-    };
+    // Google Sign-In is handled via the callback function handleGoogleSignIn 
+    // which is defined in js/auth.js.
   </script>
 <script>
 window.addEventListener('online', () => {

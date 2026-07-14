@@ -7,6 +7,9 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { OAuth2Client } = require('google-auth-library');
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || 'dummy-client-id-for-testing.apps.googleusercontent.com');
 
 const app = express();
 const supabase = createClient(
@@ -415,6 +418,66 @@ app.get('/api/auth/verify', async (req, res) => {
     res.json({ valid: true, user: decoded });
   } catch (error) {
     res.status(401).json({ valid: false });
+  }
+});
+
+// GOOGLE SIGN-IN FOR STUDENTS AND FACULTY
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      return res.status(400).json({ error: 'Missing credential' });
+    }
+
+    // Verify Google token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      // audience: process.env.GOOGLE_CLIENT_ID // Optional: ensure it matches
+    });
+    const payload = ticket.getPayload();
+    const email = payload.email;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Invalid Google token' });
+    }
+
+    // Check Students table
+    let { data: studentData, error: studentError } = await supabase
+      .from('students')
+      .select('id, email')
+      .eq('email', email)
+      .single();
+
+    if (studentData) {
+      const token = jwt.sign(
+        { user_id: studentData.id, email, role: 'student' },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+      return res.json({ success: true, token, role: 'student', user: studentData });
+    }
+
+    // Check Faculty table
+    let { data: facultyData, error: facultyError } = await supabase
+      .from('faculty')
+      .select('id, email')
+      .eq('email', email)
+      .single();
+
+    if (facultyData) {
+      const token = jwt.sign(
+        { user_id: facultyData.id, email, role: 'faculty' },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+      return res.json({ success: true, token, role: 'faculty', user: facultyData });
+    }
+
+    // Not found in either
+    return res.status(401).json({ error: 'This Google account is not authorized. Please contact the administrator.' });
+  } catch (error) {
+    console.error('[auth-google] Error:', error);
+    res.status(500).json({ error: 'Internal server error during Google Sign-In' });
   }
 });
 

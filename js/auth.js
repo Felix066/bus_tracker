@@ -31,34 +31,43 @@ const showUIForRole = (role) => {
 };
 
 
-async function handleStudentLogin(email, password) {
-  const { valid, role } = validateEmailDomain(email);
-  if (!valid) throw new Error('Incorrect username or password');
-
-  if (!supabase || !supabase.auth) {
-    throw new Error('Incorrect username or password');
+async function handleGoogleSignIn(response) {
+  const errBanner = document.getElementById('error-banner');
+  if (errBanner) {
+    errBanner.classList.add('hidden');
+    errBanner.textContent = '';
   }
 
-  // Attempt to sign in with Supabase Auth
-  let { data, error } = await supabase.auth.signInWithPassword({
-    email: email,
-    password: password,
-  });
+  try {
+    const res = await fetch(`${window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') ? 'http://localhost:3001' : ''}/api/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: response.credential })
+    });
 
-  if (error) {
-    throw new Error('Incorrect username or password');
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Authentication failed');
+    }
+
+    // Set the session locally for compatibility with other parts of the app
+    localStorage.setItem('userSession', JSON.stringify({
+      id: data.user.id,
+      email: data.user.email,
+      role: data.role,
+      token: data.token
+    }));
+
+    showUIForRole(data.role);
+
+    window.location.href = 'student-dashboard.html';
+  } catch (err) {
+    console.error('Google Sign-In Error:', err);
+    if (errBanner) {
+      errBanner.textContent = err.message;
+      errBanner.classList.remove('hidden');
+    }
   }
-
-  // Set the session locally for compatibility with other parts of the app
-  localStorage.setItem('userSession', JSON.stringify({
-    id: data.user.id,
-    email: email,
-    role: role
-  }));
-
-  showUIForRole(role);
-
-  window.location.href = 'student-dashboard.html';
 }
 
 async function logout() {
