@@ -52,13 +52,13 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://accounts.google.com"],
       scriptSrcAttr: ["'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net", "https://accounts.google.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
-      imgSrc: ["'self'", "data:", "https:", "blob:"],
-      connectSrc: ["'self'", "https://qlzqymdeguhzlxnfawiq.supabase.co", "wss://qlzqymdeguhzlxnfawiq.supabase.co", "https://nominatim.openstreetmap.org"],
-      frameSrc: ["'none'"],
+      imgSrc: ["'self'", "data:", "https:", "blob:", "https://lh3.googleusercontent.com"],
+      connectSrc: ["'self'", "https://qlzqymdeguhzlxnfawiq.supabase.co", "wss://qlzqymdeguhzlxnfawiq.supabase.co", "https://nominatim.openstreetmap.org", "https://accounts.google.com"],
+      frameSrc: ["'self'", "https://accounts.google.com"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"]
     }
