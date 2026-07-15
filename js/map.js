@@ -21,11 +21,20 @@ function createBusIcon(label = 'Bus') {
   return L.divIcon({
     className: 'custom-bus-icon',
     html: '<div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">' +
-          '<div style="font-size: 32px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); line-height: 1;">🚌</div>' +
-          '<div style="background: #1e40af; color: white; font-weight: 800; font-size: 11px; padding: 2px 6px; border-radius: 12px; border: 2px solid white; margin-top: -8px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); text-transform: uppercase;">' + 
+          '<div style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">' +
+          '<svg viewBox="0 0 100 100" width="36" height="36">' +
+          '<rect x="25" y="10" width="50" height="80" rx="10" fill="#111827"/>' +
+          '<rect x="32" y="16" width="36" height="14" rx="3" fill="#6B7280"/>' +
+          '<rect x="32" y="38" width="36" height="32" rx="3" fill="#4B5563"/>' +
+          '<rect x="32" y="10" width="10" height="3" rx="1.5" fill="#FCD34D"/>' +
+          '<rect x="58" y="10" width="10" height="3" rx="1.5" fill="#FCD34D"/>' +
+          '<rect x="32" y="87" width="10" height="3" rx="1.5" fill="#EF4444"/>' +
+          '<rect x="58" y="87" width="10" height="3" rx="1.5" fill="#EF4444"/>' +
+          '</svg></div>' +
+          '<div style="background: #1e40af; color: white; font-weight: 800; font-size: 11px; padding: 2px 6px; border-radius: 12px; border: 2px solid white; margin-top: -4px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); text-transform: uppercase;">' + 
           safeLabel + '</div></div>',
-    iconSize: [45, 45],
-    iconAnchor: [22, 22]
+    iconSize: [45, 55],
+    iconAnchor: [22, 27]
   });
 }
 
