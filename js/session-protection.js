@@ -42,11 +42,11 @@ async function protectRoute(requiredRole) {
     }
   } else {
     const localSession = JSON.parse(localStorage.getItem('userSession'));
-    if (localSession && localSession.id && localSession.id.startsWith('demo-student-')) return; // allow demo
+    if (localSession && (localSession.token || (localSession.id && localSession.id.startsWith('demo-student-')))) return;
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      window.location.href = 'index.html';
+      window.location.href = 'student-login.html';
     }
   }
 }
