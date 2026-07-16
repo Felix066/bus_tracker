@@ -9,7 +9,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { OAuth2Client } = require('google-auth-library');
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || 'dummy-client-id-for-testing.apps.googleusercontent.com');
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || '47792284104-7dncvdit6ilh47snjfm8anekv3jvavko.apps.googleusercontent.com');
 
 const app = express();
 const supabase = createClient(

@@ -3,121 +3,209 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Student Portal | BusTrack</title>
+  <title>Welcome | BusTrack</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
   <script src="js/icons.js?v=12"></script>
   <link rel="stylesheet" href="css/global.css">
-  <link rel="stylesheet" href="css/login.css">
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#1A1A1A">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="BusTrack">
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    body {
+      background-color: #F9FAFB;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .landing-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .landing-header .logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--accent-blue-light), var(--accent-blue-dark));
+      color: white;
+      border-radius: 16px;
+      font-size: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+
+    .landing-header h1 {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .landing-header p {
+      font-size: 18px;
+      color: #6B7280;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      max-width: 800px;
+      width: 100%;
+    }
+
+    .role-card {
+      background: white;
+      border-radius: 24px;
+      padding: 32px;
+      text-decoration: none;
+      color: #111827;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      border: 2px solid transparent;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .role-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      border-color: #E5E7EB;
+    }
+    
+    .role-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, transparent, transparent);
+        transition: all 0.3s ease;
+    }
+
+    .role-card.student:hover::after { background: linear-gradient(90deg, #14532d, #22c55e); }
+    .role-card.faculty:hover::after { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+    .role-card.parent:hover::after { background: linear-gradient(90deg, #db2777, #f472b6); }
+    .role-card.driver:hover::after { background: linear-gradient(90deg, #1e40af, #3b82f6); }
+
+    .role-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 20px;
+      transition: transform 0.3s ease;
+    }
+
+    .role-card:hover .role-icon {
+      transform: scale(1.1);
+    }
+
+    .student .role-icon { background: #dcfce7; color: #166534; }
+    .faculty .role-icon { background: #ede9fe; color: #5b21b6; }
+    .parent .role-icon { background: #fce7f3; color: #9d174d; }
+    .driver .role-icon { background: #dbeafe; color: #1e3a8a; }
+
+    .role-title {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .role-desc {
+      font-size: 15px;
+      color: #6B7280;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 768px) {
+      .roles-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      body {
+        padding: 24px 16px;
+      }
+      .landing-header h1 {
+        font-size: 32px;
+      }
+    }
+  </style>
 </head>
-<body class="theme-student">
-<div id="offline-indicator" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1A1A1A; color:white; padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; font-family:Inter,sans-serif; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.3); align-items:center; gap:8px;">
-  You are offline - showing cached data
-</div>
-  <div class="login-container">
-    <div class="login-card">
-      <div class="login-panel-left">
-        <div class="top-nav">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="background: rgba(255,255,255,0.2); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-              <i class="fas fa-bus"></i>
-            </div>
-            <span style="font-weight: 800; font-size: 20px; letter-spacing: -0.5px;">BusTrack</span>
-          </div>
-        </div>
-        
-        <div>
-          <h1 class="tagline">Always know where your bus is.</h1>
-          <p style="margin-top: 20px; opacity: 0.7; font-size: 18px; max-width: 320px;">Real-time tracking for students and passengers.</p>
-        </div>
+<body>
 
-        <div style="display: flex; gap: 40px;">
-          <div><span style="display:block; font-weight: 800; font-size: 20px;">Live</span><span style="font-size: 11px; opacity: 0.6; text-transform: uppercase; font-weight: 700;">Live Map</span></div>
-          <div><span style="display:block; font-weight: 800; font-size: 20px;">All</span><span style="font-size: 11px; opacity: 0.6; text-transform: uppercase; font-weight: 700;">All Routes</span></div>
-          <div><span style="display:block; font-weight: 800; font-size: 20px;">Any</span><span style="font-size: 11px; opacity: 0.6; text-transform: uppercase; font-weight: 700;">Any Device</span></div>
-        </div>
-      </div>
-
-      <div class="login-panel-right" style="position: relative;">
-        <div style="position: absolute; top: 30px; right: 40px;">
-          <a href="driver-login.html" style="text-decoration: none; font-size: 13px; font-weight: 600; color: #4B5563; border: 1.5px solid #E5E7EB; padding: 8px 16px; border-radius: 20px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;" onmouseover="this.style.borderColor='#4B5563'; this.style.color='#111827';" onmouseout="this.style.borderColor='#E5E7EB'; this.style.color='#4B5563';">
-            Admin/Driver Login →
-          </a>
-        </div>
-        <span style="font-size: 12px; font-weight: 800; background: linear-gradient(135deg, var(--accent-blue-light), var(--accent-blue-dark)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: inline-block;">Student Portal</span>
-        <h2 style="font-size: 42px; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px;">Track your bus</h2>
-        <p style="color: #6B7280; font-size: 16px; margin-bottom: 40px;">Sign in to see live bus locations on the map.</p>
-
-        <div id="error-banner" class="error-banner hidden"></div>
-
-        <div id="g_id_onload"
-             data-client_id="dummy-client-id-for-testing.apps.googleusercontent.com"
-             data-context="signin"
-             data-ux_mode="popup"
-             data-callback="handleGoogleSignIn"
-             data-auto_prompt="false">
-        </div>
-
-        <div class="g_id_signin"
-             data-type="standard"
-             data-shape="rectangular"
-             data-theme="outline"
-             data-text="signin_with"
-             data-size="large"
-             data-logo_alignment="left"
-             style="margin-bottom: 20px;">
-        </div>
-
-
-        <div class="bottom-link">
-          Are you a driver? <a href="driver-login.html">Sign in here →</a>
-        </div>
-      </div>
+  <div class="landing-header">
+    <div class="logo">
+      <i class="fas fa-bus"></i>
     </div>
+    <h1>Select Your Role</h1>
+    <p>Choose how you want to interact with BusTrack to continue to your dashboard.</p>
   </div>
 
-  <script src="js/supabase.min.js"></script>
-  <script src="js/supabase-client.js"></script>
-  <script src="js/auth.js?v=4"></script>
+  <div class="roles-grid">
+    <a href="student-login.html" class="role-card student">
+      <div class="role-icon">
+        <i class="fas fa-user-graduate"></i>
+      </div>
+      <div class="role-title">Student</div>
+      <div class="role-desc">Track your bus in real-time and get updates on arrivals.</div>
+    </a>
+
+    <a href="student-login.html" class="role-card faculty">
+      <div class="role-icon">
+        <i class="fas fa-chalkboard-teacher"></i>
+      </div>
+      <div class="role-title">Faculty</div>
+      <div class="role-desc">Sign in with your Google account for faculty access.</div>
+    </a>
+
+    <a href="student-login.html" class="role-card parent">
+      <div class="role-icon">
+        <i class="fas fa-user-friends"></i>
+      </div>
+      <div class="role-title">Parent</div>
+      <div class="role-desc">Monitor your child's bus commute and receive alerts.</div>
+    </a>
+
+    <a href="driver-login.html" class="role-card driver">
+      <div class="role-icon">
+        <i class="fas fa-id-badge"></i>
+      </div>
+      <div class="role-title">Driver</div>
+      <div class="role-desc">Manage your route, broadcast location, and check alerts.</div>
+    </a>
+  </div>
+
   <script>
-    // Google Sign-In is handled via the callback function handleGoogleSignIn 
-    // which is defined in js/auth.js.
-  </script>
-<script>
-window.addEventListener('online', () => {
-  document.getElementById('offline-indicator').style.display = 'none';
-  console.log('[Network] Back online');
-});
-
-window.addEventListener('offline', () => {
-  document.getElementById('offline-indicator').style.display = 'flex';
-  console.log('[Network] Gone offline');
-});
-
-if (!navigator.onLine) {
-  document.getElementById('offline-indicator').style.display = 'flex';
-}
-
-
-</script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then((reg) => {
-        console.log('[BusTrack] Service Worker registered:', reg.scope);
-      })
-      .catch((err) => {
-        console.warn('[BusTrack] Service Worker failed:', err);
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .catch((err) => console.warn('[BusTrack] Service Worker failed:', err));
       });
-  });
-}
-</script>
+    }
+  </script>
 </body>
 </html>
