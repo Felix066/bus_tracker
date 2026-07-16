@@ -416,16 +416,32 @@ async function saveMasterBus() {
     const busFile = document.getElementById('inpBusPhoto').files[0];
     const driverFile = document.getElementById('inpDriverPhoto').files[0];
 
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+    if (busFile && busFile.size > MAX_SIZE) {
+      throw new Error("Bus photo is too large. Maximum size is 5MB.");
+    }
+    if (driverFile && driverFile.size > MAX_SIZE) {
+      throw new Error("Driver photo is too large. Maximum size is 5MB.");
+    }
+
     let busDataUrl = localStorage.getItem(`bus_photo_${busId}`);
     let driverDataUrl = localStorage.getItem(`driver_photo_${busId}`);
 
     if (busFile) {
       busDataUrl = await fileToDataUrl(busFile);
-      localStorage.setItem(`bus_photo_${busId}`, busDataUrl);
+      try {
+        localStorage.setItem(`bus_photo_${busId}`, busDataUrl);
+      } catch (e) {
+        console.warn("Could not save bus photo to localStorage (quota exceeded).");
+      }
     }
     if (driverFile) {
       driverDataUrl = await fileToDataUrl(driverFile);
-      localStorage.setItem(`driver_photo_${busId}`, driverDataUrl);
+      try {
+        localStorage.setItem(`driver_photo_${busId}`, driverDataUrl);
+      } catch (e) {
+        console.warn("Could not save driver photo to localStorage (quota exceeded).");
+      }
     }
 
     const busPayload = {
@@ -447,8 +463,15 @@ async function saveMasterBus() {
     });
 
     if (!busRes.ok) {
-      const errData = await busRes.json();
-      throw new Error("Save Error: " + errData.error);
+      let errorMsg = "An unknown error occurred during save.";
+      try {
+        const errData = await busRes.json();
+        errorMsg = errData.error;
+      } catch (parseErr) {
+        if (busRes.status === 413) errorMsg = "The uploaded photos are too large for the server to process.";
+        else errorMsg = `Server returned status ${busRes.status}`;
+      }
+      throw new Error("Save Error: " + errorMsg);
     }
 
     if (isNew) {
