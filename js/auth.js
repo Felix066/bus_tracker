@@ -1,15 +1,4 @@
-const ALLOWED_DOMAINS = {
-  student: 'student.providence.edu.in',
-  faculty: 'providence.edu.in'
-};
-
-function validateEmailDomain(email) {
-  const domain = email.split('@')[1];
-  if (domain === ALLOWED_DOMAINS.student) return { valid: true, role: 'student' };
-  if (domain === ALLOWED_DOMAINS.faculty)  return { valid: true, role: 'faculty' };
-  return { valid: false, role: null };
-}
-
+// Email domain restrictions have been completely removed. Anyone with a verified Google account can sign in
 // ============================================================================
 // FRONTEND AUTHORIZATION - UI VISIBILITY ONLY
 // ============================================================================

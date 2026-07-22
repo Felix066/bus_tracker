@@ -473,8 +473,24 @@ app.post('/api/auth/google', async (req, res) => {
       return res.json({ success: true, token, role: 'faculty', user: facultyData });
     }
 
-    // Not found in either
-    return res.status(401).json({ error: 'This Google account is not authorized. Please contact the administrator.' });
+    // If not found in either student or faculty, auto-register as a student
+    const { data: newStudent, error: insertError } = await supabase
+      .from('students')
+      .insert([{ email }])
+      .select('id, email')
+      .single();
+
+    if (insertError) {
+      console.error('[auth-google] Auto-registration failed:', insertError);
+      return res.status(500).json({ error: 'Failed to auto-register Google account' });
+    }
+
+    const token = jwt.sign(
+      { user_id: newStudent.id, email, role: 'student' },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    return res.json({ success: true, token, role: 'student', user: newStudent });
   } catch (error) {
     console.error('[auth-google] Error:', error);
     res.status(500).json({ error: 'Internal server error during Google Sign-In' });

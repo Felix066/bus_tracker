@@ -84,16 +84,12 @@
     .brand-logo {
       width: 32px;
       height: 32px;
-      background: var(--red);
-      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 2px 8px var(--red-glow);
       flex-shrink: 0;
     }
-
-    .brand-logo svg { color: white; width: 16px; height: 16px; }
+    .brand-logo img { height: 100%; object-fit: contain; }
 
     .brand-text {
       font-size: 16px;
@@ -524,7 +520,7 @@
   <nav class="topbar">
     <a href="admin-dashboard.html" class="brand">
       <div class="brand-logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <img src="images/logo.png" alt="Logo">
       </div>
       <span class="brand-text">BusTrack <em>Emergency Center</em></span>
     </a>

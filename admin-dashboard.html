@@ -8,30 +8,39 @@
   <script src="js/icons.js?v=12"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/dashboard.css">
   <style>
     :root {
-      --bg: #f9fafb;
+      --bg: #F0EFEC;
       --surface: #ffffff;
       --text: #111827;
       --text-muted: #6b7280;
-      --border: #e5e7eb;
-      --accent: #ef4444; /* Match the red 'Remove' button */
-      --btn-bg: #ef4444;
-      --btn-hover: #dc2626;
+      --border: rgba(0,0,0,0.1);
+      --accent: #14532d;
+      --btn-bg: #111827;
+      --btn-hover: #333333;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --card-radius: 24px;
+      --input-radius: 14px;
+      --shadow-premium: 0 8px 40px rgba(0,0,0,0.08);
     }
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Inter', sans-serif;
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
     }
     
     .navbar {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      padding: 0 40px;
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
     /* V3 Top Header */
@@ -56,34 +65,38 @@
       align-items: center;
     }
     .search-bar {
-      background: #f3f4f6;
-      border: 1px solid transparent;
+      background: var(--bg);
+      border: 1px solid var(--border);
       color: var(--text);
-      padding: 10px 16px;
-      border-radius: 12px;
-      width: 250px;
+      padding: 0 16px;
+      border-radius: var(--input-radius);
+      width: 280px;
+      height: 48px;
       font-family: inherit;
+      font-size: 15px;
       transition: all 0.2s;
     }
     .search-bar:focus {
       background: var(--surface);
-      border-color: #d1d5db;
+      border-color: var(--text);
       outline: none;
     }
     .btn-add {
-      background: #f8fafc;
-      color: #334155;
-      border: 1px solid #cbd5e1;
-      padding: 10px 20px;
-      border-radius: 12px;
+      background: var(--text);
+      color: white;
+      border: none;
+      padding: 0 24px;
+      height: 48px;
+      border-radius: var(--input-radius);
       font-weight: 600;
+      font-size: 15px;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
-      transition: all 0.2s;
+      transition: all 0.2s ease;
     }
-    .btn-add:hover { background: #f1f5f9; }
+    .btn-add:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
     /* SOS Banner */
     #sos-banner {
@@ -108,8 +121,8 @@
     .table-container {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow-premium);
       overflow: hidden;
       padding: 30px;
     }
@@ -239,8 +252,9 @@
       margin: 0 40px 40px;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 20px;
+      border-radius: var(--card-radius);
+      padding: 30px;
+      box-shadow: var(--shadow-premium);
     }
     .logs-section h3 { margin-top: 0; margin-bottom: 15px; font-size: 16px; color: var(--text); }
     .log-list {
@@ -329,7 +343,10 @@
 
   <!-- NAVBAR -->
   <nav class="navbar">
-    <div class="brand" style="color:var(--text);">BusTrack <em>Admin Platform</em></div>
+    <div class="brand" style="color:var(--text); display: flex; align-items: center; gap: 12px;">
+      <img src="images/logo.png" alt="Where Is My Bus Logo" style="height: 32px; object-fit: contain;">
+      <span style="font-weight: 800; font-size: 18px; letter-spacing: -0.5px;">Admin Platform</span>
+    </div>
     <div class="nav-right" style="display: flex; align-items: center; gap: 15px;">
       <a href="admin-sos.html" style="position: relative; color: var(--text-muted); font-size: 20px; text-decoration: none; margin-right: 10px;">
         <i class="fas fa-bell"></i>
