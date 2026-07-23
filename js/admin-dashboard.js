@@ -74,9 +74,26 @@ async function loadDashboardData() {
     console.warn("Failed to load dashboard data from backend", err);
   }
 
+  updateStatsCards();
   renderBusTable();
   renderAdminLogs();
   checkSOSAlerts();
+}
+
+function updateStatsCards() {
+  if (document.getElementById('stat-total-buses')) {
+    document.getElementById('stat-total-buses').innerText = busesData.length;
+    
+    const activeDriversCount = driverSessions.filter(s => {
+      const mins = Math.round((new Date() - new Date(s.last_seen)) / 60000);
+      return s.is_online && mins <= 5;
+    }).length;
+    
+    document.getElementById('stat-active-drivers').innerText = activeDriversCount;
+    
+    const uniqueRoutes = new Set(busesData.map(b => b.route_name).filter(Boolean));
+    document.getElementById('stat-routes').innerText = uniqueRoutes.size;
+  }
 }
 
 // --- RENDER BUS TABLE ---
@@ -105,7 +122,7 @@ function renderBusTable() {
     
     // Status Logic
     let statusText = 'Offline';
-    let statusClass = 'offline';
+    let statusClass = 'status-offline';
     let lastSeenStr = '';
     
     if (session) {
@@ -113,10 +130,10 @@ function renderBusTable() {
       
       if (isOnline && mins <= 5) {
         statusText = 'Active';
-        statusClass = 'active';
+        statusClass = 'status-active';
       } else if (mins < 60) {
         statusText = 'Idle';
-        statusClass = 'idle';
+        statusClass = 'status-idle';
       }
       
       if (session.last_seen && (statusText !== 'Active')) {
@@ -126,14 +143,14 @@ function renderBusTable() {
         const months = Math.floor(days / 30);
         const years = Math.floor(days / 365);
         
-        if (years > 0) formattedTime = `${years} year${years > 1 ? 's' : ''} ago`;
-        else if (months > 0) formattedTime = `${months} month${months > 1 ? 's' : ''} ago`;
-        else if (days > 0) formattedTime = `${days} day${days > 1 ? 's' : ''} ago`;
-        else if (hours > 0) formattedTime = `${hours} hour${hours > 1 ? 's' : ''} ago`;
-        else formattedTime = `${mins} min${mins !== 1 ? 's' : ''} ago`;
+        if (years > 0) formattedTime = `${years}y ago`;
+        else if (months > 0) formattedTime = `${months}mo ago`;
+        else if (days > 0) formattedTime = `${days}d ago`;
+        else if (hours > 0) formattedTime = `${hours}h ago`;
+        else formattedTime = `${mins}m ago`;
 
         if (formattedTime) {
-          lastSeenStr = '(Last active: ' + formattedTime + ')';
+          lastSeenStr = '(' + formattedTime + ')';
         }
       }
     }
@@ -145,21 +162,33 @@ function renderBusTable() {
     // Cell 1
     const td1 = document.createElement('td');
     const div1 = document.createElement('div');
-    div1.style.display = 'flex';
-    div1.style.alignItems = 'center';
-    div1.style.gap = '12px';
+    div1.className = 'bus-id-cell';
     if (localBusPhoto) {
       const img = document.createElement('img');
       img.src = localBusPhoto;
       img.style.width = '40px';
       img.style.height = '40px';
-      img.style.borderRadius = '8px';
+      img.style.borderRadius = '10px';
       img.style.objectFit = 'cover';
       div1.appendChild(img);
+    } else {
+      const busIcon = document.createElement('div');
+      busIcon.className = 'bus-icon';
+      busIcon.innerHTML = '<i class="fas fa-bus"></i>';
+      div1.appendChild(busIcon);
     }
-    const span1 = document.createElement('span');
-    span1.textContent = bus.id;
-    div1.appendChild(span1);
+    const idInfo = document.createElement('div');
+    const idSpan = document.createElement('div');
+    idSpan.style.fontWeight = '700';
+    idSpan.textContent = bus.id;
+    const routeSpan = document.createElement('div');
+    routeSpan.style.fontSize = '12px';
+    routeSpan.style.color = 'var(--text-muted)';
+    routeSpan.style.marginTop = '2px';
+    routeSpan.textContent = bus.route_name || 'No Route';
+    idInfo.appendChild(idSpan);
+    idInfo.appendChild(routeSpan);
+    div1.appendChild(idInfo);
     td1.appendChild(div1);
     tr.appendChild(td1);
 
@@ -174,7 +203,7 @@ function renderBusTable() {
       input.placeholder = 'Enter driver name';
       const btn = document.createElement('button');
       btn.className = 'btn-inline-save';
-      btn.textContent = 'Save Changes';
+      btn.textContent = 'Save';
       btn.onclick = () => saveInlineDriver(bus.id);
       td2.appendChild(input);
       td2.appendChild(btn);
@@ -182,13 +211,36 @@ function renderBusTable() {
       const div2 = document.createElement('div');
       div2.className = 'driver-name-display';
       div2.onclick = () => enableInlineEdit(bus.id);
+      
+      const localDriverPhoto = localStorage.getItem(`driver_photo_${bus.id}`) || bus.driver_photo_url;
+      if (localDriverPhoto) {
+        const dImg = document.createElement('img');
+        dImg.src = localDriverPhoto;
+        dImg.style.width = '24px';
+        dImg.style.height = '24px';
+        dImg.style.borderRadius = '50%';
+        dImg.style.objectFit = 'cover';
+        dImg.style.marginRight = '8px';
+        div2.appendChild(dImg);
+      } else {
+        const dIcon = document.createElement('i');
+        dIcon.className = 'fas fa-user-circle';
+        dIcon.style.marginRight = '8px';
+        dIcon.style.color = 'var(--text-muted)';
+        dIcon.style.opacity = '1';
+        dIcon.style.fontSize = '16px';
+        div2.appendChild(dIcon);
+      }
+      
       if (bus.driver_name) {
-        div2.appendChild(document.createTextNode(bus.driver_name + ' '));
+        const dName = document.createElement('span');
+        dName.textContent = bus.driver_name;
+        div2.appendChild(dName);
       } else {
         const spanEmpty = document.createElement('span');
-        spanEmpty.style.color = '#9ca3af';
+        spanEmpty.style.color = 'var(--text-muted)';
         spanEmpty.style.fontStyle = 'italic';
-        spanEmpty.textContent = 'No driver assigned ';
+        spanEmpty.textContent = 'Unassigned';
         div2.appendChild(spanEmpty);
       }
       const iPen = document.createElement('i');
@@ -200,42 +252,50 @@ function renderBusTable() {
 
     // Cell 3
     const td3 = document.createElement('td');
-    const div3 = document.createElement('div');
-    div3.className = 'status-cell';
+    const pill = document.createElement('div');
+    pill.className = 'status-pill ' + statusClass;
     const dot = document.createElement('div');
-    dot.className = 'status-dot ' + statusClass;
+    dot.className = 'dot';
     const spanStatus = document.createElement('span');
-    spanStatus.style.textTransform = 'capitalize';
     spanStatus.textContent = statusText;
-    div3.appendChild(dot);
-    div3.appendChild(spanStatus);
+    pill.appendChild(dot);
+    pill.appendChild(spanStatus);
     if (lastSeenStr) {
       const spanLast = document.createElement('span');
-      spanLast.style.fontSize = '11px';
-      spanLast.style.color = '#9ca3af';
-      spanLast.style.marginLeft = '8px';
+      spanLast.style.fontSize = '10px';
+      spanLast.style.opacity = '0.8';
+      spanLast.style.marginLeft = '4px';
       spanLast.textContent = lastSeenStr;
-      div3.appendChild(spanLast);
+      pill.appendChild(spanLast);
     }
-    td3.appendChild(div3);
+    td3.appendChild(pill);
     tr.appendChild(td3);
 
     // Cell 4
     const td4 = document.createElement('td');
+    td4.style.textAlign = 'right';
     const div4 = document.createElement('div');
     div4.className = 'actions-cell';
-    const btnRem = document.createElement('button');
-    btnRem.className = 'btn-remove';
-    btnRem.textContent = 'Remove';
-    btnRem.onclick = () => deleteBus(bus.id);
+    div4.style.justifyContent = 'flex-end';
+    
     const btnEdit = document.createElement('button');
-    btnEdit.className = 'btn-edit-row';
+    btnEdit.className = 'btn-icon btn-edit-row';
+    btnEdit.title = 'Edit Bus Details';
     btnEdit.onclick = () => openMasterModal(bus.id);
     const iCog = document.createElement('i');
     iCog.className = 'fas fa-cog';
     btnEdit.appendChild(iCog);
-    div4.appendChild(btnRem);
+    
+    const btnRem = document.createElement('button');
+    btnRem.className = 'btn-icon btn-remove';
+    btnRem.title = 'Remove Bus';
+    btnRem.onclick = () => deleteBus(bus.id);
+    const iTrash = document.createElement('i');
+    iTrash.className = 'fas fa-trash';
+    btnRem.appendChild(iTrash);
+    
     div4.appendChild(btnEdit);
+    div4.appendChild(btnRem);
     td4.appendChild(div4);
     tr.appendChild(td4);
     tbody.appendChild(tr);
@@ -585,6 +645,7 @@ function renderAdminLogs() {
     span1.appendChild(document.createTextNode(': ' + log.action_text));
     
     const span2 = document.createElement('span');
+    span2.className = 'log-time';
     span2.textContent = d.toLocaleDateString() + ' ' + timeStr;
     
     div.appendChild(span1);
