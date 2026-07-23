@@ -28,7 +28,7 @@ async function handleGoogleSignIn(response) {
   }
 
   try {
-    const res = await fetch(`${window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') ? 'http://localhost:3001' : ''}/api/auth/google`, {
+    const res = await fetch(`${typeof BACKEND_URL !== 'undefined' ? BACKEND_URL : 'http://localhost:3001'}/api/auth/google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ credential: response.credential })

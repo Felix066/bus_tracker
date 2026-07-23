@@ -250,6 +250,18 @@ function renderBusTable() {
     }
     tr.appendChild(td2);
 
+    // Phone Cell
+    const tdPhone = document.createElement('td');
+    tdPhone.style.fontSize = '13px';
+    tdPhone.style.color = 'var(--text-muted)';
+    if (bus.driver_phone) {
+      tdPhone.textContent = bus.driver_phone;
+    } else {
+      tdPhone.textContent = 'Not Provided';
+      tdPhone.style.fontStyle = 'italic';
+    }
+    tr.appendChild(tdPhone);
+
     // Cell 3
     const td3 = document.createElement('td');
     const pill = document.createElement('div');
