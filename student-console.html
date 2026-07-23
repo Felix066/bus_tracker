@@ -121,8 +121,10 @@
 
   <!-- NAVBAR -->
   <nav class="navbar">
-    <div class="brand" onclick="window.location.href='student-dashboard.html'" style="cursor: pointer;">
-      <span style="font-size:18px; margin-right:8px;">&larr;</span> BusTrack <em>Student Console</em>
+    <div class="brand" onclick="window.location.href='student-dashboard.html'" style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+      <span style="font-size:18px;">&larr;</span>
+      <i class="fas fa-bus" style="font-size: 18px;"></i>
+      <span>BusTrack <em>Student Console</em></span>
     </div>
     <span class="driver-label" id="driver-name-display">Loading...</span>
     <span class="bus-badge" id="assigned-bus-label">Loading...</span>
