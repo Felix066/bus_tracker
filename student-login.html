@@ -14,6 +14,23 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="BusTrack">
+  <script>
+    // Proxy function to guarantee Google always finds the callback
+    // even if auth.js hasn't loaded yet
+    window.handleGoogleSignIn = function(response) {
+      if (window._actualHandleGoogleSignIn) {
+        window._actualHandleGoogleSignIn(response);
+      } else {
+        // If auth.js is still loading, wait for it
+        const interval = setInterval(() => {
+          if (window._actualHandleGoogleSignIn) {
+            clearInterval(interval);
+            window._actualHandleGoogleSignIn(response);
+          }
+        }, 100);
+      }
+    };
+  </script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="theme-student">
@@ -26,7 +43,11 @@
         <div class="top-nav">
           <div style="display: flex; align-items: center; gap: 12px;">
             <div style="background: rgba(255,255,255,0.2); width: 44px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; padding: 4px;">
-              <i class="fas fa-bus"></i>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" width="1em" height="1em" style="vertical-align: middle;">
+  <defs><clipPath id="w-clip"><rect x="0" y="100" width="600" height="400" /></clipPath></defs>
+  <g clip-path="url(#w-clip)"><path fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round" stroke-linejoin="round" d="M 30,60 L 150,300 L 250,100 L 350,300 L 420,160" /></g>
+  <g transform="translate(480, 50) rotate(63.4)"><path fill="currentColor" fill-rule="evenodd" d="M 0,-38 A 38,38 0 1,1 -38,0 L -55,-55 Z M 0,-14 A 14,14 0 1,0 0,14 A 14,14 0 1,0 0,-14 Z" /></g>
+</svg>
             </div>
             <span style="font-weight: 800; font-size: 20px; letter-spacing: -0.5px;">BusTrack</span>
           </div>

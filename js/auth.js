@@ -20,11 +20,25 @@ const showUIForRole = (role) => {
 };
 
 
-async function handleGoogleSignIn(response) {
+window._actualHandleGoogleSignIn = async function(response) {
   const errBanner = document.getElementById('error-banner');
   if (errBanner) {
     errBanner.classList.add('hidden');
     errBanner.textContent = '';
+  }
+
+  // Add loading UI specifically for Render cold starts
+  const loginContainer = document.querySelector('.login-panel-right');
+  let originalHtml = '';
+  if (loginContainer) {
+    originalHtml = loginContainer.innerHTML;
+    loginContainer.innerHTML = `
+      <div style="text-align:center; padding: 40px; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%;">
+        <i class="fas fa-spinner fa-spin" style="font-size: 40px; color: #2563EB;"></i>
+        <h3 style="margin-top:20px; font-weight:800; color:#111827;">Authenticating...</h3>
+        <p style="opacity:0.7; font-size:14px; margin-top:10px;">Waking up secure server (this may take up to 45 seconds on first load)...</p>
+      </div>
+    `;
   }
 
   try {
@@ -52,9 +66,17 @@ async function handleGoogleSignIn(response) {
     window.location.href = 'student-dashboard.html';
   } catch (err) {
     console.error('Google Sign-In Error:', err);
-    if (errBanner) {
-      errBanner.textContent = err.message;
-      errBanner.classList.remove('hidden');
+    if (loginContainer && originalHtml) {
+      loginContainer.innerHTML = originalHtml;
+      // Re-initialize GIS in the restored DOM if needed, 
+      // but usually the user will just reload or see the error
+    }
+    // Note: since we re-rendered the container, errBanner might be a new DOM element or removed.
+    // We fetch it again just in case
+    const currentErrBanner = document.getElementById('error-banner');
+    if (currentErrBanner) {
+      currentErrBanner.textContent = err.message;
+      currentErrBanner.classList.remove('hidden');
     }
   }
 }

@@ -146,6 +146,89 @@ app.get('/tiles/:z/:x/:y', (req, res) => {
   fetchTile(0);
 });
 
+// --- USER ACCESS MANAGEMENT ENDPOINTS ---
+
+// Get App Settings
+app.get('/api/admin/settings', requireRole(['admin']), async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('app_settings').select('allow_everyone').eq('id', 1).maybeSingle();
+    if (error) throw error;
+    res.json(data || { allow_everyone: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update App Settings
+app.post('/api/admin/settings', requireRole(['admin']), async (req, res) => {
+  try {
+    const { allow_everyone } = req.body;
+    const { data, error } = await supabase
+      .from('app_settings')
+      .upsert({ id: 1, allow_everyone })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, settings: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get Authorized Users
+app.get('/api/admin/authorized-users', requireRole(['admin']), async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('authorized_users')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json({ success: true, users: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add Authorized User
+app.post('/api/admin/authorized-users', requireRole(['admin']), async (req, res) => {
+  try {
+    let { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    email = email.toLowerCase().trim();
+
+    const { data, error } = await supabase
+      .from('authorized_users')
+      .insert({ email, added_by: req.user.username })
+      .select()
+      .single();
+      
+    if (error) {
+      if (error.code === '23505') { // Unique violation
+        return res.status(400).json({ error: 'Email is already authorized' });
+      }
+      throw error;
+    }
+    res.json({ success: true, user: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Remove Authorized User
+app.delete('/api/admin/authorized-users/:id', requireRole(['admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase
+      .from('authorized_users')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============================================================================
 // AUTHORIZATION MIDDLEWARE
 // ============================================================================
@@ -422,32 +505,52 @@ app.get('/api/auth/verify', async (req, res) => {
   }
 });
 
-// GOOGLE SIGN-IN FOR STUDENTS AND FACULTY
+// STUDENT / FACULTY LOGIN via GOOGLE
 app.post('/api/auth/google', async (req, res) => {
   try {
-    const { credential } = req.body;
-    if (!credential) {
-      return res.status(400).json({ error: 'Missing credential' });
+    const { token: googleToken } = req.body;
+    
+    if (!googleToken) {
+      return res.status(400).json({ error: 'Missing token' });
     }
 
-    // Verify Google token
     const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
-      // audience: process.env.GOOGLE_CLIENT_ID // Optional: ensure it matches
+      idToken: googleToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
     });
     const payload = ticket.getPayload();
-    const email = payload.email;
+    const email = payload.email.toLowerCase();
 
-    if (!email) {
-      return res.status(400).json({ error: 'Invalid Google token' });
+    // 1. User Access Management Check
+    const { data: appSettings } = await supabase
+      .from('app_settings')
+      .select('allow_everyone')
+      .eq('id', 1)
+      .maybeSingle();
+
+    const allowEveryone = appSettings ? appSettings.allow_everyone : true;
+
+    if (!allowEveryone) {
+      // Check if email is in authorized_users
+      const { data: authUser, error: authErr } = await supabase
+        .from('authorized_users')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (authErr || !authUser) {
+        console.warn(`Unauthorized login attempt blocked for: ${email}`);
+        return res.status(403).json({ error: 'Your account has not been authorized by the administrator.' });
+      }
     }
 
-    // Check Students table
+    // 2. Check Students table
     let { data: studentData, error: studentError } = await supabase
       .from('students')
       .select('id, email')
       .eq('email', email)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     if (studentData) {
       const token = jwt.sign(
@@ -463,7 +566,8 @@ app.post('/api/auth/google', async (req, res) => {
       .from('faculty')
       .select('id, email')
       .eq('email', email)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     if (facultyData) {
       const token = jwt.sign(
@@ -849,9 +953,13 @@ app.post('/api/admin/buses', requireRole(['admin']), async (req, res) => {
     } else {
       ({ data, error } = await supabase.from('buses').update(busPayload).eq('id', id).select());
     }
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error('[Admin Buses Error]', error);
+      return res.status(500).json({ error: `Database Error: ${error.message}` });
+    }
     res.json({ success: true, data });
   } catch (err) {
+    console.error('[Admin Buses Exception]', err);
     res.status(500).json({ error: err.message });
   }
 });

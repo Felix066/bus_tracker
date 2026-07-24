@@ -14,6 +14,8 @@ let busesData = [];
 let driverSessions = [];
 let adminLogs = [];
 let sosAlerts = [];
+let authorizedUsers = [];
+let allowEveryone = true;
 let adminUsername = 'Admin';
 let editingDriverForBusId = null; // Tracks which bus row is currently in inline-edit mode
 
@@ -22,9 +24,217 @@ document.addEventListener('DOMContentLoaded', () => {
   if (session) adminUsername = session.username;
 
   loadDashboardData();
+  loadUserManagementData();
   subscribeToRealtime();
   setupFileInputListeners();
 });
+
+// --- TABS LOGIC ---
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+  
+  event.currentTarget.classList.add('active');
+  document.getElementById('tab-' + tabId).classList.add('active');
+}
+
+// --- USER MANAGEMENT DATA ---
+async function loadUserManagementData() {
+  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  if (!token) return;
+
+  try {
+    // Load Settings
+    const setRes = await fetch(`${BACKEND_URL}/api/admin/settings`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (setRes.ok) {
+      const setData = await setRes.json();
+      allowEveryone = setData.allow_everyone;
+      const toggle = document.getElementById('toggleGlobalAccess');
+      const desc = document.getElementById('global-access-desc');
+      if (toggle) toggle.checked = allowEveryone;
+      if (desc) {
+        if (allowEveryone) {
+          desc.parentElement.querySelector('h3').innerText = 'Bus Visibility: Allow Everyone';
+          desc.innerText = 'Anyone with a Google account can log in and track the bus.';
+        } else {
+          desc.parentElement.querySelector('h3').innerText = 'Bus Visibility: Restricted';
+          desc.innerText = 'Only users in the Authorized Users list below can log in and view buses.';
+        }
+      }
+    }
+
+    // Load Users
+    const usrRes = await fetch(`${BACKEND_URL}/api/admin/authorized-users`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (usrRes.ok) {
+      const usrData = await usrRes.json();
+      authorizedUsers = usrData.users || [];
+      renderUsersTable();
+    }
+  } catch (err) {
+    console.warn("Failed to load user management data", err);
+  }
+}
+
+async function toggleAccessMode() {
+  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const toggle = document.getElementById('toggleGlobalAccess');
+  const newMode = toggle.checked;
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ allow_everyone: newMode })
+    });
+    
+    if (res.ok) {
+      allowEveryone = newMode;
+      const desc = document.getElementById('global-access-desc');
+      if (desc) {
+        if (allowEveryone) {
+          desc.parentElement.querySelector('h3').innerText = 'Bus Visibility: Allow Everyone';
+          desc.innerText = 'Anyone with a Google account can log in and track the bus.';
+        } else {
+          desc.parentElement.querySelector('h3').innerText = 'Bus Visibility: Restricted';
+          desc.innerText = 'Only users in the Authorized Users list below can log in and view buses.';
+        }
+      }
+      await logAdminAction(`Changed Global Access Mode to: ${newMode ? 'Allow Everyone' : 'Restricted'}`);
+    } else {
+      toggle.checked = !newMode; // revert
+      alert("Failed to update access mode.");
+    }
+  } catch (err) {
+    toggle.checked = !newMode; // revert
+    console.error(err);
+  }
+}
+
+function renderUsersTable() {
+  const tbody = document.getElementById('users-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  const searchTerm = (document.getElementById('filterUsers').value || '').toLowerCase();
+  const filteredUsers = authorizedUsers.filter(u => 
+    (u.email || '').toLowerCase().includes(searchTerm) || 
+    (u.added_by || '').toLowerCase().includes(searchTerm)
+  );
+
+  if (filteredUsers.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 40px; color: #888;">No users found. Add one above.</td></tr>`;
+    return;
+  }
+
+  filteredUsers.forEach(user => {
+    const tr = document.createElement('tr');
+    
+    // Email
+    const tdEmail = document.createElement('td');
+    tdEmail.style.fontWeight = '600';
+    tdEmail.textContent = user.email;
+    tr.appendChild(tdEmail);
+
+    // Date
+    const tdDate = document.createElement('td');
+    const d = new Date(user.created_at);
+    tdDate.textContent = d.toLocaleDateString();
+    tdDate.style.color = 'var(--text-muted)';
+    tdDate.style.fontSize = '13px';
+    tr.appendChild(tdDate);
+
+    // Added By
+    const tdAddedBy = document.createElement('td');
+    const badge = document.createElement('span');
+    badge.style.background = 'rgba(37,99,235,0.1)';
+    badge.style.color = 'var(--accent)';
+    badge.style.padding = '4px 10px';
+    badge.style.borderRadius = '12px';
+    badge.style.fontSize = '12px';
+    badge.style.fontWeight = '700';
+    badge.textContent = user.added_by;
+    tdAddedBy.appendChild(badge);
+    tr.appendChild(tdAddedBy);
+
+    // Action
+    const tdAction = document.createElement('td');
+    tdAction.style.textAlign = 'right';
+    const btnRem = document.createElement('button');
+    btnRem.className = 'btn-icon btn-remove';
+    btnRem.title = 'Remove User';
+    btnRem.style.marginLeft = 'auto';
+    btnRem.onclick = () => deleteAuthorizedUser(user.id, user.email);
+    btnRem.innerHTML = '<i class="fas fa-trash"></i>';
+    tdAction.appendChild(btnRem);
+    tr.appendChild(tdAction);
+
+    tbody.appendChild(tr);
+  });
+}
+
+function filterUsers() {
+  renderUsersTable();
+}
+
+async function addAuthorizedUser() {
+  const input = document.getElementById('inpNewUserEmail');
+  const email = input.value.trim().toLowerCase();
+  
+  if (!email) return alert("Please enter an email address.");
+  const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+  if (!emailRegex.test(email)) return alert("Please enter a valid email address.");
+
+  if (authorizedUsers.find(u => u.email === email)) {
+    return alert("This email is already authorized.");
+  }
+
+  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/authorized-users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ email })
+    });
+
+    if (res.ok) {
+      input.value = '';
+      await logAdminAction(`Added authorized user: ${email}`);
+      loadUserManagementData();
+    } else {
+      const errData = await res.json();
+      alert("Error adding user: " + (errData.error || "Unknown error"));
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Network error. Could not add user.");
+  }
+}
+
+async function deleteAuthorizedUser(id, email) {
+  if (!confirm(`Are you sure you want to remove access for ${email}?`)) return;
+  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/authorized-users/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (res.ok) {
+      await logAdminAction(`Removed authorized user: ${email}`);
+      loadUserManagementData();
+    } else {
+      const errData = await res.json();
+      alert("Error removing user: " + (errData.error || "Unknown error"));
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Network error. Could not remove user.");
+  }
+}
 
 function setupFileInputListeners() {
   document.getElementById('inpBusPhoto').addEventListener('change', function(e) {
