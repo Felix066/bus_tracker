@@ -185,7 +185,7 @@ async function addAuthorizedUser() {
   const email = input.value.trim().toLowerCase();
   
   if (!email) return alert("Please enter an email address.");
-  const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) return alert("Please enter a valid email address.");
 
   if (authorizedUsers.find(u => u.email === email)) {

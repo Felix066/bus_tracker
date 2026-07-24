@@ -74,13 +74,24 @@ const apiLimiter = rateLimit({
 });
 app.use('/api/', apiLimiter);
 
-// Stricter rate limiter for authentication endpoints
+// Stricter rate limiter for authentication endpoints with IP and identifier grouping
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 15,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many requests, please try again later.' }
+  keyGenerator: (req) => {
+    // Generate a unique key per IP + email/username to specifically prevent brute force
+    // on a single account from a single IP, while also limiting total spam.
+    let identifier = 'unknown';
+    if (req.body) {
+      if (req.body.username) identifier = req.body.username.toLowerCase();
+      else if (req.body.email) identifier = req.body.email.toLowerCase();
+      // Google token is too long to be an identifier, rely on IP for google auth
+    }
+    return `${req.ip}_${identifier}`;
+  },
+  message: { error: 'Too many login attempts from this IP/Account. Please try again in 15 minutes.' }
 });
 app.use('/api/auth/', authLimiter);
 

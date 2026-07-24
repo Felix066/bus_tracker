@@ -45,7 +45,7 @@ window._actualHandleGoogleSignIn = async function(response) {
     const res = await fetch(`${typeof BACKEND_URL !== 'undefined' ? BACKEND_URL : 'http://localhost:3001'}/api/auth/google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ credential: response.credential })
+      body: JSON.stringify({ token: response.credential })
     });
 
     const data = await res.json();
@@ -86,3 +86,4 @@ async function logout() {
   localStorage.clear();
   window.location.href = 'index.html';
 }
+ 
