@@ -539,21 +539,9 @@ app.post('/api/auth/google', async (req, res) => {
       .eq('id', 1)
       .maybeSingle();
 
-    const allowEveryone = appSettings ? appSettings.allow_everyone : true;
+    const allowEveryone = true; // Overridden to allow everyone to log in
 
-    if (!allowEveryone) {
-      // Check if email is in authorized_users
-      const { data: authUser, error: authErr } = await supabase
-        .from('authorized_users')
-        .select('id')
-        .eq('email', email)
-        .maybeSingle();
-
-      if (authErr || !authUser) {
-        console.warn(`Unauthorized login attempt blocked for: ${email}`);
-        return res.status(403).json({ error: 'Your account has not been authorized by the administrator.' });
-      }
-    }
+    // Authentication restrictions removed per user request
 
     // 2. Check Students table
     let { data: studentData, error: studentError } = await supabase
