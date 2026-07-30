@@ -986,6 +986,54 @@
         gap: 16px;
         align-items: flex-start;
       }
+      /* Responsive Table Styles */
+      .table-container table, 
+      .table-container thead, 
+      .table-container tbody, 
+      .table-container th, 
+      .table-container td, 
+      .table-container tr {
+        display: block;
+      }
+      .table-container thead tr {
+        display: none;
+      }
+      .table-container tr {
+        margin-bottom: 16px;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid var(--border);
+      }
+      .table-container td {
+        border: none !important;
+        position: relative;
+        padding: 12px 16px 12px 45% !important;
+        text-align: right;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.4) !important;
+      }
+      .table-container td:last-child {
+        border-bottom: none !important;
+      }
+      .table-container td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 16px;
+        width: 40%;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      .bus-id-cell, .driver-name-display, .actions-cell {
+        justify-content: flex-end;
+      }
     }
   </style>
 </head>

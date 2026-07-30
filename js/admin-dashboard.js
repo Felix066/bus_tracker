@@ -135,12 +135,14 @@ function renderUsersTable() {
     
     // Email
     const tdEmail = document.createElement('td');
+    tdEmail.setAttribute('data-label', 'Email Address');
     tdEmail.style.fontWeight = '600';
     tdEmail.textContent = user.email;
     tr.appendChild(tdEmail);
 
     // Date
     const tdDate = document.createElement('td');
+    tdDate.setAttribute('data-label', 'Date Added');
     const d = new Date(user.created_at);
     tdDate.textContent = d.toLocaleDateString();
     tdDate.style.color = 'var(--text-muted)';
@@ -149,6 +151,7 @@ function renderUsersTable() {
 
     // Added By
     const tdAddedBy = document.createElement('td');
+    tdAddedBy.setAttribute('data-label', 'Added By');
     const badge = document.createElement('span');
     badge.style.background = 'rgba(37,99,235,0.1)';
     badge.style.color = 'var(--accent)';
@@ -162,6 +165,7 @@ function renderUsersTable() {
 
     // Action
     const tdAction = document.createElement('td');
+    tdAction.setAttribute('data-label', 'Action');
     tdAction.style.textAlign = 'right';
     const btnRem = document.createElement('button');
     btnRem.className = 'btn-icon btn-remove';
@@ -371,6 +375,7 @@ function renderBusTable() {
 
     // Cell 1
     const td1 = document.createElement('td');
+    td1.setAttribute('data-label', 'Bus ID');
     const div1 = document.createElement('div');
     div1.className = 'bus-id-cell';
     if (localBusPhoto) {
@@ -404,6 +409,7 @@ function renderBusTable() {
 
     // Cell 2
     const td2 = document.createElement('td');
+    td2.setAttribute('data-label', 'Assigned Driver');
     if (editingDriverForBusId === bus.id) {
       const input = document.createElement('input');
       input.type = 'text';
@@ -462,6 +468,7 @@ function renderBusTable() {
 
     // Phone Cell
     const tdPhone = document.createElement('td');
+    tdPhone.setAttribute('data-label', 'Phone Number');
     tdPhone.style.fontSize = '13px';
     tdPhone.style.color = 'var(--text-muted)';
     if (bus.driver_phone) {
@@ -474,6 +481,7 @@ function renderBusTable() {
 
     // Cell 3
     const td3 = document.createElement('td');
+    td3.setAttribute('data-label', 'Status');
     const pill = document.createElement('div');
     pill.className = 'status-pill ' + statusClass;
     const dot = document.createElement('div');
@@ -495,6 +503,7 @@ function renderBusTable() {
 
     // Cell 4
     const td4 = document.createElement('td');
+    td4.setAttribute('data-label', 'Actions');
     td4.style.textAlign = 'right';
     const div4 = document.createElement('div');
     div4.className = 'actions-cell';
