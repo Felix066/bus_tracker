@@ -8,18 +8,24 @@
 
 body {
   font-family: 'Inter', sans-serif;
-  background: #F7F5F2;
-  color: #1A1A1A;
+  background-color: #F8FAFC;
+  background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,0.03) 0, transparent 50%), 
+                    radial-gradient(at 50% 0%, hsla(225,39%,30%,0.03) 0, transparent 50%), 
+                    radial-gradient(at 100% 0%, hsla(339,49%,30%,0.03) 0, transparent 50%);
+  background-attachment: fixed;
+  color: #0f172a;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
 
 /* NAVBAR */
 .navbar {
-  background: #FFFFFF;
-  border-bottom: 1px solid #E8E4DF;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
   padding: 0 28px;
-  height: 58px;
+  height: 64px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -29,137 +35,156 @@ body {
 }
 
 .brand {
-  font-size: 17px;
-  font-weight: 700;
-  color: #1A1A1A;
-  letter-spacing: -0.3px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
   margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .brand em {
-  font-style: italic;
-  font-weight: 400;
-  color: #6B6B6B;
+  font-style: normal;
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 .driver-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: #6B6B6B;
-  padding: 6px 12px;
-  background: #F0EDE8;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  padding: 6px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 20px;
 }
 
 .bus-badge {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1A1A1A;
-  padding: 6px 14px;
-  background: #F0EDE8;
-  border: 1px solid #E0DBD4;
-  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #4f46e5;
+  padding: 6px 16px;
+  background: rgba(79, 70, 229, 0.1);
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  border-radius: 12px;
 }
 
 .trip-select {
-  padding: 7px 12px;
-  border: 1.5px solid #E0DBD4;
-  border-radius: 8px;
-  background: #FFFFFF;
-  font-size: 13px;
-  font-weight: 500;
-  color: #1A1A1A;
+  padding: 8px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
   cursor: pointer;
   outline: none;
   font-family: 'Inter', sans-serif;
+  transition: all 0.2s ease;
 }
 
 .trip-select:focus {
-  border-color: #C96442;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
 .start-btn {
-  padding: 9px 22px;
-  background: #1A1A1A;
+  padding: 10px 24px;
+  background: #0f172a;
   color: #FFFFFF;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
-  transition: all 0.2s ease;
-  letter-spacing: -0.2px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
 }
 
 .start-btn:hover {
-  background: #333333;
-  transform: translateY(-1px);
+  background: #1e293b;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.25);
 }
 
 .start-btn.ending {
-  background: #C13333;
+  background: #ef4444;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .start-btn.ending:hover {
-  background: #A82929;
+  background: #dc2626;
+  box-shadow: 0 8px 16px rgba(239, 68, 68, 0.4);
 }
 
 /* STAT CARDS */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  padding: 20px 24px 0;
+  gap: 20px;
+  padding: 24px 28px 0;
 }
 
 .stat-card {
-  background: #FFFFFF;
-  border: 1px solid #E8E4DF;
-  border-radius: 14px;
-  padding: 20px 22px;
-  transition: box-shadow 0.2s ease;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 24px;
+  padding: 24px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.05);
 }
 
 .stat-card:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.07);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.1);
 }
 
 .stat-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: #A0A0A0;
-  letter-spacing: 0.1em;
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .stat-value {
-  font-size: 26px;
-  font-weight: 700;
-  color: #1A1A1A;
-  letter-spacing: -0.5px;
+  font-size: 32px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -1px;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
 .stat-value.searching {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 500;
-  color: #A0A0A0;
-  font-style: italic;
+  color: #94a3b8;
+  font-style: normal;
 }
 
 /* MAP CONTAINER */
 .map-wrapper {
-  margin: 18px 24px 24px;
-  border-radius: 16px;
+  margin: 24px 28px;
+  border-radius: 24px;
   overflow: hidden;
-  border: 1px solid #E8E4DF;
-  height: calc(100vh - 210px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  height: calc(100vh - 240px);
   min-height: 420px;
-  background: #F0EDE8;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  background: #f1f5f9;
+  box-shadow: 0 15px 35px -10px rgba(15, 23, 42, 0.1);
+  position: relative;
+  z-index: 1;
 }
 
 #map {
@@ -167,19 +192,20 @@ body {
   height: 100%;
 }
 
-/* STATUS BAR below map — optional trip info */
+/* STATUS BAR below map */
 .trip-status-bar {
   display: none;
-  margin: 0 24px 20px;
-  padding: 12px 18px;
-  background: #F0FDF6;
-  border: 1px solid #BBF0D6;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #2A7D55;
+  margin: 0 28px 24px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #059669;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.1);
 }
 
 .trip-status-bar.visible {
@@ -187,65 +213,68 @@ body {
 }
 
 .status-dot-green {
-  width: 8px;
-  height: 8px;
-  background: #2A7D55;
+  width: 10px;
+  height: 10px;
+  background: #10b981;
   border-radius: 50%;
-  animation: blink 2s infinite;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+  animation: pulse-dot 2s infinite;
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.3; }
+@keyframes pulse-dot {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
 /* SCROLLBAR */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #F0EDE8; }
-::-webkit-scrollbar-thumb { background: #D4CFC8; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #B0A89E; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 /* Mobile Responsiveness for Driver Dashboard */
 @media (max-width: 900px) {
   .navbar {
-    padding: 0 16px;
+    padding: 12px 16px;
     flex-wrap: wrap;
     height: auto;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    gap: 8px;
+    gap: 12px;
   }
   .brand {
     width: 100%;
     margin-bottom: 4px;
   }
   .driver-label, .bus-badge, .trip-select {
-    font-size: 12px;
-    padding: 6px 10px;
+    font-size: 13px;
+    padding: 8px 12px;
   }
   .start-btn {
-    padding: 6px 14px;
-    font-size: 13px;
+    padding: 8px 16px;
+    font-size: 14px;
     margin-left: auto;
   }
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
-    padding: 12px 16px 0;
-    gap: 10px;
+    padding: 16px 16px 0;
+    gap: 16px;
   }
   .stat-card {
-    padding: 12px 16px;
+    padding: 16px 20px;
   }
   .stat-value {
-    font-size: 20px;
+    font-size: 24px;
   }
   .stat-value.searching {
-    font-size: 13px;
+    font-size: 14px;
   }
   .map-wrapper {
-    margin: 12px 16px 16px;
-    height: calc(100vh - 200px);
+    margin: 16px 16px 24px;
+    height: calc(100vh - 240px);
     min-height: 300px;
+  }
+  .trip-status-bar {
+    margin: 0 16px 16px;
   }
 }
 
@@ -254,6 +283,6 @@ body {
     grid-template-columns: 1fr;
   }
   .map-wrapper {
-    height: calc(100vh - 350px);
+    height: calc(100vh - 380px);
   }
 }

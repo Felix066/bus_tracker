@@ -4,6 +4,10 @@
   align-items: center;
   justify-content: center;
   padding: 40px;
+  background-color: #F8FAFC;
+  background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,0.03) 0, transparent 50%), 
+                    radial-gradient(at 50% 0%, hsla(225,39%,30%,0.03) 0, transparent 50%), 
+                    radial-gradient(at 100% 0%, hsla(339,49%,30%,0.03) 0, transparent 50%);
 }
 
 .login-card {
@@ -11,55 +15,75 @@
   max-width: 100%;
   min-height: 680px;
   display: flex;
-  background: var(--white);
-  border-radius: 32px;
-  box-shadow: 0 20px 80px rgba(0,0,0,0.1);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 36px;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.1);
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.9);
 }
 
 .login-panel-left {
   flex: 1;
   padding: 80px 60px;
-  color: var(--white);
+  color: #ffffff;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: relative;
+  overflow: hidden;
 }
 
-.theme-student .login-panel-left { background: #14532d; }
-.theme-driver .login-panel-left { background: #1e40af; }
+.login-panel-left::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M0,50 C20,60 40,30 100,50" stroke="rgba(255,255,255,0.1)" fill="none" stroke-width="2"/></svg>') no-repeat center center;
+  background-size: cover;
+  z-index: 0;
+  opacity: 0.5;
+}
+
+.login-panel-left > * {
+  position: relative;
+  z-index: 1;
+}
+
+.theme-student .login-panel-left { background: linear-gradient(135deg, #0f172a 0%, #10b981 100%); }
+.theme-driver .login-panel-left { background: linear-gradient(135deg, #0f172a 0%, #4f46e5 100%); }
 
 .login-panel-right {
   flex: 1.1;
   padding: 80px 80px;
   display: flex;
   flex-direction: column;
-  background: white;
+  background: #ffffff;
 }
 
 .login-panel-left h1 {
   font-size: 56px;
   margin-top: 40px;
   line-height: 1.1;
+  letter-spacing: -1px;
 }
 
 .login-panel-left .tagline {
   font-size: 28px;
-  opacity: 0.9;
-  font-weight: 300;
+  opacity: 0.95;
+  font-weight: 400;
 }
 
 .form-group {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .form-group label {
   display: block;
   font-size: 14px;
   font-weight: 700;
-  margin-bottom: 10px;
-  color: #111827;
+  margin-bottom: 12px;
+  color: #0f172a;
 }
 
 .input-wrapper {
@@ -70,41 +94,74 @@
 
 .input-wrapper i {
   position: absolute;
-  left: 16px;
-  color: #9CA3AF;
-  font-size: 18px;
+  left: 18px;
+  color: #94a3b8;
+  font-size: 16px;
+  transition: color 0.3s ease;
 }
 
 .input-wrapper input {
-  padding-left: 48px;
-  background: #F9FAFB;
-  border: 1px solid #E5E7EB;
-  transition: all 0.2s ease;
+  width: 100%;
+  padding: 16px 16px 16px 48px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 15px;
+  color: #0f172a;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .input-wrapper input:focus {
-  background: #fff;
-  border-color: var(--text-dark);
-  box-shadow: 0 0 0 4px rgba(0,0,0,0.03);
+  background: #ffffff;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+  outline: none;
 }
 
-
+.input-wrapper input:focus + i, 
+.input-wrapper input:focus ~ i {
+  color: #4f46e5;
+}
 
 .demo-credentials {
-  background: #FFFBEB;
-  border: 1px solid #FEF3C7;
-  padding: 20px;
-  border-radius: 16px;
-  margin-bottom: 30px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  border-radius: 20px;
+  margin-bottom: 32px;
 }
 
-.demo-credentials p { font-size: 12px; font-weight: 800; color: #92400E; text-transform: uppercase; margin-bottom: 8px; }
-.demo-credentials code { display: block; font-family: var(--font-mono); color: #B45309; font-size: 13px; margin: 4px 0; }
+.demo-credentials p { font-size: 13px; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; }
+.demo-credentials code { display: block; font-family: 'Inter', monospace; color: #0f172a; font-size: 14px; margin: 6px 0; font-weight: 600; }
 
-.btn-primary { width: 100%; height: 56px; font-size: 17px; background: #111827; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.btn-primary { 
+  width: 100%; 
+  height: 56px; 
+  font-size: 16px; 
+  font-weight: 700;
+  background: #0f172a; 
+  color: white; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  gap: 12px; 
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+}
 
-.bottom-link { text-align: center; margin-top: 30px; font-size: 14px; color: #6B7280; }
-.bottom-link a { color: #111827; font-weight: 700; text-decoration: none; }
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.3);
+  background: #1e293b;
+}
+
+.bottom-link { text-align: center; margin-top: 32px; font-size: 15px; color: #64748b; font-weight: 500;}
+.bottom-link a { color: #4f46e5; font-weight: 700; text-decoration: none; transition: color 0.2s; }
+.bottom-link a:hover { color: #4338ca; text-decoration: underline; }
 
 /* Mobile Responsiveness */
 @media (max-width: 900px) {
@@ -114,25 +171,25 @@
   .login-card {
     flex-direction: column;
     min-height: auto;
-    border-radius: 20px;
+    border-radius: 24px;
   }
   .login-panel-left {
-    padding: 40px 24px;
+    padding: 48px 32px;
     flex: none;
   }
   .login-panel-right {
-    padding: 40px 24px;
+    padding: 40px 32px;
     flex: none;
   }
   .login-panel-left h1 {
-    font-size: 32px;
-    margin-top: 20px;
+    font-size: 40px;
+    margin-top: 24px;
     margin-bottom: 20px;
   }
   .login-panel-left .tagline {
-    font-size: 20px;
+    font-size: 22px;
   }
   .login-panel-left > div:last-child {
-    display: none !important; /* Hide the 3 columns of stats on mobile for space */
+    display: none !important;
   }
 }

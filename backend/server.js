@@ -539,10 +539,19 @@ app.post('/api/auth/google', async (req, res) => {
       .eq('id', 1)
       .maybeSingle();
 
-    const allowEveryone = true; // Overridden to allow everyone to log in
+    const allowEveryone = appSettings ? appSettings.allow_everyone : true;
 
-    // Authentication restrictions removed per user request
-
+    if (!allowEveryone) {
+      const { data: authUser } = await supabase
+        .from('authorized_users')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+        
+      if (!authUser) {
+        return res.status(403).json({ error: 'Access denied. You are not authorized to view buses. Contact admin.' });
+      }
+    }
     // 2. Check Students table
     let { data: studentData, error: studentError } = await supabase
       .from('students')

@@ -16,80 +16,97 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="BusTrack">
-  <style>
     body {
-      background-color: #F9FAFB;
+      background-color: #F8FAFC;
+      background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,0.03) 0, transparent 50%), 
+                        radial-gradient(at 50% 0%, hsla(225,39%,30%,0.03) 0, transparent 50%), 
+                        radial-gradient(at 100% 0%, hsla(339,49%,30%,0.03) 0, transparent 50%);
+      background-attachment: fixed;
+      font-family: 'Inter', sans-serif;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 40px;
+      margin: 0;
+      color: #0f172a;
     }
 
     .landing-header {
       text-align: center;
-      margin-bottom: 40px;
+      margin-bottom: 48px;
     }
 
     .landing-header .logo {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 56px;
-      height: 56px;
-      background: linear-gradient(135deg, var(--accent-blue-light), var(--accent-blue-dark));
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #0f172a 0%, #4f46e5 100%);
       color: white;
-      border-radius: 16px;
-      font-size: 24px;
-      margin-bottom: 20px;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      border-radius: 20px;
+      font-size: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .landing-header .logo:hover {
+      transform: scale(1.05) rotate(-5deg);
     }
 
     .landing-header h1 {
-      font-size: 42px;
+      font-size: 46px;
       font-weight: 800;
-      letter-spacing: -1px;
-      color: #111827;
-      margin-bottom: 12px;
+      letter-spacing: -1.5px;
+      color: #0f172a;
+      margin-bottom: 16px;
+      margin-top: 0;
     }
 
     .landing-header p {
       font-size: 18px;
-      color: #6B7280;
-      max-width: 400px;
+      color: #64748b;
+      max-width: 450px;
       margin: 0 auto;
+      line-height: 1.6;
+      font-weight: 500;
     }
 
     .roles-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 24px;
-      max-width: 800px;
+      gap: 32px;
+      max-width: 860px;
       width: 100%;
     }
 
     .role-card {
-      background: white;
-      border-radius: 24px;
-      padding: 32px;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-radius: 28px;
+      padding: 40px;
       text-decoration: none;
-      color: #111827;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.05);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      color: #0f172a;
+      box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.05);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      border: 2px solid transparent;
+      border: 1px solid rgba(255, 255, 255, 0.8);
       position: relative;
       overflow: hidden;
     }
 
     .role-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-      border-color: #E5E7EB;
+      transform: translateY(-8px);
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.15);
+      border-color: rgba(226, 232, 240, 1);
+      background: #ffffff;
     }
     
     .role-card::after {
@@ -98,59 +115,66 @@
         top: 0;
         left: 0;
         width: 100%;
-        height: 4px;
+        height: 6px;
         background: linear-gradient(90deg, transparent, transparent);
-        transition: all 0.3s ease;
+        transition: all 0.4s ease;
+        opacity: 0;
+    }
+    
+    .role-card:hover::after {
+        opacity: 1;
     }
 
-    .role-card.student:hover::after { background: linear-gradient(90deg, #14532d, #22c55e); }
-    .role-card.faculty:hover::after { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
-    .role-card.parent:hover::after { background: linear-gradient(90deg, #db2777, #f472b6); }
-    .role-card.driver:hover::after { background: linear-gradient(90deg, #1e40af, #3b82f6); }
+    .role-card.student:hover::after { background: linear-gradient(90deg, #10b981, #34d399); }
+    .role-card.faculty:hover::after { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+    .role-card.parent:hover::after { background: linear-gradient(90deg, #ec4899, #f472b6); }
+    .role-card.driver:hover::after { background: linear-gradient(90deg, #4f46e5, #818cf8); }
 
     .role-icon {
-      width: 64px;
-      height: 64px;
-      border-radius: 16px;
+      width: 72px;
+      height: 72px;
+      border-radius: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 28px;
-      margin-bottom: 20px;
-      transition: transform 0.3s ease;
+      font-size: 32px;
+      margin-bottom: 24px;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .role-card:hover .role-icon {
-      transform: scale(1.1);
+      transform: scale(1.1) translateY(-4px);
     }
 
-    .student .role-icon { background: #dcfce7; color: #166534; }
-    .faculty .role-icon { background: #ede9fe; color: #5b21b6; }
-    .parent .role-icon { background: #fce7f3; color: #9d174d; }
-    .driver .role-icon { background: #dbeafe; color: #1e3a8a; }
+    .student .role-icon { background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%); color: #10b981; }
+    .faculty .role-icon { background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%); color: #8b5cf6; }
+    .parent .role-icon { background: linear-gradient(135deg, rgba(236, 72, 153, 0.1) 0%, rgba(236, 72, 153, 0.05) 100%); color: #ec4899; }
+    .driver .role-icon { background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(79, 70, 229, 0.05) 100%); color: #4f46e5; }
 
     .role-title {
       font-size: 24px;
       font-weight: 800;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
     }
 
     .role-desc {
       font-size: 15px;
-      color: #6B7280;
-      line-height: 1.5;
+      color: #64748b;
+      line-height: 1.6;
+      font-weight: 500;
     }
 
     @media (max-width: 768px) {
       .roles-grid {
         grid-template-columns: 1fr;
-        gap: 16px;
+        gap: 20px;
       }
       body {
         padding: 24px 16px;
       }
       .landing-header h1 {
-        font-size: 32px;
+        font-size: 36px;
       }
     }
   </style>
