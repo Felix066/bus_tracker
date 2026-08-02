@@ -36,6 +36,10 @@ function switchTab(tabId) {
   
   event.currentTarget.classList.add('active');
   document.getElementById('tab-' + tabId).classList.add('active');
+  
+  if (tabId === 'analytics') {
+    loadAnalyticsData();
+  }
 }
 
 // --- USER MANAGEMENT DATA ---
@@ -918,3 +922,46 @@ function subscribeToRealtime() {
     })
     .subscribe();
 }
+
+async function loadAnalyticsData() {
+  const tableBody = document.getElementById('analytics-table-body');
+  if (!tableBody) return;
+  
+  tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 32px; color: var(--text-muted);">Loading analytics data...</td></tr>';
+  
+  try {
+    const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+    const res = await fetch(`${BACKEND_URL}/api/analytics`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!res.ok) throw new Error('Failed to load analytics');
+    const data = await res.json();
+    
+    if (data.history && data.history.length > 0) {
+      tableBody.innerHTML = '';
+      data.history.forEach(item => {
+        const start = new Date(item.start_time);
+        const end = new Date(item.end_time);
+        const diffMs = end - start;
+        const diffMins = Math.round(diffMs / 60000);
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${end.toLocaleDateString()} <span style="color:var(--text-muted); font-size:12px;">${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></td>
+          <td>${item.bus_id}</td>
+          <td>${item.auth ? item.auth.email : 'Unknown'}</td>
+          <td>${item.route_name}</td>
+          <td>${diffMins} mins</td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    } else {
+      tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 32px; color: var(--text-muted);">No trips recorded yet.</td></tr>';
+    }
+  } catch (err) {
+    console.error('Analytics load error:', err);
+    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 32px; color: var(--red);">Error loading data.</td></tr>';
+  }
+}
+

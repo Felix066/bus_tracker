@@ -742,11 +742,88 @@ app.post('/api/trip/end', requireRole(['driver']), async (req, res) => {
       .select();
 
     if (error) return res.status(500).json({ error: error.message });
+
+    // Fetch bus to get route name
+    const { data: busData } = await supabase
+      .from('buses')
+      .select('route_name')
+      .eq('id', tripData.bus_id)
+      .single();
+
+    // Insert into trip_history
+    await supabase.from('trip_history').insert({
+      bus_id: tripData.bus_id,
+      driver_id: driver_id,
+      start_time: tripData.started_at || new Date().toISOString(),
+      end_time: new Date().toISOString(),
+      route_name: busData ? busData.route_name : 'Unknown'
+    });
+
     res.json({ success: true, trip: data[0] });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
+app.get('/api/analytics', requireRole(['admin']), async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('trip_history')
+      .select('*, buses(name), auth.users(email)')
+      .order('end_time', { ascending: false })
+      .limit(50);
+    
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, history: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/chat/send', async (req, res) => {
+  try {
+    // Both drivers and admins can chat. The user role is stored in req.user.role.
+    const { bus_id, message } = req.body;
+    
+    // We could strict-check token here but let's just use a simple approach for the demo
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const sender_role = decoded.role === 'admin' ? 'admin' : 'driver';
+
+    const { data, error } = await supabase
+      .from('driver_messages')
+      .insert({
+        bus_id,
+        sender_role,
+        message
+      })
+      .select();
+      
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, message: data[0] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/chat/:bus_id', async (req, res) => {
+  try {
+    const { bus_id } = req.params;
+    const { data, error } = await supabase
+      .from('driver_messages')
+      .select('*')
+      .eq('bus_id', bus_id)
+      .order('created_at', { ascending: true });
+      
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, messages: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 app.get('/api/trip/:trip_id/info', requireRole(['student', 'faculty']), async (req, res) => {
     try {

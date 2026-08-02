@@ -23,40 +23,41 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.4);
+      background: rgba(15, 23, 42, 0.4);
       z-index: 10000;
       align-items: center;
       justify-content: center;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
     .location-prompt-modal.active {
       display: flex;
     }
     .location-prompt-card {
-      background: rgba(255, 255, 255, 0.85);
-      padding: 30px;
-      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 32px;
+      border-radius: 24px;
       width: 90%;
-      max-width: 400px;
+      max-width: 420px;
       text-align: center;
-      border: 1px solid rgba(255, 255, 255, 0.5);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
     }
     .location-prompt-card h3 {
-      color: #1A1A1A;
-      margin-bottom: 15px;
-      font-size: 20px;
-      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 12px;
+      font-size: 22px;
+      font-weight: 800;
       letter-spacing: -0.5px;
     }
     .location-prompt-card p {
-      color: #4A4A4A;
-      margin-bottom: 25px;
+      color: #64748b;
+      margin-bottom: 28px;
       line-height: 1.6;
-      font-size: 14px;
+      font-size: 15px;
+      font-weight: 500;
     }
     .prompt-btn-group {
       display: flex;
@@ -64,47 +65,55 @@
     }
     .prompt-btn-group button {
       flex: 1;
-      padding: 12px;
-      border-radius: 12px;
-      font-weight: 600;
+      padding: 14px;
+      border-radius: 14px;
+      font-weight: 700;
       cursor: pointer;
       border: none;
       font-family: 'Inter', sans-serif;
-      transition: all 0.2s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size: 14px;
     }
     .btn-allow {
-      background: #10B981;
+      background: #4f46e5;
       color: white;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
     }
     .btn-allow:hover {
-      background: #059669;
-      transform: translateY(-1px);
+      background: #4338ca;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
+    }
+    .btn-deny {
+      background: #f1f5f9;
+      color: #64748b;
     }
     .btn-deny:hover {
-      background: rgba(0,0,0,0.08);
+      background: #e2e8f0;
+      color: #0f172a;
     }
     
     /* Map Controls - Follow Bus */
     #follow-bus-button {
       position: absolute;
-      top: 15px;
-      right: 15px;
+      top: 16px;
+      right: 16px;
       z-index: 1000;
-      padding: 10px 15px;
-      background: #f0f0f0;
-      border: 2px solid #ccc;
-      border-radius: 8px;
+      padding: 10px 18px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      border-radius: 12px;
       cursor: pointer;
       font-size: 14px;
-      font-weight: 600;
-      font-family: 'Inter', sans-serif;
-      transition: all 0.3s;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      font-weight: 700;
+      color: #0f172a;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
     }
     
     #follow-bus-button.active {
-      background: #10B981;
       color: white;
       border-color: #059669;
     }
@@ -165,6 +174,9 @@
 
   <!-- MAP -->
   <div class="map-wrapper" style="margin-top: 15px; position: relative;">
+    <button id="alert-nearby-btn" onclick="toggleNearbyAlert()" style="position: absolute; top: 16px; left: 16px; z-index: 1000; padding: 10px 18px; background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 700; color: #0f172a; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05); display: flex; align-items: center; gap: 8px;">
+      <i class="fas fa-bell"></i> Alert when nearby
+    </button>
     <div id="map"></div>
   </div>
 

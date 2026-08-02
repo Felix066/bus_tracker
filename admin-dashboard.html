@@ -1214,6 +1214,7 @@
     <div class="tabs-nav">
       <button class="tab-btn active" onclick="switchTab('fleet')">Fleet Overview</button>
       <button class="tab-btn" onclick="switchTab('users')">User Access Management</button>
+      <button class="tab-btn" onclick="switchTab('analytics')">Trip Analytics</button>
     </div>
 
     <!-- TAB: FLEET OVERVIEW -->
@@ -1326,6 +1327,37 @@
       </div>
     </div>
     <!-- END TAB: USER ACCESS MANAGEMENT -->
+    
+    <!-- TAB: TRIP ANALYTICS -->
+    <div id="tab-analytics" class="tab-content">
+      <div class="content-header">
+        <div>
+          <h2>Trip Analytics</h2>
+          <p class="subtitle">View historical data and route performance</p>
+        </div>
+        <button class="btn-primary" onclick="loadAnalyticsData()" style="padding: 10px 16px; border-radius: 8px; font-weight: 600;">
+          <i class="fas fa-sync-alt"></i> Refresh Data
+        </button>
+      </div>
+
+      <div class="glass" style="padding: 0; overflow: hidden; margin-top: 24px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Date / Time</th>
+              <th>Bus</th>
+              <th>Driver</th>
+              <th>Route</th>
+              <th>Duration</th>
+            </tr>
+          </thead>
+          <tbody id="analytics-table-body">
+            <tr><td colspan="5" style="text-align: center; padding: 32px; color: var(--text-muted);">Loading analytics data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <!-- END TAB: TRIP ANALYTICS -->
     
   </div>
 

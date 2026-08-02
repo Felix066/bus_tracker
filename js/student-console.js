@@ -442,3 +442,43 @@ function toggleFollowBusMode() {
 }
 window.toggleFollowBusMode = toggleFollowBusMode;
 
+
+ l e t   i s N e a r b y A l e r t E n a b l e d   =   f a l s e ; 
+ l e t   a l e r t T r i g g e r e d   =   f a l s e ; 
+ f u n c t i o n   t o g g l e N e a r b y A l e r t ( )   { 
+     i s N e a r b y A l e r t E n a b l e d   =   ! i s N e a r b y A l e r t E n a b l e d ; 
+     c o n s t   b t n   =   d o c u m e n t . g e t E l e m e n t B y I d ( ' a l e r t - n e a r b y - b t n ' ) ; 
+     i f   ( i s N e a r b y A l e r t E n a b l e d )   { 
+         b t n . s t y l e . b a c k g r o u n d   =   ' # 0 5 9 6 6 9 ' ; 
+         b t n . s t y l e . c o l o r   =   ' w h i t e ' ; 
+         b t n . i n n e r H T M L   =   ' < i   c l a s s = " f a s   f a - b e l l - s l a s h " > < / i >   D i s a b l e   A l e r t ' ; 
+         a l e r t T r i g g e r e d   =   f a l s e ;   / /   R e s e t   t r i g g e r 
+         a l e r t ( ' Y o u   w i l l   b e   a l e r t e d   w h e n   t h e   b u s   i s   w i t h i n   1 k m   o f   y o u r   l o c a t i o n . ' ) ; 
+     }   e l s e   { 
+         b t n . s t y l e . b a c k g r o u n d   =   ' r g b a ( 2 5 5 ,   2 5 5 ,   2 5 5 ,   0 . 9 ) ' ; 
+         b t n . s t y l e . c o l o r   =   ' # 0 f 1 7 2 a ' ; 
+         b t n . i n n e r H T M L   =   ' < i   c l a s s = " f a s   f a - b e l l " > < / i >   A l e r t   w h e n   n e a r b y ' ; 
+     } 
+ } 
+ 
+ f u n c t i o n   c h e c k N e a r b y A l e r t ( b u s L a t ,   b u s L o n )   { 
+     i f   ( ! i s N e a r b y A l e r t E n a b l e d   | |   a l e r t T r i g g e r e d )   r e t u r n ; 
+     i f   ( t y p e o f   u s e r M a r k e r   ! = =   ' u n d e f i n e d '   & &   u s e r M a r k e r   & &   t y p e o f   h a v e r s i n e D i s t a n c e   = = =   ' f u n c t i o n ' )   { 
+         c o n s t   u s e r P o s   =   u s e r M a r k e r . g e t L a t L n g ( ) ; 
+         c o n s t   d i s t   =   h a v e r s i n e D i s t a n c e ( u s e r P o s . l a t ,   u s e r P o s . l n g ,   b u s L a t ,   b u s L o n ) ; 
+         i f   ( d i s t   <   1 0 0 0 )   { 
+             a l e r t T r i g g e r e d   =   t r u e ; 
+             a l e r t ( ' T h e   b u s   i s   w i t h i n   1 k m   o f   y o u r   l o c a t i o n ! ' ) ; 
+             i f ( w i n d o w . N o t i f i c a t i o n   & &   w i n d o w . N o t i f i c a t i o n . p e r m i s s i o n   = = =   ' g r a n t e d ' )   { 
+                 n e w   w i n d o w . N o t i f i c a t i o n ( ' B u s   A p p r o a c h i n g ' ,   {   b o d y :   ' T h e   b u s   i s   w i t h i n   1 k m   o f   y o u r   l o c a t i o n ! '   } ) ; 
+             }   e l s e   i f   ( w i n d o w . N o t i f i c a t i o n   & &   w i n d o w . N o t i f i c a t i o n . p e r m i s s i o n   ! = =   ' d e n i e d ' )   { 
+                 w i n d o w . N o t i f i c a t i o n . r e q u e s t P e r m i s s i o n ( ) . t h e n ( p e r m   = >   { 
+                     i f ( p e r m   = = =   ' g r a n t e d ' )   { 
+                         n e w   w i n d o w . N o t i f i c a t i o n ( ' B u s   A p p r o a c h i n g ' ,   {   b o d y :   ' T h e   b u s   i s   w i t h i n   1 k m   o f   y o u r   l o c a t i o n ! '   } ) ; 
+                     } 
+                 } ) ; 
+             } 
+         } 
+     } 
+ }  
+ 

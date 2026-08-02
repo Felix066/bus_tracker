@@ -577,9 +577,30 @@
     </div>
   </div>
 
+  <!-- CHAT PANEL -->
+  <button id="chat-toggle-btn" onclick="toggleChat()" style="position:fixed; bottom:40px; right:40px; background:#4f46e5; color:white; border:none; width:56px; height:56px; border-radius:50%; font-size:24px; box-shadow:0 10px 20px rgba(79, 70, 229, 0.3); z-index:9999; cursor:pointer; display:none; justify-content:center; align-items:center;">
+    <i class="fas fa-comment-dots"></i>
+    <span id="chat-badge" style="display:none; position:absolute; top:-2px; right:-2px; background:#ef4444; width:16px; height:16px; border-radius:50%; font-size:10px; font-weight:bold; align-items:center; justify-content:center;">!</span>
+  </button>
+
+  <div id="chat-panel" style="position:fixed; bottom:110px; right:40px; width:340px; height:450px; background:rgba(255,255,255,0.95); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.9); border-radius:24px; box-shadow:0 15px 35px rgba(15,23,42,0.15); z-index:9998; display:none; flex-direction:column; overflow:hidden; transition:all 0.3s ease;">
+    <div style="background:#0f172a; color:white; padding:16px 20px; font-weight:700; font-size:15px; display:flex; justify-content:space-between; align-items:center;">
+      <span id="chat-header-title">Driver Chat</span>
+      <button onclick="toggleChat()" style="background:none; border:none; color:#cbd5e1; cursor:pointer;"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="chat-messages" style="flex:1; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; font-size:13px; font-family:'Inter',sans-serif;">
+      <div style="text-align:center; color:#94a3b8; font-size:12px; margin-top:20px;">No messages yet.</div>
+    </div>
+    <div style="padding:16px; border-top:1px solid #e2e8f0; display:flex; gap:8px; background:white;">
+      <input type="text" id="chat-input" placeholder="Type a message..." style="flex:1; padding:10px 14px; border:1px solid #e2e8f0; border-radius:12px; outline:none; font-family:'Inter',sans-serif; font-size:13px;">
+      <button onclick="sendChatMessage()" style="background:#4f46e5; color:white; border:none; border-radius:12px; width:40px; height:40px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-paper-plane"></i></button>
+    </div>
+  </div>
+
   <script src="js/supabase.min.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/session-protection.js"></script>
+  <script src="js/chat.js"></script>
   <script src="js/admin-sos.js"></script>
   <script>
     protectRoute('admin');

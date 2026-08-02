@@ -108,14 +108,19 @@ async function loadSOSAlerts() {
           </div>
         </div>
 
-        <button class="btn-resolve">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          Mark as Resolved
-        </button>
+        <div style="display:flex; gap:10px;">
+          <button class="btn-resolve" style="flex:1;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Mark as Resolved
+          </button>
+          <button class="btn-chat" style="flex:1; background:#4f46e5; color:white; border:none; padding:12px; border-radius:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i class="fas fa-comment-dots"></i> Message Driver
+          </button>
+        </div>
       `;
 
       // Safely set text content (prevents XSS)
-      card.querySelector('.time-stamp').textContent = `${timeStr} · ${dateStr}`;
+      card.querySelector('.time-stamp').textContent = `${timeStr} • ${dateStr}`;
       card.querySelector('.bus-id').textContent = alert.bus_id || 'Unknown Bus';
       card.querySelector('.driver-name-val').textContent = alert.driver_name || 'N/A';
 
@@ -136,6 +141,15 @@ async function loadSOSAlerts() {
       }
 
       card.querySelector('.btn-resolve').addEventListener('click', () => resolveAlert(alert.bus_id));
+      
+      card.querySelector('.btn-chat').addEventListener('click', () => {
+        const chatPanel = document.getElementById('chat-panel');
+        if (chatPanel.style.display === 'none') {
+          toggleChat();
+        }
+        document.getElementById('chat-header-title').textContent = `Chat: ${alert.bus_id}`;
+        initChat(alert.bus_id, 'admin');
+      });
 
       container.appendChild(card);
     });
