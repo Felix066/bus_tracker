@@ -960,11 +960,11 @@ async function loadAnalyticsData() {
         
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${end.toLocaleDateString()} <span style="color:var(--text-muted); font-size:12px;">${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></td>
-          <td>${item.bus_id}</td>
-          <td>${item.auth ? item.auth.email : 'Unknown'}</td>
-          <td>${item.route_name}</td>
-          <td>${diffMins} mins</td>
+          <td data-label="Date / Time">${end.toLocaleDateString()} <span style="color:var(--text-muted); font-size:12px;">${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></td>
+          <td data-label="Bus">${item.bus_id}</td>
+          <td data-label="Driver">${item.auth ? item.auth.email : 'Unknown'}</td>
+          <td data-label="Route">${item.route_name}</td>
+          <td data-label="Duration">${diffMins} mins</td>
         `;
         tableBody.appendChild(tr);
       });
