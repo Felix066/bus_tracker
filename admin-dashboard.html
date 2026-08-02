@@ -12,6 +12,10 @@
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/dashboard.css">
   <style>
+    /* Smooth Leaflet marker movement */
+    .leaflet-marker-icon {
+      transition: transform 1.5s linear !important;
+    }
     :root {
       --bg: #F8FAFC;
       --surface: rgba(255, 255, 255, 0.7);
@@ -1191,7 +1195,7 @@
         <div class="avatar"><i class="fas fa-user-shield"></i></div>
         <span class="user-greeting" id="adminGreeting">Admin</span>
       </div>
-      <button class="logout-btn" onclick="logout()">
+      <button class="logout-btn" onclick="logoutAdmin()">
         <i class="fas fa-sign-out-alt"></i> Logout
       </button>
     </div>
@@ -1213,7 +1217,6 @@
     <!-- TABS NAVIGATION -->
     <div class="tabs-nav">
       <button class="tab-btn active" onclick="switchTab('fleet')">Fleet Overview</button>
-      <button class="tab-btn" onclick="switchTab('users')">User Access Management</button>
       <button class="tab-btn" onclick="switchTab('analytics')">Trip Analytics</button>
     </div>
 
@@ -1278,55 +1281,7 @@
     </div>
     <!-- END TAB: FLEET OVERVIEW -->
 
-    <!-- TAB: USER ACCESS MANAGEMENT -->
-    <div id="tab-users" class="tab-content">
-      <div class="global-access-card glass">
-        <div class="global-access-info">
-          <h3>Bus Visibility: Allow Everyone</h3>
-          <p id="global-access-desc">Anyone with a Google account can log in and track the bus.</p>
-        </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="toggleGlobalAccess" onchange="toggleAccessMode()">
-          <span class="slider"></span>
-        </label>
-      </div>
-
-      <div class="user-management-grid">
-        <div class="table-container glass" style="padding: 24px;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px;">
-            <div>
-              <h3 style="margin: 0 0 4px; font-size: 18px; color: var(--text);">Authorized Users</h3>
-              <p style="margin: 0; color: var(--text-muted); font-size: 14px;">Manage users allowed to view buses when restricted.</p>
-            </div>
-            <div style="display: flex; gap: 12px; align-items: center;">
-              <div class="search-wrapper">
-                <i class="fas fa-search"></i>
-                <input type="text" class="search-bar" id="filterUsers" placeholder="Search emails..." onkeyup="filterUsers()">
-              </div>
-              <input type="email" id="inpNewUserEmail" class="search-bar" placeholder="New user email..." style="width: 250px;">
-              <button class="btn-add" onclick="addAuthorizedUser()">
-                <i class="fas fa-user-plus"></i> Add
-              </button>
-            </div>
-          </div>
-          
-          <table>
-            <thead>
-              <tr>
-                <th>Email Address</th>
-                <th>Date Added</th>
-                <th>Added By</th>
-                <th style="text-align: right;">Action</th>
-              </tr>
-            </thead>
-            <tbody id="users-table-body">
-              <!-- Rendered via JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-    <!-- END TAB: USER ACCESS MANAGEMENT -->
+    <!-- User Access Management tab removed - all Google users are allowed -->
     
     <!-- TAB: TRIP ANALYTICS -->
     <div id="tab-analytics" class="tab-content">
@@ -1439,6 +1394,7 @@
   <script src="js/supabase.min.js"></script>
   <script src="js/supabase-client.js?v=12"></script>
   <script src="js/session-protection.js?v=12"></script>
+  <script src="js/auth.js?v=12"></script>
   <script src="js/admin-dashboard.js?v=12"></script>
 
   <script>
@@ -1451,6 +1407,8 @@
 
     function logoutAdmin() {
       localStorage.removeItem('adminSession');
+      localStorage.removeItem('userSession');
+      sessionStorage.clear();
       window.location.href = 'driver-login.html';
     }
 

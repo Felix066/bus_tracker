@@ -14,5 +14,8 @@ CREATE TABLE IF NOT EXISTS driver_sessions (
 
 -- 3. Enable RLS on driver_sessions
 ALTER TABLE driver_sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable read for all" ON driver_sessions;
 CREATE POLICY "Enable read for all" ON driver_sessions FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Enable all for everyone" ON driver_sessions;
 CREATE POLICY "Enable all for everyone" ON driver_sessions FOR ALL USING (true);

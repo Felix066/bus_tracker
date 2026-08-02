@@ -532,26 +532,7 @@ app.post('/api/auth/google', async (req, res) => {
     const payload = ticket.getPayload();
     const email = payload.email.toLowerCase();
 
-    // 1. User Access Management Check
-    const { data: appSettings } = await supabase
-      .from('app_settings')
-      .select('allow_everyone')
-      .eq('id', 1)
-      .maybeSingle();
-
-    const allowEveryone = appSettings ? appSettings.allow_everyone : true;
-
-    if (!allowEveryone) {
-      const { data: authUser } = await supabase
-        .from('authorized_users')
-        .select('id')
-        .eq('email', email)
-        .maybeSingle();
-        
-      if (!authUser) {
-        return res.status(403).json({ error: 'Access denied. You are not authorized to view buses. Contact admin.' });
-      }
-    }
+    // All verified Google users are allowed - no access restrictions
     // 2. Check Students table
     let { data: studentData, error: studentError } = await supabase
       .from('students')
@@ -1231,7 +1212,79 @@ app.put('/api/trip/stop-index', requireRole(['driver']), async (req, res) => {
   }
 });
 
+
+// ============================================================================
+// ANALYTICS API
+// ============================================================================
+app.get('/api/analytics', requireRole(['admin']), async (req, res) => {
+  try {
+    const { data: history, error } = await supabase
+      .from('trips')
+      .select('id, bus_id, trip_type, status, started_at, ended_at, driver_id')
+      .eq('status', 'completed')
+      .order('ended_at', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+
+    // Enrich with bus route names
+    const busIds = [...new Set(history.map(t => t.bus_id))];
+    const { data: buses } = await supabase.from('buses').select('id, route_name, driver_name').in('id', busIds);
+    const busMap = {};
+    if (buses) buses.forEach(b => { busMap[b.id] = b; });
+
+    const enriched = history.map(t => ({
+      ...t,
+      route_name: busMap[t.bus_id]?.route_name || t.trip_type || 'Unknown',
+      driver_name: busMap[t.bus_id]?.driver_name || 'Unknown',
+      start_time: t.started_at,
+      end_time: t.ended_at
+    }));
+
+    res.json({ success: true, history: enriched });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================================
+// CHAT API
+// ============================================================================
+app.get('/api/chat/:busId', requireRole(['admin', 'driver']), async (req, res) => {
+  try {
+    const { busId } = req.params;
+    const { data: messages, error } = await supabase
+      .from('driver_messages')
+      .select('*')
+      .eq('bus_id', busId)
+      .order('created_at', { ascending: true })
+      .limit(100);
+    if (error) throw error;
+    res.json({ success: true, messages: messages || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/chat/send', requireRole(['admin', 'driver']), async (req, res) => {
+  try {
+    const { bus_id, message } = req.body;
+    if (!bus_id || !message) return res.status(400).json({ error: 'bus_id and message required' });
+
+    const sender_role = req.user.role;
+    const { data, error } = await supabase
+      .from('driver_messages')
+      .insert([{ bus_id, message, sender_role }])
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+

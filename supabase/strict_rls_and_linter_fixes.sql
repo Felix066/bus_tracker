@@ -4,11 +4,20 @@
 -- ============================================================================
 -- 1. FIX MUTABLE FUNCTION SEARCH PATHS (Linter: function_search_path_mutable)
 -- ============================================================================
-ALTER FUNCTION public.handle_new_user SET search_path = public;
-ALTER FUNCTION public.admin_login SET search_path = public;
-ALTER FUNCTION public.verify_driver SET search_path = public;
-ALTER FUNCTION public.rate_limit_location_submission SET search_path = public;
-ALTER FUNCTION public.validate_location_submission SET search_path = public;
+DO $$ 
+DECLARE 
+    func_record record;
+BEGIN
+    FOR func_record IN 
+        SELECT p.oid, p.proname 
+        FROM pg_proc p 
+        JOIN pg_namespace n ON p.pronamespace = n.oid 
+        WHERE n.nspname = 'public' 
+        AND p.proname IN ('handle_new_user', 'admin_login', 'verify_driver', 'rate_limit_location_submission', 'validate_location_submission')
+    LOOP
+        EXECUTE 'ALTER FUNCTION public.' || func_record.proname || '(' || pg_get_function_identity_arguments(func_record.oid) || ') SET search_path = public;';
+    END LOOP;
+END $$;
 
 -- ============================================================================
 -- 2. DROP ALL PERMISSIVE RLS POLICIES (Linter: rls_policy_always_true)

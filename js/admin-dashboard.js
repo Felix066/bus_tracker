@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (session) adminUsername = session.username;
 
   loadDashboardData();
-  loadUserManagementData();
   subscribeToRealtime();
   setupFileInputListeners();
 });
@@ -37,7 +36,7 @@ function switchTab(tabId) {
   event.currentTarget.classList.add('active');
   document.getElementById('tab-' + tabId).classList.add('active');
   
-  if (tabId === 'analytics') {
+  if (tabId === 'analytics') { 
     loadAnalyticsData();
   }
 }
@@ -321,7 +320,7 @@ function renderBusTable() {
   tbody.innerHTML = '';
   
   // Search filtering
-  const searchTerm = (document.getElementById('filterFleet').value || '').toLowerCase();
+  const searchTerm = ((document.getElementById('filterFleet')?.value) || '').toLowerCase();
 
   const filteredBuses = busesData.filter(b => 
     (b.id || '').toLowerCase().includes(searchTerm) || 
@@ -917,7 +916,20 @@ function subscribeToRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_logs' }, () => {
       if (!editingDriverForBusId) loadDashboardData();
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'sos_alerts' }, () => {
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sos_alerts' }, (payload) => {
+      // Immediately push to local array and update badge without requiring a full reload
+      if (payload.new && payload.new.status === 'active') {
+        sosAlerts.push(payload.new);
+        checkSOSAlerts();
+        // Flash the SOS banner if it exists
+        const sosBanner = document.getElementById('sos-banner');
+        if (sosBanner) {
+          sosBanner.style.display = 'block';
+          sosBanner.textContent = `🚨 EMERGENCY SOS from ${payload.new.bus_id || 'Unknown Bus'}! Click bell to respond.`;
+        }
+      }
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sos_alerts' }, () => {
       if (!editingDriverForBusId) loadDashboardData();
     })
     .subscribe();
