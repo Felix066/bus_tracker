@@ -2,7 +2,7 @@
 // Uses Kalman-smoothed velocity, traffic time-of-day weights,
 // and haversine distance to compute real-time ETA predictions.
 
-window.AIEta = (function() {
+window.AIEta = (function () {
 
   // =========================================================================
   // CONFIGURATION — Update college GPS coordinates below
@@ -50,8 +50,8 @@ window.AIEta = (function() {
   // Simulate slow-down near stops/college
   // =========================================================================
   function getDecelerationFactor(distanceM) {
-    if (distanceM < 200)  return 1.6;   // Very close — slowing to stop
-    if (distanceM < 500)  return 1.3;   // Approaching intersection/stop
+    if (distanceM < 200) return 1.6;   // Very close — slowing to stop
+    if (distanceM < 500) return 1.3;   // Approaching intersection/stop
     if (distanceM < 1500) return 1.15;  // Within 1.5km — cautious speed
     return 1.0;
   }
@@ -63,10 +63,10 @@ window.AIEta = (function() {
     const R = 6371000;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
   // =========================================================================

@@ -256,7 +256,7 @@ async function initChat(busId, userRole) {
   }
 
   // Fetch existing messages
-  const session = JSON.parse(localStorage.getItem(userRole === 'admin' ? 'adminSession' : 'driverSession'));
+  const session = JSON.parse(localStorage.getItem('userSession'));
   const token = session?.token;
   
   try {
@@ -274,6 +274,10 @@ async function initChat(busId, userRole) {
         </div>`;
       } else {
         data.messages.forEach(msg => appendMessage(msg));
+      }
+
+      if (window.chatUserRole === 'driver') {
+        handleSosChatLock(data.isSosActive);
       }
     }
   } catch (err) {
@@ -300,6 +304,40 @@ async function initChat(busId, userRole) {
       }
     })
     .subscribe();
+
+  if (window.chatUserRole === 'driver') {
+    // Listen for SOS alerts
+    supabase.channel(`sos_alerts_${busId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sos_alerts', filter: `bus_id=eq.${busId}` }, payload => {
+        const isSosActive = payload.new && payload.new.status === 'active';
+        handleSosChatLock(isSosActive);
+      }).subscribe();
+  }
+}
+
+function handleSosChatLock(isSosActive) {
+  const inputBar = document.getElementById('chat-input-bar');
+  const container = document.getElementById('chat-messages');
+  let sosWarning = document.getElementById('sos-chat-warning');
+  
+  if (isSosActive) {
+    if (inputBar) inputBar.style.display = 'flex';
+    if (sosWarning) sosWarning.remove();
+  } else {
+    if (inputBar) inputBar.style.display = 'none';
+    if (!sosWarning && container) {
+      sosWarning = document.createElement('div');
+      sosWarning.id = 'sos-chat-warning';
+      sosWarning.innerHTML = `
+        <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:#ef4444; border-radius:12px; padding:12px; margin-top:auto; font-size:12px; text-align:center;">
+          <i class="fas fa-lock" style="margin-bottom:6px; font-size:16px;"></i><br>
+          Chat is disabled. You can only message Dispatcher during an active SOS.
+        </div>
+      `;
+      container.appendChild(sosWarning);
+      container.scrollTop = container.scrollHeight;
+    }
+  }
 }
 
 function appendMessage(msg) {
@@ -346,7 +384,7 @@ async function sendChatMessage() {
   const message = input?.value.trim();
   if (!message || !currentChatBusId) return;
   
-  const session = JSON.parse(localStorage.getItem(window.chatUserRole === 'admin' ? 'adminSession' : 'driverSession'));
+  const session = JSON.parse(localStorage.getItem('userSession'));
   const token = session?.token;
   
   input.value = '';
@@ -414,7 +452,7 @@ function stopVoiceRecording() {
 async function uploadAndSendVoice(audioBlob) {
   if (!currentChatBusId) return;
 
-  const session = JSON.parse(localStorage.getItem(window.chatUserRole === 'admin' ? 'adminSession' : 'driverSession'));
+  const session = JSON.parse(localStorage.getItem('userSession'));
   const token = session?.token;
 
   try {

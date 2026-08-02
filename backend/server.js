@@ -761,49 +761,7 @@ app.get('/api/analytics', requireRole(['admin']), async (req, res) => {
   }
 });
 
-app.post('/api/chat/send', async (req, res) => {
-  try {
-    // Both drivers and admins can chat. The user role is stored in req.user.role.
-    const { bus_id, message } = req.body;
-    
-    // We could strict-check token here but let's just use a simple approach for the demo
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-    
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const sender_role = decoded.role === 'admin' ? 'admin' : 'driver';
 
-    const { data, error } = await supabase
-      .from('driver_messages')
-      .insert({
-        bus_id,
-        sender_role,
-        message
-      })
-      .select();
-      
-    if (error) return res.status(500).json({ error: error.message });
-    res.json({ success: true, message: data[0] });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/chat/:bus_id', async (req, res) => {
-  try {
-    const { bus_id } = req.params;
-    const { data, error } = await supabase
-      .from('driver_messages')
-      .select('*')
-      .eq('bus_id', bus_id)
-      .order('created_at', { ascending: true });
-      
-    if (error) return res.status(500).json({ error: error.message });
-    res.json({ success: true, messages: data });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
 
 app.get('/api/trip/:trip_id/info', requireRole(['student', 'faculty']), async (req, res) => {
@@ -1259,7 +1217,17 @@ app.get('/api/chat/:busId', requireRole(['admin', 'driver']), async (req, res) =
       .order('created_at', { ascending: true })
       .limit(100);
     if (error) throw error;
-    res.json({ success: true, messages: messages || [] });
+
+    // Check SOS status
+    const { data: sosAlerts } = await supabase
+      .from('sos_alerts')
+      .select('id')
+      .eq('bus_id', busId)
+      .eq('status', 'active');
+      
+    const isSosActive = sosAlerts && sosAlerts.length > 0;
+
+    res.json({ success: true, messages: messages || [], isSosActive });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
