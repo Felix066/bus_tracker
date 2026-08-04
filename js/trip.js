@@ -562,7 +562,8 @@ window.triggerSOS = async function() {
 
         btn.innerHTML = '<i class="fas fa-check"></i> SOS SENT!';
         btn.style.background = '#991b1b'; // Darker red to indicate it is active
-        alert("EMERGENCY SOS SENT TO ADMIN!");
+        // Show the post-SOS emergency panel with chat option
+        if (typeof openSosPanel === 'function') openSosPanel();
     } catch (err) {
         console.error(err);
         alert("Failed to send SOS! " + err.message);
