@@ -172,6 +172,9 @@ function animateMarker(marker, fromLat, fromLon, toLat, toLon, durationMs) {
       const lat      = fromLat + (toLat - fromLat) * progress;
       const lon      = fromLon + (toLon - fromLon) * progress;
       marker.setLatLng([lat, lon]);
+      if (window.isFollowBusEnabled) {
+          map.setView([lat, lon], map.getZoom(), { animate: false });
+      }
       if (progress < 1) requestAnimationFrame(step);
     }
   
@@ -195,10 +198,6 @@ function updateBusMarker(lat, lon, label = 'Bus') {
             animateMarker(busMarker, oldPos.lat, oldPos.lng, lat, lon, 2500);
             busMarker.setIcon(createBusIcon(label));
             
-            // Continuous Automatic Map Pan Issue: Only pan if explicitly enabled
-            if (window.isFollowBusEnabled) {
-                map.panTo([lat, lon], { animate: true, duration: 2.5 });
-            }
             if (typeof checkNearbyAlert === 'function') checkNearbyAlert(lat, lon);
         }
     }

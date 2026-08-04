@@ -381,6 +381,3 @@ Passionate about building scalable software systems that combine cloud infrastru
 
 <img width="1911" height="902" alt="image" src="https://github.com/user-attachments/assets/952c1c50-d6e3-4f33-a6eb-eb091e1f8f8b" />
 <img width="1266" height="911" alt="image" src="https://github.com/user-attachments/assets/0de37ed2-3417-40ae-96d8-8ffa79433c56" />
-
-
-

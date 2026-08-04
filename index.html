@@ -24,7 +24,10 @@
                         radial-gradient(at 100% 0%, hsla(339,49%,30%,0.03) 0, transparent 50%);
       background-attachment: fixed;
       font-family: 'Inter', sans-serif;
-      min-height: 100vh;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      box-sizing: border-box;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -168,14 +171,46 @@
 
     @media (max-width: 768px) {
       .roles-grid {
-        grid-template-columns: 1fr;
-        gap: 20px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+      .role-card {
+        padding: 20px;
+      }
+      .role-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 24px;
+        margin-bottom: 12px;
+        border-radius: 16px;
+      }
+      .role-title {
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+      .role-desc {
+        font-size: 12px;
+        line-height: 1.4;
       }
       body {
-        padding: 24px 16px;
+        padding: 16px;
+      }
+      .landing-header {
+        margin-bottom: 24px;
+      }
+      .landing-header .logo {
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+        margin-bottom: 16px;
+        border-radius: 16px;
       }
       .landing-header h1 {
-        font-size: 36px;
+        font-size: 28px;
+        margin-bottom: 12px;
+      }
+      .landing-header p {
+        font-size: 14px;
       }
     }
   </style>
