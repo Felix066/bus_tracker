@@ -1,6 +1,8 @@
-// js/admin-sos.js — Updated for premium dark UI
+// js/admin-sos.js — Embedded inline chat per SOS card
 
 let resolvedToday = 0;
+// Map of busId -> polling interval ID
+const chatPolls = {};
 
 function initResolvedCounter() {
   const storedDate = localStorage.getItem('sos_resolved_date');
@@ -49,6 +51,8 @@ async function loadSOSAlerts() {
     document.getElementById('stat-resolved').textContent = resolvedToday;
 
     if (uniqueAlerts.length === 0) {
+      // Clear all polls
+      Object.values(chatPolls).forEach(id => clearInterval(id));
       container.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon-wrap">
@@ -69,6 +73,7 @@ async function loadSOSAlerts() {
     uniqueAlerts.forEach(alert => {
       const card = document.createElement('div');
       card.className = 'sos-card';
+      card.dataset.busId = alert.bus_id;
 
       const d = new Date(alert.created_at);
       const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -108,14 +113,33 @@ async function loadSOSAlerts() {
           </div>
         </div>
 
-        <div style="display:flex; gap:10px;">
+        <!-- ACTION BUTTONS -->
+        <div style="display:flex; gap:10px; margin-bottom:0;">
           <button class="btn-resolve" style="flex:1;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             Mark as Resolved
           </button>
-          <button class="btn-chat" style="flex:1; background:#4f46e5; color:white; border:none; padding:12px; border-radius:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-            <i class="fas fa-comment-dots"></i> Message Driver
+          <button class="btn-chat-toggle" style="flex:1; background: var(--accent-dim); color: var(--accent); border: 1.5px solid #c7d2fe; padding:12px; border-radius:12px; font-weight:600; font-size:13px; font-family:var(--font); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition: all 0.2s;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Message Driver
           </button>
+        </div>
+
+        <!-- EMBEDDED CHAT -->
+        <div class="card-chat">
+          <div class="chat-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;display:inline;vertical-align:middle;margin-right:4px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Live Chat with Driver
+          </div>
+          <div class="chat-messages-wrap">
+            <div class="chat-empty-msg">No messages yet. Say something to the driver.</div>
+          </div>
+          <div class="chat-input-row">
+            <input type="text" class="chat-text-input" placeholder="Type a message to the driver…" autocomplete="off">
+            <button class="chat-send-btn" title="Send">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
         </div>
       `;
 
@@ -140,16 +164,60 @@ async function loadSOSAlerts() {
         card.querySelector('.info-value.dimmed').textContent = 'Location not available';
       }
 
+      // Resolve button
       card.querySelector('.btn-resolve').addEventListener('click', () => resolveAlert(alert.bus_id));
-      
-      card.querySelector('.btn-chat').addEventListener('click', () => {
-        const chatPanel = document.getElementById('chat-panel');
-        if (chatPanel.style.display === 'none') {
-          toggleChat();
+
+      // Chat toggle button
+      const chatSection = card.querySelector('.card-chat');
+      const chatToggleBtn = card.querySelector('.btn-chat-toggle');
+      let chatOpen = false;
+      let chatLoaded = false;
+
+      chatToggleBtn.addEventListener('click', () => {
+        chatOpen = !chatOpen;
+        if (chatOpen) {
+          chatSection.classList.add('open');
+          chatToggleBtn.style.background = '#4f46e5';
+          chatToggleBtn.style.color = 'white';
+          chatToggleBtn.style.border = '1.5px solid #4f46e5';
+          chatToggleBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Close Chat
+          `;
+          // Load messages only on first open
+          if (!chatLoaded) {
+            loadChatMessages(card, alert.bus_id);
+            chatLoaded = true;
+            // Poll for new messages every 5s while open
+            chatPolls[alert.bus_id] = setInterval(() => {
+              if (chatOpen) loadChatMessages(card, alert.bus_id);
+            }, 5000);
+          }
+        } else {
+          chatSection.classList.remove('open');
+          chatToggleBtn.style.background = 'var(--accent-dim)';
+          chatToggleBtn.style.color = 'var(--accent)';
+          chatToggleBtn.style.border = '1.5px solid #c7d2fe';
+          chatToggleBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Message Driver
+          `;
         }
-        document.getElementById('chat-header-title').textContent = `Chat: ${alert.bus_id}`;
-        initChat(alert.bus_id, 'admin');
       });
+
+      // Send button
+      const input = card.querySelector('.chat-text-input');
+      const sendBtn = card.querySelector('.chat-send-btn');
+
+      const doSend = async () => {
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        await sendChatToDriver(card, alert.bus_id, text);
+      };
+
+      sendBtn.addEventListener('click', doSend);
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
 
       container.appendChild(card);
     });
@@ -168,6 +236,66 @@ async function loadSOSAlerts() {
   }
 }
 
+async function loadChatMessages(card, busId) {
+  const messagesWrap = card.querySelector('.chat-messages-wrap');
+  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/chat/${encodeURIComponent(busId)}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const messages = data.messages || [];
+
+    if (messages.length === 0) {
+      messagesWrap.innerHTML = '<div class="chat-empty-msg">No messages yet. Say something to the driver.</div>';
+      return;
+    }
+
+    const wasAtBottom = messagesWrap.scrollHeight - messagesWrap.scrollTop <= messagesWrap.clientHeight + 40;
+    messagesWrap.innerHTML = '';
+
+    messages.forEach(msg => {
+      const isAdmin = msg.sender_role === 'admin';
+      const bubble = document.createElement('div');
+      bubble.className = `chat-bubble ${isAdmin ? 'admin' : 'driver'}`;
+      const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+      const safeText = document.createTextNode(msg.message);
+      const metaEl = document.createElement('div');
+      metaEl.className = 'bubble-meta';
+      metaEl.textContent = `${isAdmin ? 'You' : 'Driver'} · ${time}`;
+      bubble.appendChild(safeText);
+      bubble.appendChild(metaEl);
+      messagesWrap.appendChild(bubble);
+    });
+
+    if (wasAtBottom) {
+      messagesWrap.scrollTop = messagesWrap.scrollHeight;
+    }
+  } catch (e) {
+    console.error('[Chat] Load error:', e);
+  }
+}
+
+async function sendChatToDriver(card, busId, text) {
+  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/chat/send`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bus_id: busId, message: text })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to send');
+    }
+    await loadChatMessages(card, busId);
+  } catch (e) {
+    console.error('[Chat] Send error:', e);
+  }
+}
+
 async function resolveAlert(busId) {
   if (!confirm(`Resolve the SOS alert for ${String(busId)}?`)) return;
 
@@ -181,6 +309,12 @@ async function resolveAlert(busId) {
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.error || 'Failed to resolve alert');
+    }
+
+    // Clear chat poll for this bus
+    if (chatPolls[busId]) {
+      clearInterval(chatPolls[busId]);
+      delete chatPolls[busId];
     }
 
     resolvedToday++;

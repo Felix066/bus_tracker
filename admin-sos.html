@@ -443,6 +443,123 @@
       transform: scale(0.98);
     }
 
+    /* ── Chat Section (inside SOS card) ── */
+    .card-chat {
+      margin-top: 20px;
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      display: none;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .card-chat.open {
+      display: flex;
+    }
+
+    .chat-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted2);
+      margin-bottom: 10px;
+    }
+
+    .chat-messages-wrap {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      height: 180px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .chat-bubble {
+      max-width: 85%;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .chat-bubble.admin {
+      background: var(--accent);
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-bubble.driver {
+      background: white;
+      border: 1px solid var(--border);
+      color: var(--text);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-bubble .bubble-meta {
+      font-size: 10px;
+      opacity: 0.65;
+      margin-top: 4px;
+    }
+
+    .chat-bubble.admin .bubble-meta { text-align: right; }
+
+    .chat-empty-msg {
+      text-align: center;
+      color: var(--muted2);
+      font-size: 12px;
+      margin: auto;
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .chat-input-row input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1.5px solid var(--border2);
+      border-radius: 10px;
+      outline: none;
+      font-family: var(--font);
+      font-size: 13px;
+      color: var(--text);
+      background: white;
+      transition: border-color 0.2s;
+    }
+
+    .chat-input-row input:focus {
+      border-color: var(--accent);
+    }
+
+    .chat-send-btn {
+      width: 38px;
+      height: 38px;
+      background: var(--accent);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s, transform 0.15s;
+    }
+
+    .chat-send-btn:hover { background: #4338ca; }
+    .chat-send-btn:active { transform: scale(0.95); }
+    .chat-send-btn svg { width: 15px; height: 15px; }
+
     /* ── Empty State ── */
     .empty-state {
       grid-column: 1 / -1;
@@ -577,25 +694,8 @@
     </div>
   </div>
 
-  <!-- CHAT PANEL -->
-  <button id="chat-toggle-btn" onclick="toggleChat()" style="position:fixed; bottom:40px; right:40px; background:#4f46e5; color:white; border:none; width:56px; height:56px; border-radius:50%; font-size:24px; box-shadow:0 10px 20px rgba(79, 70, 229, 0.3); z-index:9999; cursor:pointer; display:none; justify-content:center; align-items:center;">
-    <i class="fas fa-comment-dots"></i>
-    <span id="chat-badge" style="display:none; position:absolute; top:-2px; right:-2px; background:#ef4444; width:16px; height:16px; border-radius:50%; font-size:10px; font-weight:bold; align-items:center; justify-content:center;">!</span>
-  </button>
-
-  <div id="chat-panel" style="position:fixed; bottom:110px; right:40px; width:340px; height:450px; background:rgba(255,255,255,0.95); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.9); border-radius:24px; box-shadow:0 15px 35px rgba(15,23,42,0.15); z-index:9998; display:none; flex-direction:column; overflow:hidden; transition:all 0.3s ease;">
-    <div style="background:#0f172a; color:white; padding:16px 20px; font-weight:700; font-size:15px; display:flex; justify-content:space-between; align-items:center;">
-      <span id="chat-header-title">Driver Chat</span>
-      <button onclick="toggleChat()" style="background:none; border:none; color:#cbd5e1; cursor:pointer;"><i class="fas fa-times"></i></button>
-    </div>
-    <div id="chat-messages" style="flex:1; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; font-size:13px; font-family:'Inter',sans-serif;">
-      <div style="text-align:center; color:#94a3b8; font-size:12px; margin-top:20px;">No messages yet.</div>
-    </div>
-    <div style="padding:16px; border-top:1px solid #e2e8f0; display:flex; gap:8px; background:white;">
-      <input type="text" id="chat-input" placeholder="Type a message..." style="flex:1; padding:10px 14px; border:1px solid #e2e8f0; border-radius:12px; outline:none; font-family:'Inter',sans-serif; font-size:13px;">
-      <button onclick="sendChatMessage()" style="background:#4f46e5; color:white; border:none; border-radius:12px; width:40px; height:40px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-paper-plane"></i></button>
-    </div>
-  </div>
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous">
 
   <script src="js/supabase.min.js"></script>
   <script src="js/supabase-client.js"></script>
