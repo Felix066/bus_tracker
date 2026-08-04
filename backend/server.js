@@ -750,7 +750,7 @@ app.get('/api/analytics', requireRole(['admin']), async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('trip_history')
-      .select('*, buses(name), auth.users(email)')
+      .select('*, auth.users(email)')
       .order('end_time', { ascending: false })
       .limit(50);
     
@@ -1171,38 +1171,6 @@ app.put('/api/trip/stop-index', requireRole(['driver']), async (req, res) => {
 });
 
 
-// ============================================================================
-// ANALYTICS API
-// ============================================================================
-app.get('/api/analytics', requireRole(['admin']), async (req, res) => {
-  try {
-    const { data: history, error } = await supabase
-      .from('trips')
-      .select('id, bus_id, trip_type, status, started_at, ended_at, driver_id')
-      .eq('status', 'completed')
-      .order('ended_at', { ascending: false })
-      .limit(100);
-    if (error) throw error;
-
-    // Enrich with bus route names
-    const busIds = [...new Set(history.map(t => t.bus_id))];
-    const { data: buses } = await supabase.from('buses').select('id, route_name, driver_name').in('id', busIds);
-    const busMap = {};
-    if (buses) buses.forEach(b => { busMap[b.id] = b; });
-
-    const enriched = history.map(t => ({
-      ...t,
-      route_name: busMap[t.bus_id]?.route_name || t.trip_type || 'Unknown',
-      driver_name: busMap[t.bus_id]?.driver_name || 'Unknown',
-      start_time: t.started_at,
-      end_time: t.ended_at
-    }));
-
-    res.json({ success: true, history: enriched });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // ============================================================================
 // CHAT API

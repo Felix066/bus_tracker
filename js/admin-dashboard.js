@@ -976,4 +976,3 @@ async function loadAnalyticsData() {
     tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 32px; color: var(--red);">Error loading data.</td></tr>';
   }
 }
-

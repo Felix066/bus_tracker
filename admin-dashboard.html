@@ -767,13 +767,17 @@
     .tab-content {
       display: none;
       grid-column: 1 / -1;
-      grid-template-columns: 1fr 350px;
       gap: 30px;
       width: 100%;
     }
 
-    .tab-content.active {
+    #tab-fleet.active {
       display: grid;
+      grid-template-columns: 1fr 350px;
+    }
+
+    #tab-analytics.active {
+      display: block;
     }
 
     /* Toggle Switch */
