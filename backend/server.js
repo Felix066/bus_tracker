@@ -740,7 +740,7 @@ app.get('/api/analytics', requireRole(['admin']), async (req, res) => {
       .from('trips')
       .select('id, bus_id, trip_type, status, started_at, completed_at, driver_id')
       .eq('status', 'completed')
-      .order('completed_at', { ascending: false })
+      .order('started_at', { ascending: false })
       .limit(100);
     if (error) throw error;
 
