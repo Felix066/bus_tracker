@@ -962,7 +962,7 @@ async function loadAnalyticsData() {
         tr.innerHTML = `
           <td data-label="Date / Time">${end.toLocaleDateString()} <span style="color:var(--text-muted); font-size:12px;">${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></td>
           <td data-label="Bus">${item.bus_id}</td>
-          <td data-label="Driver">${item.auth ? item.auth.email : 'Unknown'}</td>
+          <td data-label="Driver">${item.driver_name || 'Unknown'}</td>
           <td data-label="Route">${item.route_name}</td>
           <td data-label="Duration">${diffMins} mins</td>
         `;
