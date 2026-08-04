@@ -65,9 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const res = await fetch(`${BACKEND_URL}/api/public/bus-status/${busId}`);
         if (res.ok) {
             const data = await res.json();
-            if (data.is_online === false) {
-                handleDriverOffline();
-            } else if (!isTripActive) {
+            if (!isTripActive) {
                 handleTripEnded();
             }
         }
@@ -191,27 +189,21 @@ function subscribeToLiveUpdates() {
             if (res.ok) {
                 const data = await res.json();
                 
-                // 1. Check if driver logged out
-                if (data.is_online === false) {
-                    handleDriverOffline();
-                    return;
-                }
-                
-                // 2. Check if trip ended
+                // 1. Check if trip ended
                 if (activeTripId && (data.trip_status === 'completed' || data.trip_status === 'cancelled')) {
                     handleTripEnded();
                     return;
                 }
             }
             
-            // 3. Fetch live location as fallback for Realtime
+            // 2. Fetch live location as fallback for Realtime
             const locRes = await fetch(`${BACKEND_URL}/api/location/bus/${busId}`);
             if (locRes.ok) {
                 const locData = await locRes.json();
                 if (locData.success && locData.location) {
                     const loc = locData.location;
                     if (loc.latitude && loc.longitude) {
-                        // Only process if it actually changed to avoid jitter
+                        // Process location update
                         if (loc.latitude !== lastGPSLat || loc.longitude !== lastGPSLon) {
                             processNewLocation(loc.latitude, loc.longitude, loc.speed_kmh);
                         }
@@ -220,7 +212,7 @@ function subscribeToLiveUpdates() {
             }
         } catch(e) {}
 
-        // 4. Check for app crash / forced close (no GPS for 90s)
+        // 3. Check for app crash / forced close (no GPS for 90s)
         if (lastGPSTime > 0) {
             const timeDiffMs = Date.now() - lastGPSTime;
             if (timeDiffMs > 90000) { 
@@ -241,24 +233,12 @@ function handleDriverOffline() {
         statusBar.classList.add('visible'); // MAKE VISIBLE
         statusBar.style.background = 'rgba(239, 68, 68, 0.1)';
         statusBar.style.border = '1px solid rgba(239, 68, 68, 0.2)';
-        statusText.textContent = 'Driver Offline';
+        statusText.textContent = 'Driver Offline — Last known location';
         statusText.style.color = '#ef4444';
         if (statusDot) {
             statusDot.style.background = '#ef4444';
             statusDot.style.boxShadow = '0 0 8px #ef4444';
         }
-    }
-    const speedDisplay = document.getElementById('speed-display');
-    if (speedDisplay) speedDisplay.textContent = '0 km/h';
-    
-    if (typeof stopTripTimer === 'function') stopTripTimer();
-    
-    const locationDisplay = document.getElementById('location-display');
-    if (locationDisplay) locationDisplay.textContent = '-';
-    
-    if (window.busMarker && window.map) {
-        window.map.removeLayer(window.busMarker);
-        window.busMarker = null;
     }
 }
 
@@ -441,10 +421,11 @@ async function geocodeIfNeeded(lat, lon) {
     try {
         const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
         const data = await response.json();
-        return data.display_name.split(',').slice(0, 2).join(', ');
-    } catch (err) {
-        return 'Location unknown';
-    }
+        if (data && data.display_name) {
+            return data.display_name.split(',').slice(0, 2).join(', ');
+        }
+    } catch (err) {}
+    return `${lat.toFixed(4)}° N, ${lon.toFixed(4)}° E`;
 }
 
 // ---------------------------------------------
