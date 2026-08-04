@@ -22,46 +22,16 @@
       height: 100vh;
       height: 100dvh;
       overflow: hidden;
-      background-color: #020617; /* Very dark slate */
+      background-color: #F8FAFC;
+      background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,0.03) 0, transparent 50%), 
+                        radial-gradient(at 50% 0%, hsla(225,39%,30%,0.03) 0, transparent 50%), 
+                        radial-gradient(at 100% 0%, hsla(339,49%,30%,0.03) 0, transparent 50%);
+      background-attachment: fixed;
       font-family: 'Inter', sans-serif;
-      color: #f8fafc;
+      color: #0f172a;
       display: flex;
       flex-direction: column;
       position: relative;
-    }
-
-    /* Animated Glowing Orbs */
-    body::before, body::after {
-      content: '';
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(120px);
-      z-index: 0;
-      animation: float 12s infinite ease-in-out alternate;
-    }
-    body::before {
-      width: 50vw;
-      height: 50vw;
-      max-width: 600px;
-      max-height: 600px;
-      background: rgba(79, 70, 229, 0.25); /* Indigo glow */
-      top: -10%;
-      left: -10%;
-    }
-    body::after {
-      width: 40vw;
-      height: 40vw;
-      max-width: 500px;
-      max-height: 500px;
-      background: rgba(236, 72, 153, 0.2); /* Pink glow */
-      bottom: -10%;
-      right: -10%;
-      animation-delay: -6s;
-    }
-
-    @keyframes float {
-      0% { transform: translate(0, 0) scale(1); }
-      100% { transform: translate(50px, 30px) scale(1.1); }
     }
 
     .main-container {
@@ -95,12 +65,12 @@
       justify-content: center;
       width: 72px;
       height: 72px;
-      background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+      background: linear-gradient(135deg, #0f172a 0%, #4f46e5 100%);
       color: white;
       border-radius: 24px;
       font-size: 32px;
       margin-bottom: 24px;
-      box-shadow: 0 12px 30px rgba(79, 70, 229, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+      box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
       transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     
@@ -113,29 +83,27 @@
       font-weight: 800;
       letter-spacing: -1.5px;
       margin: 0 0 12px 0;
-      background: linear-gradient(to right, #ffffff, #94a3b8);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: #0f172a;
     }
 
     .landing-header p {
       font-size: 17px;
-      color: #94a3b8;
+      color: #64748b;
       max-width: 480px;
       margin: 0 auto;
       line-height: 1.6;
-      font-weight: 400;
+      font-weight: 500;
     }
 
     .roles-wrapper {
       flex: 1;
-      overflow-y: auto; /* Allow inner scrolling if needed */
-      scrollbar-width: none; /* Firefox */
-      -ms-overflow-style: none;  /* IE and Edge */
+      overflow-y: auto;
+      scrollbar-width: none; 
+      -ms-overflow-style: none;
       padding-bottom: 32px;
     }
     .roles-wrapper::-webkit-scrollbar {
-      display: none; /* Chrome/Safari */
+      display: none;
     }
 
     .roles-grid {
@@ -151,15 +119,15 @@
     }
 
     .role-card {
-      background: rgba(30, 41, 59, 0.6);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
       border-radius: 24px;
       padding: 32px;
       text-decoration: none;
-      color: #f8fafc;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #0f172a;
+      box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.8);
       transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       display: flex;
       flex-direction: column;
@@ -171,9 +139,9 @@
 
     .role-card:hover {
       transform: translateY(-8px) scale(1.02);
-      background: rgba(40, 53, 76, 0.8);
-      border-color: rgba(255, 255, 255, 0.15);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      background: #ffffff;
+      border-color: rgba(226, 232, 240, 1);
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.15);
     }
     
     .role-card::after {
@@ -207,18 +175,16 @@
       font-size: 28px;
       margin-bottom: 20px;
       transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-      background: rgba(15, 23, 42, 0.5);
-      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05);
     }
 
     .role-card:hover .role-icon {
       transform: scale(1.15) translateY(-4px);
     }
 
-    .student .role-icon { color: #34d399; }
-    .faculty .role-icon { color: #a78bfa; }
-    .parent .role-icon { color: #f472b6; }
-    .driver .role-icon { color: #818cf8; }
+    .student .role-icon { background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%); color: #10b981; }
+    .faculty .role-icon { background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%); color: #8b5cf6; }
+    .parent .role-icon { background: linear-gradient(135deg, rgba(236, 72, 153, 0.1) 0%, rgba(236, 72, 153, 0.05) 100%); color: #ec4899; }
+    .driver .role-icon { background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(79, 70, 229, 0.05) 100%); color: #4f46e5; }
 
     .role-title {
       font-size: 22px;
@@ -229,8 +195,9 @@
 
     .role-desc {
       font-size: 14px;
-      color: #94a3b8;
+      color: #64748b;
       line-height: 1.5;
+      font-weight: 500;
     }
 
     /* Responsive Adjustments */
@@ -245,11 +212,11 @@
         margin-bottom: 32px;
       }
       .roles-grid {
-        grid-template-columns: 1fr; /* Switch to 1 column so cards are beautifully readable */
+        grid-template-columns: 1fr;
         gap: 16px;
       }
       .role-card {
-        flex-direction: row; /* Horizontal layout for mobile */
+        flex-direction: row;
         text-align: left;
         padding: 20px 24px;
         align-items: center;
