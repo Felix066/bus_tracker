@@ -746,9 +746,13 @@ app.get('/api/analytics', requireRole(['admin']), async (req, res) => {
 
     // Enrich with bus route names
     const busIds = [...new Set(history.map(t => t.bus_id))];
-    const { data: buses } = await supabase.from('buses').select('id, route_name, driver_name').in('id', busIds);
+    let buses = [];
+    if (busIds.length > 0) {
+      const { data } = await supabase.from('buses').select('id, route_name, driver_name').in('id', busIds);
+      if (data) buses = data;
+    }
     const busMap = {};
-    if (buses) buses.forEach(b => { busMap[b.id] = b; });
+    buses.forEach(b => { busMap[b.id] = b; });
 
     const enriched = history.map(t => {
       let timeBasedRoute = 'Unknown';
