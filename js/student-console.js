@@ -88,14 +88,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 5. Display Initial Location Immediately
-    if (locRes.data && locRes.data.length > 0) {
+    if (locRes.data && locRes.data.length > 0 && locRes.data[0] && locRes.data[0].latitude && locRes.data[0].longitude) {
         processNewLocation(locRes.data[0].latitude, locRes.data[0].longitude, locRes.data[0].speed_kmh);
+    } else {
+        fetch(`${BACKEND_URL}/api/location/bus/${encodeURIComponent(busId)}`)
+            .then(res => res.json())
+            .then(json => {
+                if (json && json.location && json.location.latitude && json.location.longitude) {
+                    processNewLocation(json.location.latitude, json.location.longitude, json.location.speed_kmh);
+                } else {
+                    const locEl = document.getElementById('location-display');
+                    if (locEl) {
+                        locEl.textContent = 'Waiting for Driver GPS...';
+                        locEl.classList.remove('searching');
+                    }
+                }
+            })
+            .catch(() => {
+                const locEl = document.getElementById('location-display');
+                if (locEl) locEl.textContent = 'Waiting for Driver GPS...';
+            });
     }
 
     // 6. Subscribe to Realtime Updates
     subscribeToLiveUpdates();
 
-    // 7. Prompt for Location Access (Optional)
+    // 7. Auto-detect student position for personal stop AI ETA
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((pos) => {
+            const sLat = pos.coords.latitude;
+            const sLon = pos.coords.longitude;
+            if (typeof L !== 'undefined' && window.map) {
+                if (window.userMarker) window.map.removeLayer(window.userMarker);
+                window.userMarker = L.circleMarker([sLat, sLon], {
+                    radius: 8,
+                    fillColor: '#6366f1',
+                    color: '#ffffff',
+                    weight: 3,
+                    fillOpacity: 0.9
+                }).addTo(window.map).bindPopup('Your Location');
+            }
+            if (lastGPSLat && lastGPSLon && typeof AIEta !== 'undefined') {
+                AIEta.updateETADisplay(lastGPSLat, lastGPSLon, lastGPSSpeedKmh, sLat, sLon);
+            }
+        }, () => {}, { enableHighAccuracy: false, timeout: 10000 });
+    }
+
     if (isTripActive) {
         checkLocationSharingPrompt();
     }

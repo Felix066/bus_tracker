@@ -64,25 +64,44 @@ async function submitLocationSecure(latitude, longitude, speed_kmh, trip_id, bus
 
 async function getBusLocation(bus_id) {
   try {
-    const { data, error } = await window.supabase
-      .from('current_bus_locations')
-      .select('*')
-      .eq('bus_id', bus_id)
-      .single();
-    if (error) return null;
-    return data;
+    const busNum = String(bus_id).replace(/\D/g, '');
+    const searchId = busNum ? `Bus ${busNum}` : bus_id;
+    if (window.supabase) {
+      const { data, error } = await window.supabase
+        .from('current_bus_locations')
+        .select('*')
+        .or(`bus_id.eq."${searchId}",bus_id.eq."Bus${busNum}",bus_id.eq."${bus_id}"`)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+      if (!error && data && data.length > 0) return data[0];
+    }
+    return await getBusLocationBackend(bus_id);
   } catch (error) {
     console.error('Failed to fetch bus location:', error);
-    return null;
+    return await getBusLocationBackend(bus_id);
   }
+}
+
+async function getBusLocationBackend(bus_id) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/location/bus/${encodeURIComponent(bus_id)}`);
+    if (res.ok) {
+      const json = await res.json();
+      return json.location || null;
+    }
+  } catch (e) {}
+  return null;
 }
 
 async function getTripInfo(bus_id) {
   try {
+    if (!window.supabase) return null;
+    const busNum = String(bus_id).replace(/\D/g, '');
+    const searchId = busNum ? `Bus ${busNum}` : bus_id;
     const { data, error } = await window.supabase
       .from('trips')
       .select('*')
-      .eq('bus_id', bus_id)
+      .or(`bus_id.eq."${searchId}",bus_id.eq."Bus${busNum}",bus_id.eq."${bus_id}"`)
       .eq('status', 'active')
       .order('started_at', { ascending: false })
       .limit(1);

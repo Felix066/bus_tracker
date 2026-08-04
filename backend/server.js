@@ -854,16 +854,20 @@ app.get('/api/trip/:bus_id', async (req, res) => {
 app.get('/api/location/bus/:bus_id', async (req, res) => {
   try {
     const { bus_id } = req.params;
+    const busNum = String(bus_id).replace(/\D/g, '');
+    const searchId = busNum ? `Bus ${busNum}` : bus_id;
+    
     const { data, error } = await supabase
       .from('current_bus_locations')
       .select('*')
-      .eq('bus_id', bus_id)
-      .single();
+      .or(`bus_id.eq."${searchId}",bus_id.eq."Bus${busNum}",bus_id.eq."${bus_id}"`)
+      .order('updated_at', { ascending: false })
+      .limit(1);
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       return res.status(500).json({ error: error.message });
     }
-    res.json({ success: true, location: data || null });
+    res.json({ success: true, location: (data && data.length > 0) ? data[0] : null });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -892,23 +896,28 @@ app.get('/api/public/bus-status/:bus_id', async (req, res) => {
   try {
     const { bus_id } = req.params;
     const { trip_id } = req.query; // optional
+    const busNum = String(bus_id).replace(/\D/g, '');
+    const searchId = busNum ? `Bus ${busNum}` : bus_id;
 
     const [busRes, sessionRes] = await Promise.all([
-      supabase.from('buses').select('driver_name').eq('id', bus_id).single(),
-      supabase.from('driver_sessions').select('driver_name, is_online').eq('bus_id', bus_id).single()
+      supabase.from('buses').select('driver_name').or(`id.eq."${searchId}",id.eq."Bus${busNum}",id.eq."${bus_id}"`).limit(1),
+      supabase.from('driver_sessions').select('driver_name, is_online').or(`bus_id.eq."${searchId}",bus_id.eq."Bus${busNum}",bus_id.eq."${bus_id}"`).limit(1)
     ]);
 
     let tripStatus = null;
     if (trip_id) {
-      const { data } = await supabase.from('trips').select('status').eq('id', trip_id).single();
-      tripStatus = data ? data.status : null;
+      const { data } = await supabase.from('trips').select('status').eq('id', trip_id).limit(1);
+      tripStatus = (data && data.length > 0) ? data[0].status : null;
     }
+
+    const busData = busRes.data && busRes.data.length > 0 ? busRes.data[0] : null;
+    const sessionData = sessionRes.data && sessionRes.data.length > 0 ? sessionRes.data[0] : null;
 
     res.json({
       success: true,
-      bus_driver: busRes.data ? busRes.data.driver_name : null,
-      session_driver: sessionRes.data ? sessionRes.data.driver_name : null,
-      is_online: sessionRes.data ? sessionRes.data.is_online : false,
+      bus_driver: busData ? busData.driver_name : null,
+      session_driver: sessionData ? sessionData.driver_name : null,
+      is_online: sessionData ? sessionData.is_online : false,
       trip_status: tripStatus
     });
   } catch (error) {
