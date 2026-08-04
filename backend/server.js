@@ -107,7 +107,7 @@ app.use(express.static(path.join(__dirname, '../')));
 // Usage: /tiles/:z/:x/:y  =>  proxies https://tile.openstreetmap.org/{z}/{x}/{y}.png
 // ============================================================================
 const https = require('https');
-const http = require('http');
+const http = require('http'); 
 
 app.get('/tiles/:z/:x/:y', (req, res) => {
   const { z, x, y } = req.params;
