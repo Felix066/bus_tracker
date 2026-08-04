@@ -117,14 +117,29 @@ window.AIEta = (function () {
   // =========================================================================
   function updateETADisplay(busLat, busLon, rawSpeedKmph, studentLat, studentLon) {
     const etaEl = document.getElementById('eta-student');
+    const etaSubEl = document.getElementById('eta-student-sub');
     const etaCollegeEl = document.getElementById('eta-college');
+    const etaCollegeSubEl = document.getElementById('eta-college-sub');
 
     // Student ETA
-    if (etaEl && studentLat && studentLon) {
-      const result = predict(busLat, busLon, studentLat, studentLon, rawSpeedKmph);
-      if (result) {
-        etaEl.textContent = result.label;
-        etaEl.style.color = result.status === 'inside_bus' ? '#10b981' : '#f59e0b';
+    if (etaEl) {
+      if (studentLat && studentLon) {
+        const result = predict(busLat, busLon, studentLat, studentLon, rawSpeedKmph);
+        if (result) {
+          if (result.status === 'inside_bus') {
+            etaEl.textContent = 'On Board';
+            etaEl.style.color = '#10b981';
+            if (etaSubEl) etaSubEl.innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i> You are currently inside the bus';
+          } else {
+            etaEl.textContent = result.etaMinutes < 1 ? '< 1 min' : `~${result.etaMinutes} mins`;
+            etaEl.style.color = '#4f46e5';
+            const distKm = (result.distanceM / 1000).toFixed(1);
+            if (etaSubEl) etaSubEl.innerHTML = `<i class="fas fa-location-arrow" style="color:#6366f1;"></i> ${distKm} km to your stop · Live AI Estimate`;
+          }
+        }
+      } else {
+        etaEl.textContent = 'Waiting GPS...';
+        if (etaSubEl) etaSubEl.innerHTML = '<i class="fas fa-map-marker-alt" style="color:#94a3b8;"></i> Allow location for personal stop ETA';
       }
     }
 
@@ -132,13 +147,16 @@ window.AIEta = (function () {
     if (etaCollegeEl) {
       const distToCollege = haversineDist(busLat, busLon, COLLEGE_LAT, COLLEGE_LON);
       if (distToCollege <= ARRIVED_COLLEGE_THRESHOLD_M) {
-        etaCollegeEl.textContent = '🎓 Status: Arrived at College';
+        etaCollegeEl.textContent = 'Arrived';
         etaCollegeEl.style.color = '#10b981';
+        if (etaCollegeSubEl) etaCollegeSubEl.innerHTML = '<i class="fas fa-graduation-cap" style="color:#10b981;"></i> Bus has arrived at Campus';
       } else {
         const result = predict(busLat, busLon, COLLEGE_LAT, COLLEGE_LON, rawSpeedKmph);
         if (result) {
-          etaCollegeEl.textContent = `🏫 College ${result.label.replace('🕒 AI ETA:', 'ETA:')}`;
-          etaCollegeEl.style.color = '#818cf8';
+          etaCollegeEl.textContent = result.etaMinutes < 1 ? '< 1 min' : `~${result.etaMinutes} mins`;
+          etaCollegeEl.style.color = '#059669';
+          const distKm = (distToCollege / 1000).toFixed(1);
+          if (etaCollegeSubEl) etaCollegeSubEl.innerHTML = `<i class="fas fa-school" style="color:#10b981;"></i> ${distKm} km to College · Traffic Factored`;
         }
       }
     }

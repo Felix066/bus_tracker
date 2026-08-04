@@ -172,8 +172,8 @@ function animateMarker(marker, fromLat, fromLon, toLat, toLon, durationMs) {
       const lat      = fromLat + (toLat - fromLat) * progress;
       const lon      = fromLon + (toLon - fromLon) * progress;
       marker.setLatLng([lat, lon]);
-      if (window.isFollowBusEnabled) {
-          map.setView([lat, lon], map.getZoom(), { animate: false });
+      if (window.isFollowBusEnabled !== false && map) {
+          map.panTo([lat, lon], { animate: false });
       }
       if (progress < 1) requestAnimationFrame(step);
     }
@@ -181,23 +181,29 @@ function animateMarker(marker, fromLat, fromLon, toLat, toLon, durationMs) {
     requestAnimationFrame(step);
 }
 
+if (typeof window.isFollowBusEnabled === 'undefined') {
+  window.isFollowBusEnabled = true; // Auto-follow bus by default
+}
+
 function updateBusMarker(lat, lon, label = 'Bus') {
+    const targetZoom = (map && map.getZoom() < 13) ? 15 : (map ? map.getZoom() : 15);
     if (!busMarker) {
         busMarker = L.marker([lat, lon], { icon: createBusIcon(label) }).addTo(map);
-        map.setView([lat, lon], map.getZoom());
+        map.setView([lat, lon], targetZoom);
         if (typeof checkNearbyAlert === 'function') checkNearbyAlert(lat, lon);
     } else {
         const oldPos = busMarker.getLatLng();
-        // Use haversineDistance if available to check movement threshold (e.g., 3 meters)
-        let distance = 100; // default to rendering if haversine isn't defined
+        let distance = 100;
         if (typeof haversineDistance === 'function') {
             distance = haversineDistance(oldPos.lat, oldPos.lng, lat, lon);
         }
         
-        if (distance >= 3) { // 3 meters threshold
-            animateMarker(busMarker, oldPos.lat, oldPos.lng, lat, lon, 2500);
+        if (distance >= 1) { // 1 meter threshold for smooth responsive tracking
+            animateMarker(busMarker, oldPos.lat, oldPos.lng, lat, lon, 2000);
             busMarker.setIcon(createBusIcon(label));
-            
+            if (window.isFollowBusEnabled !== false && map) {
+                map.panTo([lat, lon], { animate: true, duration: 1.5 });
+            }
             if (typeof checkNearbyAlert === 'function') checkNearbyAlert(lat, lon);
         }
     }

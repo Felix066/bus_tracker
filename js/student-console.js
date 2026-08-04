@@ -18,7 +18,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = 'student-dashboard.html';
         return;
     }
-    busId = busParam.replace(/Bus/i, 'Bus '); // "Bus4" -> "Bus 4"
+    const busNum = busParam.replace(/\D/g, '');
+    busId = busNum ? `Bus ${busNum}` : busParam.trim();
 
     // 2. Fetch Active Trip and Initial Location in parallel
     const trip = await getTripInfo(busId);
@@ -37,8 +38,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     } catch(e) {}
 
-    document.getElementById('driver-name-display').textContent = driverName;
-    document.getElementById('assigned-bus-label').textContent = busId;
+    const driverEl = document.getElementById('driver-name-display');
+    if (driverEl) driverEl.textContent = driverName;
+    const busLabelEl = document.getElementById('assigned-bus-label');
+    if (busLabelEl) busLabelEl.textContent = busId;
 
     if (!trip) {
         document.getElementById('location-display').textContent = 'Offline — No active trip for ' + busId;
@@ -430,7 +433,7 @@ document.getElementById('btn-allow')?.addEventListener('click', () => {
 // FOLLOW BUS MODE - User-Controlled Map Panning
 // ============================================================================
 
-window.isFollowBusEnabled = false; // Default: user can explore map freely
+window.isFollowBusEnabled = true; // Default: automatically track bus movement on map
 
 function toggleFollowBusMode() {
   window.isFollowBusEnabled = !window.isFollowBusEnabled;
