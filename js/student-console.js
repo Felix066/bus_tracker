@@ -44,15 +44,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (busLabelEl) busLabelEl.textContent = busId;
 
     if (!trip) {
-        document.getElementById('location-display').textContent = 'Offline — No active trip for ' + busId;
-        initMap('morning'); // Initialize with a default route so map isn't completely blank
+        const locEl = document.getElementById('location-display');
+        if (locEl) locEl.textContent = 'Bus at Depot — No active trip for ' + busId;
+        initMap('morning');
         
-        // Show last known location even if no active trip
-        if (locRes.data && locRes.data.length > 0 && locRes.data[0]) {
-            processNewLocation(locRes.data[0].latitude, locRes.data[0].longitude, locRes.data[0].speed_kmh);
+        let startLat = (locRes.data && locRes.data[0] && locRes.data[0].latitude) ? locRes.data[0].latitude : null;
+        let startLon = (locRes.data && locRes.data[0] && locRes.data[0].longitude) ? locRes.data[0].longitude : null;
+        if (!startLat) {
+            const routeStops = (typeof getRoute === 'function') ? getRoute('morning') : [];
+            startLat = (routeStops && routeStops[0]) ? routeStops[0].lat : 8.8932;
+            startLon = (routeStops && routeStops[0]) ? routeStops[0].lon : 76.6141;
         }
-        
-        // Subscribe to live updates anyway so the bus appears as soon as it starts moving
+        processNewLocation(startLat, startLon, 0);
         subscribeToLiveUpdates();
         return;
     }
@@ -72,41 +75,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch(e) {}
 
     // 4. Initialize Map and Timer
-    initMap(currentTripType);
+    initMap(currentTripType || 'morning');
     
     const statusBar = document.getElementById('trip-status-bar');
-    
-    if (isTripActive) {
-        if (statusBar) statusBar.classList.add('visible');
+    if (isTripActive && statusBar) {
+        statusBar.classList.add('visible');
     }
     
-    if (isTripActive && trip.started_at) {
+    if (isTripActive && trip && trip.started_at) {
         globalTripStartTime = new Date(trip.started_at).getTime();
         startTripTimer(globalTripStartTime);
     }
 
-    // 5. Display Initial Location Immediately
-    if (locRes.data && locRes.data.length > 0 && locRes.data[0] && locRes.data[0].latitude && locRes.data[0].longitude) {
-        processNewLocation(locRes.data[0].latitude, locRes.data[0].longitude, locRes.data[0].speed_kmh);
-    } else {
-        fetch(`${BACKEND_URL}/api/location/bus/${encodeURIComponent(busId)}`)
-            .then(res => res.json())
-            .then(json => {
-                if (json && json.location && json.location.latitude && json.location.longitude) {
-                    processNewLocation(json.location.latitude, json.location.longitude, json.location.speed_kmh);
-                } else {
-                    const locEl = document.getElementById('location-display');
-                    if (locEl) {
-                        locEl.textContent = 'Waiting for Driver GPS...';
-                        locEl.classList.remove('searching');
-                    }
-                }
-            })
-            .catch(() => {
-                const locEl = document.getElementById('location-display');
-                if (locEl) locEl.textContent = 'Waiting for Driver GPS...';
-            });
+    // 5. Display Initial Location Immediately (with route fallback if DB has no pings yet)
+    let initialLat = null, initialLon = null, initialSpeed = 0;
+    if (locRes.data && locRes.data.length > 0 && locRes.data[0] && locRes.data[0].latitude) {
+        initialLat = locRes.data[0].latitude;
+        initialLon = locRes.data[0].longitude;
+        initialSpeed = locRes.data[0].speed_kmh || 0;
     }
+
+    if (!initialLat) {
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/location/bus/${encodeURIComponent(busId)}`);
+            if (res.ok) {
+                const json = await res.json();
+                if (json && json.location && json.location.latitude) {
+                    initialLat = json.location.latitude;
+                    initialLon = json.location.longitude;
+                    initialSpeed = json.location.speed_kmh || 0;
+                }
+            }
+        } catch(e) {}
+    }
+
+    // Default route start fallback if no pings exist anywhere yet
+    if (!initialLat) {
+        const routeStops = (typeof getRoute === 'function') ? getRoute(currentTripType || 'morning') : [];
+        initialLat = (routeStops && routeStops[0]) ? routeStops[0].lat : 8.8932;
+        initialLon = (routeStops && routeStops[0]) ? routeStops[0].lon : 76.6141;
+        initialSpeed = 0;
+    }
+
+    // Render initial location immediately on map and cards
+    processNewLocation(initialLat, initialLon, initialSpeed);
 
     // 6. Subscribe to Realtime Updates
     subscribeToLiveUpdates();
