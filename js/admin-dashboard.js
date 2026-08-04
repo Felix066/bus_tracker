@@ -953,18 +953,33 @@ async function loadAnalyticsData() {
     if (data.history && data.history.length > 0) {
       tableBody.innerHTML = '';
       data.history.forEach(item => {
-        const start = new Date(item.start_time);
-        const end = new Date(item.end_time);
-        const diffMs = end - start;
-        const diffMins = Math.round(diffMs / 60000);
+        const start = item.start_time ? new Date(item.start_time) : null;
+        const end = item.end_time ? new Date(item.end_time) : null;
+        
+        let dateStr = 'Unknown Date';
+        let timeStr = '';
+        let diffStr = 'N/A';
+
+        // Check for valid dates and not the epoch
+        if (start && end && start.getTime() > 0 && end.getTime() > 0) {
+          dateStr = end.toLocaleDateString();
+          timeStr = `<span style="color:var(--text-muted); font-size:12px;">${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
+          const diffMs = end - start;
+          const diffMins = Math.round(diffMs / 60000);
+          diffStr = diffMins > 0 ? `${diffMins} mins` : '< 1 min';
+        } else if (start && start.getTime() > 0) {
+          dateStr = start.toLocaleDateString();
+          timeStr = `<span style="color:var(--text-muted); font-size:12px;">${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
+          diffStr = 'Incomplete';
+        }
         
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td data-label="Date / Time">${end.toLocaleDateString()} <span style="color:var(--text-muted); font-size:12px;">${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></td>
+          <td data-label="Date / Time">${dateStr} ${timeStr}</td>
           <td data-label="Bus">${item.bus_id}</td>
           <td data-label="Driver">${item.driver_name || 'Unknown'}</td>
-          <td data-label="Route">${item.route_name}</td>
-          <td data-label="Duration">${diffMins} mins</td>
+          <td data-label="Route">${item.route_name || 'Unknown'}</td>
+          <td data-label="Duration">${diffStr}</td>
         `;
         tableBody.appendChild(tr);
       });
@@ -974,5 +989,23 @@ async function loadAnalyticsData() {
   } catch (err) {
     console.error('Analytics load error:', err);
     tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 32px; color: var(--red);">Error loading data.</td></tr>';
+  }
+}
+
+async function clearAnalyticsData() {
+  if (!confirm("Are you sure you want to clear all trip history? This cannot be undone.")) return;
+  
+  try {
+    const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+    const res = await fetch(`${BACKEND_URL}/api/analytics/clear`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!res.ok) throw new Error('Failed to clear analytics');
+    loadAnalyticsData();
+  } catch (err) {
+    console.error('Clear analytics error:', err);
+    alert('Error clearing analytics data: ' + err.message);
   }
 }

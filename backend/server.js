@@ -764,6 +764,26 @@ app.get('/api/analytics', requireRole(['admin']), async (req, res) => {
   }
 });
 
+app.delete('/api/analytics/clear', requireRole(['admin']), async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('trips')
+      .delete()
+      .eq('status', 'completed');
+      
+    if (error) throw error;
+
+    await supabase.from('admin_logs').insert({
+      admin_username: req.user.username,
+      action_text: 'Cleared trip analytics history'
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 
 

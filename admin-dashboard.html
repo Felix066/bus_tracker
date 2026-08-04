@@ -1310,9 +1310,14 @@
           <h2>Trip Analytics</h2>
           <p class="subtitle">View historical data and route performance</p>
         </div>
-        <button class="btn-primary" onclick="loadAnalyticsData()" style="padding: 10px 16px; border-radius: 8px; font-weight: 600;">
-          <i class="fas fa-sync-alt"></i> Refresh Data
-        </button>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <button onclick="clearAnalyticsData()" style="padding: 10px 16px; border-radius: 8px; font-weight: 600; background: rgba(239, 68, 68, 0.1); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.2); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+            <i class="fas fa-trash"></i> Clear Data
+          </button>
+          <button class="btn-primary" onclick="loadAnalyticsData()" style="padding: 10px 16px; border-radius: 8px; font-weight: 600;">
+            <i class="fas fa-sync-alt"></i> Refresh Data
+          </button>
+        </div>
       </div>
 
       <div class="table-container glass" style="padding: 0; overflow: hidden; margin-top: 24px;">
