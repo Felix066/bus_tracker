@@ -970,7 +970,7 @@ async function loadAnalyticsData() {
         } else if (start && start.getTime() > 0) {
           dateStr = start.toLocaleDateString();
           timeStr = `<span style="color:var(--text-muted); font-size:12px;">${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
-          diffStr = 'Incomplete';
+          diffStr = 'Unknown';
         }
         
         const tr = document.createElement('tr');
