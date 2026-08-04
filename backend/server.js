@@ -750,13 +750,21 @@ app.get('/api/analytics', requireRole(['admin']), async (req, res) => {
     const busMap = {};
     if (buses) buses.forEach(b => { busMap[b.id] = b; });
 
-    const enriched = history.map(t => ({
-      ...t,
-      route_name: busMap[t.bus_id]?.route_name || t.trip_type || 'Unknown',
-      driver_name: busMap[t.bus_id]?.driver_name || 'Unknown',
-      start_time: t.started_at,
-      end_time: t.completed_at
-    }));
+    const enriched = history.map(t => {
+      let timeBasedRoute = 'Unknown';
+      if (t.started_at) {
+        const hour = new Date(t.started_at).getHours();
+        timeBasedRoute = hour < 12 ? 'morning' : 'evening';
+      }
+      
+      return {
+        ...t,
+        route_name: busMap[t.bus_id]?.route_name || timeBasedRoute,
+        driver_name: busMap[t.bus_id]?.driver_name || 'Unknown',
+        start_time: t.started_at,
+        end_time: t.completed_at
+      };
+    });
 
     res.json({ success: true, history: enriched });
   } catch (err) {
