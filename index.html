@@ -11,122 +11,185 @@
   <script src="js/icons.js?v=12"></script>
   <link rel="stylesheet" href="css/global.css">
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#1A1A1A">
+  <meta name="theme-color" content="#0f172a">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="BusTrack">
   <style>
     body {
-      background-color: #F8FAFC;
-      background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,0.03) 0, transparent 50%), 
-                        radial-gradient(at 50% 0%, hsla(225,39%,30%,0.03) 0, transparent 50%), 
-                        radial-gradient(at 100% 0%, hsla(339,49%,30%,0.03) 0, transparent 50%);
-      background-attachment: fixed;
-      font-family: 'Inter', sans-serif;
+      margin: 0;
       height: 100vh;
       height: 100dvh;
       overflow: hidden;
-      box-sizing: border-box;
+      background-color: #020617; /* Very dark slate */
+      font-family: 'Inter', sans-serif;
+      color: #f8fafc;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px;
-      margin: 0;
-      color: #0f172a;
+      position: relative;
+    }
+
+    /* Animated Glowing Orbs */
+    body::before, body::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      z-index: 0;
+      animation: float 12s infinite ease-in-out alternate;
+    }
+    body::before {
+      width: 50vw;
+      height: 50vw;
+      max-width: 600px;
+      max-height: 600px;
+      background: rgba(79, 70, 229, 0.25); /* Indigo glow */
+      top: -10%;
+      left: -10%;
+    }
+    body::after {
+      width: 40vw;
+      height: 40vw;
+      max-width: 500px;
+      max-height: 500px;
+      background: rgba(236, 72, 153, 0.2); /* Pink glow */
+      bottom: -10%;
+      right: -10%;
+      animation-delay: -6s;
+    }
+
+    @keyframes float {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(50px, 30px) scale(1.1); }
+    }
+
+    .main-container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 32px 24px;
+      box-sizing: border-box;
+      max-width: 1000px;
+      margin: 0 auto;
     }
 
     .landing-header {
       text-align: center;
-      margin-bottom: 48px;
+      margin-bottom: 40px;
+      flex-shrink: 0;
+      animation: fadeDown 0.8s ease-out;
+    }
+    
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .landing-header .logo {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 64px;
-      height: 64px;
-      background: linear-gradient(135deg, #0f172a 0%, #4f46e5 100%);
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
       color: white;
-      border-radius: 20px;
-      font-size: 28px;
+      border-radius: 24px;
+      font-size: 32px;
       margin-bottom: 24px;
-      box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 12px 30px rgba(79, 70, 229, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     
     .landing-header .logo:hover {
-      transform: scale(1.05) rotate(-5deg);
+      transform: scale(1.1) rotate(-8deg);
     }
 
     .landing-header h1 {
-      font-size: 46px;
+      font-size: 42px;
       font-weight: 800;
       letter-spacing: -1.5px;
-      color: #0f172a;
-      margin-bottom: 16px;
-      margin-top: 0;
+      margin: 0 0 12px 0;
+      background: linear-gradient(to right, #ffffff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     .landing-header p {
-      font-size: 18px;
-      color: #64748b;
-      max-width: 450px;
+      font-size: 17px;
+      color: #94a3b8;
+      max-width: 480px;
       margin: 0 auto;
       line-height: 1.6;
-      font-weight: 500;
+      font-weight: 400;
+    }
+
+    .roles-wrapper {
+      flex: 1;
+      overflow-y: auto; /* Allow inner scrolling if needed */
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none;  /* IE and Edge */
+      padding-bottom: 32px;
+    }
+    .roles-wrapper::-webkit-scrollbar {
+      display: none; /* Chrome/Safari */
     }
 
     .roles-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 32px;
-      max-width: 860px;
-      width: 100%;
+      gap: 24px;
+      animation: fadeUp 0.8s ease-out 0.2s both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .role-card {
-      background: rgba(255, 255, 255, 0.7);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border-radius: 28px;
-      padding: 40px;
+      background: rgba(30, 41, 59, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 32px;
       text-decoration: none;
-      color: #0f172a;
-      box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.05);
+      color: #f8fafc;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      border: 1px solid rgba(255, 255, 255, 0.8);
       position: relative;
       overflow: hidden;
     }
 
     .role-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.15);
-      border-color: rgba(226, 232, 240, 1);
-      background: #ffffff;
+      transform: translateY(-8px) scale(1.02);
+      background: rgba(40, 53, 76, 0.8);
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
     }
     
     .role-card::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 6px;
-        background: linear-gradient(90deg, transparent, transparent);
-        transition: all 0.4s ease;
-        opacity: 0;
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, transparent, transparent);
+      transition: all 0.4s ease;
+      opacity: 0;
     }
     
     .role-card:hover::after {
-        opacity: 1;
+      opacity: 1;
     }
 
     .role-card.student:hover::after { background: linear-gradient(90deg, #10b981, #34d399); }
@@ -135,128 +198,134 @@
     .role-card.driver:hover::after { background: linear-gradient(90deg, #4f46e5, #818cf8); }
 
     .role-icon {
-      width: 72px;
-      height: 72px;
-      border-radius: 24px;
+      width: 64px;
+      height: 64px;
+      border-radius: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 32px;
-      margin-bottom: 24px;
-      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      font-size: 28px;
+      margin-bottom: 20px;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      background: rgba(15, 23, 42, 0.5);
+      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05);
     }
 
     .role-card:hover .role-icon {
-      transform: scale(1.1) translateY(-4px);
+      transform: scale(1.15) translateY(-4px);
     }
 
-    .student .role-icon { background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%); color: #10b981; }
-    .faculty .role-icon { background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%); color: #8b5cf6; }
-    .parent .role-icon { background: linear-gradient(135deg, rgba(236, 72, 153, 0.1) 0%, rgba(236, 72, 153, 0.05) 100%); color: #ec4899; }
-    .driver .role-icon { background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(79, 70, 229, 0.05) 100%); color: #4f46e5; }
+    .student .role-icon { color: #34d399; }
+    .faculty .role-icon { color: #a78bfa; }
+    .parent .role-icon { color: #f472b6; }
+    .driver .role-icon { color: #818cf8; }
 
     .role-title {
-      font-size: 24px;
-      font-weight: 800;
-      margin-bottom: 12px;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 10px;
       letter-spacing: -0.5px;
     }
 
     .role-desc {
-      font-size: 15px;
-      color: #64748b;
-      line-height: 1.6;
-      font-weight: 500;
+      font-size: 14px;
+      color: #94a3b8;
+      line-height: 1.5;
     }
 
+    /* Responsive Adjustments */
     @media (max-width: 768px) {
-      .roles-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-      }
-      .role-card {
-        padding: 20px;
-      }
-      .role-icon {
-        width: 48px;
-        height: 48px;
-        font-size: 24px;
-        margin-bottom: 12px;
-        border-radius: 16px;
-      }
-      .role-title {
-        font-size: 16px;
-        margin-bottom: 8px;
-      }
-      .role-desc {
-        font-size: 12px;
-        line-height: 1.4;
-      }
-      body {
-        padding: 16px;
-      }
-      .landing-header {
-        margin-bottom: 24px;
-      }
-      .landing-header .logo {
-        width: 48px;
-        height: 48px;
-        font-size: 20px;
-        margin-bottom: 16px;
-        border-radius: 16px;
+      .main-container {
+        padding: 24px 16px;
       }
       .landing-header h1 {
-        font-size: 28px;
-        margin-bottom: 12px;
+        font-size: 32px;
       }
-      .landing-header p {
-        font-size: 14px;
+      .landing-header {
+        margin-bottom: 32px;
+      }
+      .roles-grid {
+        grid-template-columns: 1fr; /* Switch to 1 column so cards are beautifully readable */
+        gap: 16px;
+      }
+      .role-card {
+        flex-direction: row; /* Horizontal layout for mobile */
+        text-align: left;
+        padding: 20px 24px;
+        align-items: center;
+      }
+      .role-icon {
+        width: 56px;
+        height: 56px;
+        margin-bottom: 0;
+        margin-right: 20px;
+        flex-shrink: 0;
+        font-size: 24px;
+      }
+      .role-card:hover .role-icon {
+        transform: scale(1.1) translateX(4px);
+      }
+      .role-title {
+        font-size: 18px;
+        margin-bottom: 4px;
       }
     }
   </style>
 </head>
 <body>
 
-  <div class="landing-header">
-    <div class="logo">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 462 244" role="img" aria-label="Where Is My Bus" width="36" height="36"><path fill-rule="evenodd" fill="currentColor" d="M406.66 132.0 L428.16 111.0 L445.38 91.0 L453.18 76.0 L455.31 68.0 L456.2 57.0 L455.31 48.0 L451.19 35.0 L441.0 20.37 L433.0 13.89 L425.0 9.72 L415.0 6.68 L405.0 5.83 L396.0 6.7 L386.0 9.66 L377.0 14.62 L369.0 21.38 L363.67 28.0 L358.74 37.0 L355.69 47.0 L354.6 60.0 L357.58 76.0 L365.85 92.0 L396.63 126.0 L404.0 132.24 L406.66 132.0 Z M320.22 238.0 L331.0 236.31 L342.0 232.2 L353.0 225.19 L361.33 217.0 L369.37 205.0 L400.82 145.0 L381.0 127.84 L357.0 171.82 L352.58 175.0 L340.17 199.0 L335.94 204.0 L327.0 209.23 L314.0 211.33 L303.0 209.34 L292.31 203.0 L284.6 193.0 L252.69 131.0 L278.0 82.24 L332.0 185.4 L347.66 160.0 L289.3 45.0 L281.21 34.0 L272.0 25.69 L257.0 17.88 L239.0 14.76 L223.0 16.62 L208.0 22.76 L197.33 31.0 L188.89 41.0 L159.0 97.67 L155.62 93.0 L129.37 41.0 L120.0 29.62 L109.0 21.59 L98.0 16.84 L86.0 14.65 L5.43 15.0 L103.76 206.0 L112.0 217.56 L123.0 227.27 L139.0 235.2 L158.0 238.15 L175.0 236.27 L191.0 229.34 L202.0 220.51 L210.27 210.0 L237.0 159.79 L260.65 205.0 L267.8 216.0 L273.38 222.0 L283.0 229.37 L296.0 235.36 L304.0 237.35 L320.22 238.0 Z M409.0 77.03 L403.0 77.3 L395.0 74.38 L388.82 68.0 L386.55 63.0 L385.72 55.0 L387.79 48.0 L394.0 40.71 L400.0 37.67 L407.0 36.95 L414.0 38.78 L421.35 45.0 L424.41 51.0 L425.21 59.0 L422.29 68.0 L416.0 74.38 L409.0 77.03 Z M118.0 175.46 L49.0 41.52 L83.0 41.34 L91.0 42.69 L100.53 48.0 L107.45 57.0 L142.95 127.0 L118.0 175.46 Z M163.0 211.01 L156.0 211.11 L147.0 209.17 L139.0 205.13 L135.46 201.0 L208.8 60.0 L217.32 49.0 L230.0 42.65 L241.0 41.89 L249.0 43.71 L255.0 46.67 L262.34 54.0 L188.33 195.0 L183.29 202.0 L178.0 206.28 L171.0 209.45 L163.0 211.01 Z"/></svg>
+  <div class="main-container">
+    <div class="landing-header">
+      <div class="logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 462 244" role="img" aria-label="Where Is My Bus" width="36" height="36"><path fill-rule="evenodd" fill="currentColor" d="M406.66 132.0 L428.16 111.0 L445.38 91.0 L453.18 76.0 L455.31 68.0 L456.2 57.0 L455.31 48.0 L451.19 35.0 L441.0 20.37 L433.0 13.89 L425.0 9.72 L415.0 6.68 L405.0 5.83 L396.0 6.7 L386.0 9.66 L377.0 14.62 L369.0 21.38 L363.67 28.0 L358.74 37.0 L355.69 47.0 L354.6 60.0 L357.58 76.0 L365.85 92.0 L396.63 126.0 L404.0 132.24 L406.66 132.0 Z M320.22 238.0 L331.0 236.31 L342.0 232.2 L353.0 225.19 L361.33 217.0 L369.37 205.0 L400.82 145.0 L381.0 127.84 L357.0 171.82 L352.58 175.0 L340.17 199.0 L335.94 204.0 L327.0 209.23 L314.0 211.33 L303.0 209.34 L292.31 203.0 L284.6 193.0 L252.69 131.0 L278.0 82.24 L332.0 185.4 L347.66 160.0 L289.3 45.0 L281.21 34.0 L272.0 25.69 L257.0 17.88 L239.0 14.76 L223.0 16.62 L208.0 22.76 L197.33 31.0 L188.89 41.0 L159.0 97.67 L155.62 93.0 L129.37 41.0 L120.0 29.62 L109.0 21.59 L98.0 16.84 L86.0 14.65 L5.43 15.0 L103.76 206.0 L112.0 217.56 L123.0 227.27 L139.0 235.2 L158.0 238.15 L175.0 236.27 L191.0 229.34 L202.0 220.51 L210.27 210.0 L237.0 159.79 L260.65 205.0 L267.8 216.0 L273.38 222.0 L283.0 229.37 L296.0 235.36 L304.0 237.35 L320.22 238.0 Z M409.0 77.03 L403.0 77.3 L395.0 74.38 L388.82 68.0 L386.55 63.0 L385.72 55.0 L387.79 48.0 L394.0 40.71 L400.0 37.67 L407.0 36.95 L414.0 38.78 L421.35 45.0 L424.41 51.0 L425.21 59.0 L422.29 68.0 L416.0 74.38 L409.0 77.03 Z M118.0 175.46 L49.0 41.52 L83.0 41.34 L91.0 42.69 L100.53 48.0 L107.45 57.0 L142.95 127.0 L118.0 175.46 Z M163.0 211.01 L156.0 211.11 L147.0 209.17 L139.0 205.13 L135.46 201.0 L208.8 60.0 L217.32 49.0 L230.0 42.65 L241.0 41.89 L249.0 43.71 L255.0 46.67 L262.34 54.0 L188.33 195.0 L183.29 202.0 L178.0 206.28 L171.0 209.45 L163.0 211.01 Z"/></svg>
+      </div>
+      <h1>BusTrack</h1>
+      <p>Choose your role to continue to the dashboard.</p>
     </div>
-    <h1>Select Your Role</h1>
-    <p>Choose how you want to interact with BusTrack to continue to your dashboard.</p>
-  </div>
 
-  <div class="roles-grid">
-    <a href="student-login.html" class="role-card student">
-      <div class="role-icon">
-        <i class="fas fa-user-graduate"></i>
-      </div>
-      <div class="role-title">Student</div>
-      <div class="role-desc">Track your bus in real-time and get updates on arrivals.</div>
-    </a>
+    <div class="roles-wrapper">
+      <div class="roles-grid">
+        <a href="student-login.html" class="role-card student">
+          <div class="role-icon">
+            <i class="fas fa-user-graduate"></i>
+          </div>
+          <div>
+            <div class="role-title">Student</div>
+            <div class="role-desc">Track your bus in real-time and get updates.</div>
+          </div>
+        </a>
 
-    <a href="student-login.html" class="role-card faculty">
-      <div class="role-icon">
-        <i class="fas fa-chalkboard-teacher"></i>
-      </div>
-      <div class="role-title">Faculty</div>
-      <div class="role-desc">Sign in with your Google account for faculty access.</div>
-    </a>
+        <a href="student-login.html" class="role-card faculty">
+          <div class="role-icon">
+            <i class="fas fa-chalkboard-teacher"></i>
+          </div>
+          <div>
+            <div class="role-title">Faculty</div>
+            <div class="role-desc">Sign in with Google for faculty access.</div>
+          </div>
+        </a>
 
-    <a href="student-login.html" class="role-card parent">
-      <div class="role-icon">
-        <i class="fas fa-user-friends"></i>
-      </div>
-      <div class="role-title">Parent</div>
-      <div class="role-desc">Monitor your child's bus commute and receive alerts.</div>
-    </a>
+        <a href="student-login.html" class="role-card parent">
+          <div class="role-icon">
+            <i class="fas fa-user-friends"></i>
+          </div>
+          <div>
+            <div class="role-title">Parent</div>
+            <div class="role-desc">Monitor commutes and receive live alerts.</div>
+          </div>
+        </a>
 
-    <a href="driver-login.html" class="role-card driver">
-      <div class="role-icon">
-        <i class="fas fa-id-badge"></i>
+        <a href="driver-login.html" class="role-card driver">
+          <div class="role-icon">
+            <i class="fas fa-id-badge"></i>
+          </div>
+          <div>
+            <div class="role-title">Driver</div>
+            <div class="role-desc">Manage your route and broadcast location.</div>
+          </div>
+        </a>
       </div>
-      <div class="role-title">Driver</div>
-      <div class="role-desc">Manage your route, broadcast location, and check alerts.</div>
-    </a>
+    </div>
   </div>
 
   <script>
