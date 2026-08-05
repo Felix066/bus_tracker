@@ -206,7 +206,7 @@ window.RoadETA = (function () {
   // =========================================================================
   // MAIN UPDATE FUNCTION — called by student-console.js on every GPS update
   // =========================================================================
-  async function updateDisplay(busLat, busLon, speedKmh, studentLat, studentLon, lastGPSTime, busId) {
+  async function updateDisplay(busLat, busLon, speedKmh, studentLat, studentLon, lastGPSTime, busId, studentAccuracyGlobal) {
     if (!busLat || !busLon) return;
 
     const avgSpeed = updateAverageSpeed(speedKmh);
@@ -295,14 +295,24 @@ window.RoadETA = (function () {
       if (studentDistEl) {
         const distM = haversineDist(studentLat, studentLon, busLat, busLon);
         const distKm = (distM / 1000).toFixed(1);
+
+        let accWarning = '';
+        if (studentAccuracyGlobal !== null && studentAccuracyGlobal !== undefined) {
+          if (studentAccuracyGlobal > 1000) {
+            accWarning = ` ⚠️ GPS accuracy poor (±${(studentAccuracyGlobal/1000).toFixed(1)}km)`;
+          } else if (studentAccuracyGlobal > 50) {
+            accWarning = ` (±${Math.round(studentAccuracyGlobal)}m)`;
+          }
+        }
+
         if (insideBusConfirmed) {
           studentDistEl.textContent = 'You are currently on the bus';
         } else if (smoothedSpeed < 1) {
-          studentDistEl.textContent = `${distKm} km away · Bus is currently stopped`;
+          studentDistEl.textContent = `${distKm} km away${accWarning} · Bus is currently stopped`;
         } else {
           // ETA for bus to reach student position
           const etaMins = Math.max(1, Math.round((distM / (Math.max(smoothedSpeed, 5) / 3.6)) / 60));
-          studentDistEl.textContent = `${distKm} km away · ETA ~${etaMins} min for bus to reach you`;
+          studentDistEl.textContent = `${distKm} km away${accWarning} · ETA ~${etaMins} min for bus to reach you`;
         }
       }
     } else {

@@ -13,6 +13,7 @@ let globalTripStartTime = null;
 // Student GPS coords (updated by watchPosition)
 let studentLatGlobal = null;
 let studentLonGlobal = null;
+let studentAccuracyGlobal = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Get Bus ID from URL
@@ -418,7 +419,7 @@ function processNewLocation(lat, lon, speedKmh) {
 
     // D. Road-Based ETA Engine (replaces old AIEta)
     if (typeof RoadETA !== 'undefined') {
-        RoadETA.update(lat, lon, speedKmh || lastGPSSpeedKmh, studentLatGlobal, studentLonGlobal, lastGPSTime, busId)
+        RoadETA.update(lat, lon, speedKmh || lastGPSSpeedKmh, studentLatGlobal, studentLonGlobal, lastGPSTime, busId, studentAccuracyGlobal)
             .catch(() => {}); // never crash the GPS loop
     }
 }
@@ -469,17 +470,10 @@ function startStudentGPS() {
             const sLon = pos.coords.longitude;
             const accuracy = pos.coords.accuracy;
 
-            // Laptops often rely on IP/Wi-Fi with huge error margins.
-            // If accuracy is worse than 2000m, notify the user.
-            const accuracyWarningEl = document.getElementById('road-dist-student');
-            if (accuracy > 2000 && accuracyWarningEl) {
-                accuracyWarningEl.textContent = `⚠️ Low accuracy (${Math.round(accuracy/1000)}km margin). Laptop GPS may be inaccurate.`;
-                // Still update the map, but the distance calculated might be skewed
-            }
-
             // Store globally for use in processNewLocation
             studentLatGlobal = sLat;
             studentLonGlobal = sLon;
+            studentAccuracyGlobal = accuracy;
             
             // Update student marker locally (no database upload, avoiding DB growth)
             if (typeof L !== 'undefined' && window.map) {
@@ -498,7 +492,7 @@ function startStudentGPS() {
             
             // Road ETA update with student coords
             if (lastGPSLat && lastGPSLon && typeof RoadETA !== 'undefined') {
-                RoadETA.update(lastGPSLat, lastGPSLon, lastGPSSpeedKmh, sLat, sLon, lastGPSTime, busId)
+                RoadETA.update(lastGPSLat, lastGPSLon, lastGPSSpeedKmh, sLat, sLon, lastGPSTime, busId, studentAccuracyGlobal)
                     .catch(() => {});
             }
         }, (err) => {
