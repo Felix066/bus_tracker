@@ -466,6 +466,15 @@ function startStudentGPS() {
         studentWatchId = navigator.geolocation.watchPosition((pos) => {
             const sLat = pos.coords.latitude;
             const sLon = pos.coords.longitude;
+            const accuracy = pos.coords.accuracy;
+
+            // Laptops often rely on IP/Wi-Fi with huge error margins.
+            // If accuracy is worse than 2000m, notify the user.
+            const accuracyWarningEl = document.getElementById('road-dist-student');
+            if (accuracy > 2000 && accuracyWarningEl) {
+                accuracyWarningEl.textContent = `⚠️ Low accuracy (${Math.round(accuracy/1000)}km margin). Laptop GPS may be inaccurate.`;
+                // Still update the map, but the distance calculated might be skewed
+            }
 
             // Store globally for use in processNewLocation
             studentLatGlobal = sLat;
@@ -497,7 +506,7 @@ function startStudentGPS() {
             if (etaEl && etaEl.textContent === 'Loading...') {
                 // Don't change destination ETA — only affects student proximity
             }
-        }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 });
+        }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
     }
 }
 

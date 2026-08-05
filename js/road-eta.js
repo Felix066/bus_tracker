@@ -266,7 +266,7 @@ window.RoadETA = (function () {
           const etaMins = computeETA(distM, speedKmh, avgSpeed, routeData.duration_s);
           const source  = routeData.source === 'ors' ? '🛣️ Road' : '📐 Estimated';
           if (destEtaEl)  { destEtaEl.textContent = `~${etaMins} min`; destEtaEl.style.color = '#059669'; }
-          if (destDistEl) destDistEl.textContent = `${distKm} km to ${destination.name} · ${source}`;
+          if (destDistEl) destDistEl.textContent = `${distKm} km from bus to ${destination.name} · ${source}`;
         }
       }
     } else {
@@ -297,7 +297,7 @@ window.RoadETA = (function () {
           if (insideBusConfirmed) {
             studentDistEl.textContent = 'You are currently on the bus';
           } else {
-            studentDistEl.textContent = `${studentRoute.road_distance_km} km · ETA ~${etaMins} min to your location`;
+            studentDistEl.textContent = `${studentRoute.road_distance_km} km · ETA ~${etaMins} min for bus to reach you`;
           }
         }
       }
