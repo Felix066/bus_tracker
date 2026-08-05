@@ -106,6 +106,16 @@ function initMap(tripType) {
 
   showCachedLocationIfAvailable();
   prewarmTileCache(map);
+
+  // Auto-disable Follow Bus mode if user manually drags map
+  map.on('dragstart', function() {
+    if (window.isFollowBusEnabled) {
+      if (typeof window.toggleFollowBusMode === 'function') {
+        window.toggleFollowBusMode(); // Toggle it off
+      }
+    }
+  });
+
   return map;
 }
 
@@ -172,9 +182,6 @@ function animateMarker(marker, fromLat, fromLon, toLat, toLon, durationMs) {
       const lat      = fromLat + (toLat - fromLat) * progress;
       const lon      = fromLon + (toLon - fromLon) * progress;
       marker.setLatLng([lat, lon]);
-      if (window.isFollowBusEnabled !== false && map) {
-          map.panTo([lat, lon], { animate: false });
-      }
       if (progress < 1) requestAnimationFrame(step);
     }
   
