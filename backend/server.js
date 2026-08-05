@@ -58,7 +58,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net", "https://accounts.google.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
       imgSrc: ["'self'", "data:", "https:", "blob:", "https://lh3.googleusercontent.com"],
-      connectSrc: ["'self'", "https://qlzqymdeguhzlxnfawiq.supabase.co", "wss://qlzqymdeguhzlxnfawiq.supabase.co", "https://nominatim.openstreetmap.org", "https://accounts.google.com"],
+      connectSrc: ["'self'", "https://qlzqymdeguhzlxnfawiq.supabase.co", "wss://qlzqymdeguhzlxnfawiq.supabase.co", "https://nominatim.openstreetmap.org", "https://accounts.google.com", "https://api.openrouteservice.org"],
       frameSrc: ["'self'", "https://accounts.google.com"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"]
@@ -1266,5 +1266,214 @@ app.post('/api/chat/send', requireRole(['admin', 'driver']), async (req, res) =>
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// ============================================================================
+// DESTINATION MANAGEMENT (Admin sets it, students read it)
+// ============================================================================
+
+// GET current destination — public, no auth needed
+app.get('/api/public/destination', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('destinations')
+      .select('*')
+      .eq('id', 1)
+      .single();
+    if (error || !data) {
+      return res.json({ success: false, destination: null });
+    }
+    res.json({ success: true, destination: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET current destination — admin view
+app.get('/api/admin/destination', requireRole(['admin']), async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('destinations')
+      .select('*')
+      .eq('id', 1)
+      .single();
+    if (error) throw error;
+    res.json({ success: true, destination: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST save/update destination — admin only
+app.post('/api/admin/destination', requireRole(['admin']), async (req, res) => {
+  try {
+    const { name, latitude, longitude } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+      return res.status(400).json({ error: 'Destination name must be at least 2 characters.' });
+    }
+    const lat = parseFloat(latitude);
+    const lon = parseFloat(longitude);
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+      return res.status(400).json({ error: 'Invalid latitude. Must be between -90 and 90.' });
+    }
+    if (isNaN(lon) || lon < -180 || lon > 180) {
+      return res.status(400).json({ error: 'Invalid longitude. Must be between -180 and 180.' });
+    }
+
+    const { data, error } = await supabase
+      .from('destinations')
+      .upsert({
+        id: 1,
+        name: name.trim(),
+        latitude: lat,
+        longitude: lon,
+        updated_at: new Date().toISOString(),
+        updated_by: req.user.username
+      }, { onConflict: 'id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Log the action
+    await supabase.from('admin_logs').insert({
+      admin_username: req.user.username,
+      action_text: `Set destination to: ${name.trim()} (${lat.toFixed(4)}, ${lon.toFixed(4)})`
+    });
+
+    // Invalidate routing cache for all buses when destination changes
+    routeCache.clear();
+
+    res.json({ success: true, destination: data });
+  } catch (err) {
+    console.error('[destination] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================================
+// ORS ROUTING PROXY — Road-Based Distance & ETA
+// ============================================================================
+// Protects ORS API key server-side. 
+// Caches results per bus for 30s to avoid hitting free tier limits.
+// Only re-fetches when bus moves >150m or cache expires.
+// ============================================================================
+
+// In-memory route cache: key = "busId" → { result, timestamp, busLat, busLon }
+const routeCache = new Map();
+const ROUTE_CACHE_TTL_MS = 30000;      // 30 seconds
+const ROUTE_MIN_MOVE_M = 150;         // Re-fetch only if bus moved this far
+
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// GET road route info: distance + duration from bus to destination
+// Called by student console; proxied to ORS; API key never exposed to browser
+app.get('/api/route/eta', async (req, res) => {
+  try {
+    const { fromLat, fromLon, toLat, toLon, busId } = req.query;
+
+    const bLat = parseFloat(fromLat);
+    const bLon = parseFloat(fromLon);
+    const dLat = parseFloat(toLat);
+    const dLon = parseFloat(toLon);
+
+    if ([bLat, bLon, dLat, dLon].some(isNaN)) {
+      return res.status(400).json({ error: 'Invalid coordinates' });
+    }
+
+    const cacheKey = busId || `${bLat.toFixed(4)},${bLon.toFixed(4)}`;
+    const cached = routeCache.get(cacheKey);
+    const now = Date.now();
+
+    // Return cached result if fresh AND bus hasn't moved significantly
+    if (cached) {
+      const age = now - cached.timestamp;
+      const moved = haversineMeters(cached.busLat, cached.busLon, bLat, bLon);
+      if (age < ROUTE_CACHE_TTL_MS && moved < ROUTE_MIN_MOVE_M) {
+        return res.json({ success: true, ...cached.result, cached: true });
+      }
+    }
+
+    const ORS_KEY = process.env.ORS_API_KEY;
+    if (!ORS_KEY || ORS_KEY === 'your_openrouteservice_api_key_here') {
+      // Fallback: return haversine estimate so the UI still works
+      const dist = haversineMeters(bLat, bLon, dLat, dLon);
+      const fallback = {
+        road_distance_m: dist * 1.25, // circuity factor
+        duration_s: (dist * 1.25) / (30 / 3.6),
+        road_distance_km: ((dist * 1.25) / 1000).toFixed(1),
+        source: 'haversine_fallback'
+      };
+      return res.json({ success: true, ...fallback, cached: false });
+    }
+
+    // Call ORS Directions API
+    const orsUrl = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ORS_KEY}&start=${bLon},${bLat}&end=${dLon},${dLat}`;
+
+    const orsResp = await fetch(orsUrl, {
+      headers: { 'Accept': 'application/json, application/geo+json' },
+      signal: AbortSignal.timeout(8000)
+    });
+
+    if (!orsResp.ok) {
+      // On ORS error, fall back to haversine with circuity factor
+      const dist = haversineMeters(bLat, bLon, dLat, dLon);
+      const fallback = {
+        road_distance_m: dist * 1.25,
+        duration_s: (dist * 1.25) / (30 / 3.6),
+        road_distance_km: ((dist * 1.25) / 1000).toFixed(1),
+        source: 'haversine_fallback'
+      };
+      return res.json({ success: true, ...fallback, cached: false });
+    }
+
+    const orsData = await orsResp.json();
+    const segment = orsData?.features?.[0]?.properties?.segments?.[0];
+    const summary = orsData?.features?.[0]?.properties?.summary;
+
+    const road_distance_m = summary?.distance || segment?.distance || 0;
+    const duration_s      = summary?.duration  || segment?.duration  || 0;
+
+    const result = {
+      road_distance_m,
+      road_distance_km: (road_distance_m / 1000).toFixed(1),
+      duration_s,
+      source: 'ors'
+    };
+
+    // Cache the result
+    routeCache.set(cacheKey, {
+      result,
+      timestamp: now,
+      busLat: bLat,
+      busLon: bLon
+    });
+
+    res.json({ success: true, ...result, cached: false });
+  } catch (err) {
+    console.error('[route/eta] Error:', err.message);
+    // Always return something so UI doesn't break
+    const bLat = parseFloat(req.query.fromLat) || 0;
+    const bLon = parseFloat(req.query.fromLon) || 0;
+    const dLat = parseFloat(req.query.toLat) || 0;
+    const dLon = parseFloat(req.query.toLon) || 0;
+    const dist = haversineMeters(bLat, bLon, dLat, dLon);
+    res.json({
+      success: true,
+      road_distance_m: dist * 1.25,
+      road_distance_km: ((dist * 1.25) / 1000).toFixed(1),
+      duration_s: (dist * 1.25) / (30 / 3.6),
+      source: 'haversine_fallback',
+      cached: false
+    });
+  }
 });
 

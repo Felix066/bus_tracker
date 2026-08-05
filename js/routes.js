@@ -5,11 +5,11 @@ const morningRoute = [
   { name: "Kottarakkara", lat: 9.0000, lon: 76.7800 },
   { name: "Adoor", lat: 9.1526, lon: 76.7314 },
   { name: "Pandalam", lat: 9.2312, lon: 76.6834 },
-  { name: "College Campus", lat: 9.0750, lon: 76.5710 }
+  { name: "College Campus", lat: 9.2990, lon: 76.6154 }
 ];
 
 const eveningRoute = [
-  { name: "College Campus", lat: 9.0750, lon: 76.5710 },
+  { name: "College Campus", lat: 9.2990, lon: 76.6154 },
   { name: "Pandalam", lat: 9.2312, lon: 76.6834 },
   { name: "Adoor", lat: 9.1526, lon: 76.7314 },
   { name: "Kottarakkara", lat: 9.0000, lon: 76.7800 },

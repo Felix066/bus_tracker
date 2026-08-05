@@ -780,6 +780,10 @@
       display: block;
     }
 
+    #tab-destination.active {
+      display: block;
+    }
+
     /* Toggle Switch */
     .toggle-switch {
       position: relative;
@@ -1238,6 +1242,7 @@
     <div class="tabs-nav">
       <button class="tab-btn active" onclick="switchTab('fleet')">Fleet Overview</button>
       <button class="tab-btn" onclick="switchTab('analytics')">Trip Analytics</button>
+      <button class="tab-btn" onclick="switchTab('destination')">🗺 Destination</button>
     </div>
 
     <!-- TAB: FLEET OVERVIEW -->
@@ -1338,7 +1343,69 @@
       </div>
     </div>
     <!-- END TAB: TRIP ANALYTICS -->
-    
+
+    <!-- TAB: DESTINATION MANAGEMENT -->
+    <div id="tab-destination" class="tab-content" style="display:none;">
+      <div style="max-width:760px;">
+
+        <!-- Current Destination Preview -->
+        <div id="dest-current-card" style="background:rgba(255,255,255,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(226,232,240,0.9);border-radius:24px;padding:28px 32px;margin-bottom:28px;box-shadow:0 8px 30px -10px rgba(15,23,42,0.08);position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#059669,#34d399);"></div>
+          <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#059669;margin-bottom:12px;display:flex;align-items:center;gap:8px;"><i class="fas fa-flag-checkered"></i> Current Active Destination</div>
+          <div id="dest-preview-name" style="font-size:26px;font-weight:800;color:#1e293b;letter-spacing:-0.5px;margin-bottom:6px;">Loading...</div>
+          <div id="dest-preview-coords" style="font-size:13px;color:#64748b;font-weight:600;">Fetching coordinates...</div>
+          <div id="dest-preview-by" style="font-size:12px;color:#94a3b8;margin-top:8px;"></div>
+        </div>
+
+        <!-- Set Destination Form -->
+        <div style="background:rgba(255,255,255,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(226,232,240,0.9);border-radius:24px;padding:32px;box-shadow:0 8px 30px -10px rgba(15,23,42,0.08);">
+          <div style="font-size:18px;font-weight:800;color:#1e293b;letter-spacing:-0.3px;margin-bottom:6px;"><i class="fas fa-map-marker-alt" style="color:#4f46e5;margin-right:8px;"></i>Set New Destination</div>
+          <div style="font-size:14px;color:#64748b;font-weight:500;margin-bottom:28px;">Students will automatically use this destination for road-based ETA calculations. Only you (admin) can change this.</div>
+
+          <div style="display:grid;grid-template-columns:1fr;gap:20px;">
+            <div>
+              <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:8px;letter-spacing:.02em;">Destination Name</label>
+              <input type="text" id="dest-inp-name" placeholder="e.g. Providence College of Engineering" maxlength="100"
+                style="width:100%;box-sizing:border-box;padding:14px 18px;border:1.5px solid rgba(226,232,240,0.9);border-radius:14px;font-size:15px;font-family:inherit;font-weight:500;color:#0f172a;background:#fff;transition:border-color .2s,box-shadow .2s;outline:none;"
+                onfocus="this.style.borderColor='#4f46e5';this.style.boxShadow='0 0 0 4px rgba(79,70,229,.1)'"
+                onblur="this.style.borderColor='rgba(226,232,240,0.9)';this.style.boxShadow='none'">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div>
+                <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:8px;letter-spacing:.02em;">Latitude</label>
+                <input type="number" id="dest-inp-lat" placeholder="e.g. 9.0750" step="0.000001" min="-90" max="90"
+                  style="width:100%;box-sizing:border-box;padding:14px 18px;border:1.5px solid rgba(226,232,240,0.9);border-radius:14px;font-size:15px;font-family:inherit;font-weight:500;color:#0f172a;background:#fff;transition:border-color .2s,box-shadow .2s;outline:none;"
+                  onfocus="this.style.borderColor='#4f46e5';this.style.boxShadow='0 0 0 4px rgba(79,70,229,.1)'"
+                  onblur="this.style.borderColor='rgba(226,232,240,0.9)';this.style.boxShadow='none'">
+              </div>
+              <div>
+                <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:8px;letter-spacing:.02em;">Longitude</label>
+                <input type="number" id="dest-inp-lon" placeholder="e.g. 76.5710" step="0.000001" min="-180" max="180"
+                  style="width:100%;box-sizing:border-box;padding:14px 18px;border:1.5px solid rgba(226,232,240,0.9);border-radius:14px;font-size:15px;font-family:inherit;font-weight:500;color:#0f172a;background:#fff;transition:border-color .2s,box-shadow .2s;outline:none;"
+                  onfocus="this.style.borderColor='#4f46e5';this.style.boxShadow='0 0 0 4px rgba(79,70,229,.1)'"
+                  onblur="this.style.borderColor='rgba(226,232,240,0.9)';this.style.boxShadow='none'">
+              </div>
+            </div>
+
+            <div style="background:rgba(79,70,229,0.06);border:1px solid rgba(79,70,229,0.15);border-radius:14px;padding:14px 18px;font-size:13px;color:#4f46e5;font-weight:600;line-height:1.5;">
+              <i class="fas fa-circle-info" style="margin-right:6px;"></i>
+              To get coordinates: Open <strong>Google Maps</strong>, right-click on the destination location, and copy the coordinates shown.
+            </div>
+
+            <div style="display:flex;gap:12px;align-items:center;">
+              <button onclick="saveDestination()" id="btn-save-dest"
+                style="padding:14px 32px;background:#0f172a;color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;transition:all .25s;box-shadow:0 4px 14px rgba(15,23,42,.2);">
+                <i class="fas fa-save"></i> Save Destination
+              </button>
+              <div id="dest-save-status" style="font-size:13px;font-weight:600;color:#64748b;"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!-- END TAB: DESTINATION MANAGEMENT -->
+
   </div>
 
   <!-- MASTER EDIT MODAL -->

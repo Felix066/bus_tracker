@@ -10,6 +10,10 @@ let lastReverseGeocodeLon = null;
 
 let globalTripStartTime = null;
 
+// Student GPS coords (updated by watchPosition)
+let studentLatGlobal = null;
+let studentLonGlobal = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Get Bus ID from URL
     const params = new URLSearchParams(window.location.search);
@@ -20,6 +24,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     const busNum = busParam.replace(/\D/g, '');
     busId = busNum ? `Bus ${busNum}` : busParam.trim();
+
+    // 1b. Load destination from admin (road-eta.js) — non-blocking
+    if (typeof RoadETA !== 'undefined') {
+        RoadETA.init().catch(() => {});
+    }
 
     // 2. Fetch Active Trip and Initial Location in parallel
     const trip = await getTripInfo(busId);
@@ -124,25 +133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     subscribeToLiveUpdates();
 
     // 7. Auto-detect student position for personal stop AI ETA
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((pos) => {
-            const sLat = pos.coords.latitude;
-            const sLon = pos.coords.longitude;
-            if (typeof L !== 'undefined' && window.map) {
-                if (window.userMarker) window.map.removeLayer(window.userMarker);
-                window.userMarker = L.circleMarker([sLat, sLon], {
-                    radius: 8,
-                    fillColor: '#6366f1',
-                    color: '#ffffff',
-                    weight: 3,
-                    fillOpacity: 0.9
-                }).addTo(window.map).bindPopup('Your Location');
-            }
-            if (lastGPSLat && lastGPSLon && typeof AIEta !== 'undefined') {
-                AIEta.updateETADisplay(lastGPSLat, lastGPSLon, lastGPSSpeedKmh, sLat, sLon);
-            }
-        }, () => {}, { enableHighAccuracy: false, timeout: 10000 });
-    }
+    // This is now handled by checkLocationSharingPrompt() and watchPosition
 
     if (isTripActive) {
         checkLocationSharingPrompt();
@@ -154,38 +145,47 @@ function subscribeToLiveUpdates() {
         .on('postgres_changes', {
             event: '*', // Listen to INSERT and UPDATE since we are using UPSERT
             schema: 'public',
-            table: 'current_bus_locations',
-            filter: `bus_id=eq.${busId}`
+            table: 'current_bus_locations'
         }, (payload) => {
             if (payload.new) {
-                processNewLocation(payload.new.latitude, payload.new.longitude, payload.new.speed_kmh);
-                if (payload.new.trip_id && !activeTripId) {
-                    activeTripId = payload.new.trip_id;
-                    // Reload to fully initialize active trip UI
-                    location.reload();
+                const payloadBusId = (payload.new.bus_id || '').replace(/\s+/g, '').toLowerCase();
+                const expectedBusId = busId.replace(/\s+/g, '').toLowerCase();
+                if (payloadBusId === expectedBusId) {
+                    processNewLocation(payload.new.latitude, payload.new.longitude, payload.new.speed_kmh);
+                    if (payload.new.trip_id && !activeTripId) {
+                        activeTripId = payload.new.trip_id;
+                        // Reload to fully initialize active trip UI
+                        location.reload();
+                    }
                 }
             }
         })
         .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
-            table: 'driver_sessions',
-            filter: `bus_id=eq.${busId}`
+            table: 'driver_sessions'
         }, (payload) => {
-            if (payload.new.is_online === false) {
-                handleDriverOffline();
-            } else if (payload.new.is_online === true) {
-                handleDriverOnline();
+            if (payload.new) {
+                const payloadBusId = (payload.new.bus_id || '').replace(/\s+/g, '').toLowerCase();
+                const expectedBusId = busId.replace(/\s+/g, '').toLowerCase();
+                if (payloadBusId === expectedBusId) {
+                    if (payload.new.is_online === false) {
+                        handleDriverOffline();
+                    } else if (payload.new.is_online === true) {
+                        handleDriverOnline();
+                    }
+                }
             }
         })
         .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
-            table: 'trips',
-            filter: `id=eq.${activeTripId}`
+            table: 'trips'
         }, (payload) => {
-            if (payload.new.status === 'completed' || payload.new.status === 'cancelled') {
-                handleTripEnded();
+            if (payload.new && payload.new.id === activeTripId) {
+                if (payload.new.status === 'completed' || payload.new.status === 'cancelled') {
+                    handleTripEnded();
+                }
             }
         })
         .subscribe();
@@ -215,10 +215,8 @@ function subscribeToLiveUpdates() {
                 if (locData.success && locData.location) {
                     const loc = locData.location;
                     if (loc.latitude && loc.longitude) {
-                        // Process location update
-                        if (loc.latitude !== lastGPSLat || loc.longitude !== lastGPSLon) {
-                            processNewLocation(loc.latitude, loc.longitude, loc.speed_kmh);
-                        }
+                        // Process location update always, to update lastGPSTime
+                        processNewLocation(loc.latitude, loc.longitude, loc.speed_kmh);
                     }
                 }
             }
@@ -417,15 +415,10 @@ function processNewLocation(lat, lon, speedKmh) {
         updateBusMarker(lat, lon, busLabel);
     }
 
-    // D. AI ETA Prediction Update
-    if (typeof AIEta !== 'undefined') {
-        let studentLat = null, studentLon = null;
-        if (typeof userMarker !== 'undefined' && userMarker) {
-            const pos = userMarker.getLatLng();
-            studentLat = pos.lat;
-            studentLon = pos.lng;
-        }
-        AIEta.updateETADisplay(lat, lon, speedKmh || lastGPSSpeedKmh, studentLat, studentLon);
+    // D. Road-Based ETA Engine (replaces old AIEta)
+    if (typeof RoadETA !== 'undefined') {
+        RoadETA.update(lat, lon, speedKmh || lastGPSSpeedKmh, studentLatGlobal, studentLonGlobal, lastGPSTime, busId)
+            .catch(() => {}); // never crash the GPS loop
     }
 }
 
@@ -441,24 +434,72 @@ async function geocodeIfNeeded(lat, lon) {
 }
 
 // ---------------------------------------------
-// Optional Student Location Sharing (DISABLED)
+// Optional Student Location Sharing
 // ---------------------------------------------
 function checkLocationSharingPrompt() {
-    // Passenger GPS uploads have been disabled completely to reduce database load.
-    console.log("Passenger GPS uploads disabled.");
+    if (!sessionStorage.getItem(`locationPrompted_${busId}`)) {
+        const modal = document.getElementById('locationPrompt');
+        if (modal) modal.classList.add('active');
+    } else if (sessionStorage.getItem(`locationGranted_${busId}`) === 'true') {
+        startStudentGPS();
+    }
 }
 
 document.getElementById('btn-deny')?.addEventListener('click', () => {
     sessionStorage.setItem(`locationPrompted_${busId}`, 'true');
+    sessionStorage.setItem(`locationGranted_${busId}`, 'false');
     document.getElementById('locationPrompt').classList.remove('active');
 });
 
 document.getElementById('btn-allow')?.addEventListener('click', () => {
     sessionStorage.setItem(`locationPrompted_${busId}`, 'true');
+    sessionStorage.setItem(`locationGranted_${busId}`, 'true');
     document.getElementById('locationPrompt').classList.remove('active');
     
-    // GPS start disabled.
+    startStudentGPS();
 });
+
+let studentWatchId = null;
+
+function startStudentGPS() {
+    if (navigator.geolocation) {
+        studentWatchId = navigator.geolocation.watchPosition((pos) => {
+            const sLat = pos.coords.latitude;
+            const sLon = pos.coords.longitude;
+
+            // Store globally for use in processNewLocation
+            studentLatGlobal = sLat;
+            studentLonGlobal = sLon;
+            
+            // Update student marker locally (no database upload, avoiding DB growth)
+            if (typeof L !== 'undefined' && window.map) {
+                if (window.userMarker) {
+                    window.userMarker.setLatLng([sLat, sLon]);
+                } else {
+                    window.userMarker = L.circleMarker([sLat, sLon], {
+                        radius: 8,
+                        fillColor: '#6366f1',
+                        color: '#ffffff',
+                        weight: 3,
+                        fillOpacity: 0.9
+                    }).addTo(window.map).bindPopup('Your Location');
+                }
+            }
+            
+            // Road ETA update with student coords
+            if (lastGPSLat && lastGPSLon && typeof RoadETA !== 'undefined') {
+                RoadETA.update(lastGPSLat, lastGPSLon, lastGPSSpeedKmh, sLat, sLon, lastGPSTime, busId)
+                    .catch(() => {});
+            }
+        }, (err) => {
+            console.warn("Student GPS tracking error:", err);
+            const etaEl = document.getElementById('road-eta-dest');
+            if (etaEl && etaEl.textContent === 'Loading...') {
+                // Don't change destination ETA — only affects student proximity
+            }
+        }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 });
+    }
+}
 
 // ============================================================================
 // FOLLOW BUS MODE - User-Controlled Map Panning

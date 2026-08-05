@@ -31,13 +31,23 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- TABS LOGIC ---
 function switchTab(tabId) {
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.remove('active');
+    content.style.display = 'none';
+  });
   
   event.currentTarget.classList.add('active');
-  document.getElementById('tab-' + tabId).classList.add('active');
+  const tabEl = document.getElementById('tab-' + tabId);
+  if (tabEl) {
+    tabEl.classList.add('active');
+    tabEl.style.display = '';
+  }
   
   if (tabId === 'analytics') { 
     loadAnalyticsData();
+  }
+  if (tabId === 'destination') {
+    loadDestination();
   }
 }
 
@@ -1007,5 +1017,105 @@ async function clearAnalyticsData() {
   } catch (err) {
     console.error('Clear analytics error:', err);
     alert('Error clearing analytics data: ' + err.message);
+  }
+}
+
+// ============================================================================
+// DESTINATION MANAGEMENT
+// ============================================================================
+
+/**
+ * Load and display the current destination set by admin.
+ * Auto-fills the form inputs for easy editing.
+ */
+async function loadDestination() {
+  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  if (!token) return;
+
+  const nameEl   = document.getElementById('dest-preview-name');
+  const coordEl  = document.getElementById('dest-preview-coords');
+  const byEl     = document.getElementById('dest-preview-by');
+  const inpName  = document.getElementById('dest-inp-name');
+  const inpLat   = document.getElementById('dest-inp-lat');
+  const inpLon   = document.getElementById('dest-inp-lon');
+
+  if (nameEl) nameEl.textContent = 'Loading...';
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/destination`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch destination');
+    const data = await res.json();
+
+    if (data.success && data.destination) {
+      const d = data.destination;
+      if (nameEl)  nameEl.textContent = d.name;
+      if (coordEl) coordEl.textContent = `${parseFloat(d.latitude).toFixed(6)}° N, ${parseFloat(d.longitude).toFixed(6)}° E`;
+      if (byEl) {
+        const t = d.updated_at ? new Date(d.updated_at).toLocaleString() : '';
+        byEl.textContent = d.updated_by ? `Last updated by ${d.updated_by}${t ? ' · ' + t : ''}` : '';
+      }
+      // Pre-fill form for quick editing
+      if (inpName) inpName.value = d.name;
+      if (inpLat)  inpLat.value  = d.latitude;
+      if (inpLon)  inpLon.value  = d.longitude;
+    } else {
+      if (nameEl)  nameEl.textContent = 'No destination set yet';
+      if (coordEl) coordEl.textContent = 'Enter a destination below to activate road-based ETA.';
+    }
+  } catch (err) {
+    if (nameEl)  nameEl.textContent = 'Error loading destination';
+    if (coordEl) coordEl.textContent = err.message;
+    console.error('[loadDestination]', err);
+  }
+}
+
+/**
+ * Save the destination entered by admin.
+ * Validates inputs, calls backend, refreshes preview.
+ */
+async function saveDestination() {
+  const token    = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const name     = (document.getElementById('dest-inp-name')?.value || '').trim();
+  const latRaw   = document.getElementById('dest-inp-lat')?.value;
+  const lonRaw   = document.getElementById('dest-inp-lon')?.value;
+  const statusEl = document.getElementById('dest-save-status');
+  const btn      = document.getElementById('btn-save-dest');
+
+  if (!name)          { if (statusEl) statusEl.textContent = '⚠ Please enter a destination name.'; return; }
+  if (!latRaw || !lonRaw) { if (statusEl) statusEl.textContent = '⚠ Please enter both latitude and longitude.'; return; }
+
+  const lat = parseFloat(latRaw);
+  const lon = parseFloat(lonRaw);
+  if (isNaN(lat) || lat < -90  || lat > 90)  { if (statusEl) statusEl.textContent = '⚠ Invalid latitude (must be -90 to 90).';   return; }
+  if (isNaN(lon) || lon < -180 || lon > 180) { if (statusEl) statusEl.textContent = '⚠ Invalid longitude (must be -180 to 180).'; return; }
+
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...'; }
+  if (statusEl) statusEl.textContent = '';
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/destination`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ name, latitude: lat, longitude: lon })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Save failed');
+
+    if (statusEl) {
+      statusEl.textContent = '✅ Destination saved! Students will use this immediately.';
+      statusEl.style.color = '#059669';
+      setTimeout(() => { if (statusEl) { statusEl.textContent = ''; statusEl.style.color = '#64748b'; } }, 4000);
+    }
+
+    // Refresh preview
+    loadDestination();
+    await logAdminAction(`Set destination to: ${name} (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+  } catch (err) {
+    if (statusEl) { statusEl.textContent = '❌ ' + err.message; statusEl.style.color = '#ef4444'; }
+    console.error('[saveDestination]', err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save Destination'; }
   }
 }
