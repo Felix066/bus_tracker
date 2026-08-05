@@ -1263,11 +1263,6 @@ app.post('/api/chat/send', requireRole(['admin', 'driver']), async (req, res) =>
   }
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
 // ============================================================================
 // DESTINATION MANAGEMENT (Admin sets it, students read it)
 // ============================================================================
@@ -1362,8 +1357,8 @@ app.post('/api/admin/destination', requireRole(['admin']), async (req, res) => {
 
 // In-memory route cache: key = "busId" → { result, timestamp, busLat, busLon }
 const routeCache = new Map();
-const ROUTE_CACHE_TTL_MS = 30000;      // 30 seconds
-const ROUTE_MIN_MOVE_M = 150;         // Re-fetch only if bus moved this far
+const ROUTE_CACHE_TTL_MS = 30000;  // 30 seconds
+const ROUTE_MIN_MOVE_M   = 150;    // Re-fetch only if bus moved this far
 
 function haversineMeters(lat1, lon1, lat2, lon2) {
   const R = 6371000;
@@ -1395,7 +1390,7 @@ app.get('/api/route/eta', async (req, res) => {
 
     // Return cached result if fresh AND bus hasn't moved significantly
     if (cached) {
-      const age = now - cached.timestamp;
+      const age   = now - cached.timestamp;
       const moved = haversineMeters(cached.busLat, cached.busLon, bLat, bLon);
       if (age < ROUTE_CACHE_TTL_MS && moved < ROUTE_MIN_MOVE_M) {
         return res.json({ success: true, ...cached.result, cached: true });
@@ -1407,35 +1402,28 @@ app.get('/api/route/eta', async (req, res) => {
       // Fallback: return haversine estimate so the UI still works
       const dist = haversineMeters(bLat, bLon, dLat, dLon);
       const fallback = {
-        road_distance_m: dist * 1.25, // circuity factor
-        duration_s: (dist * 1.25) / (30 / 3.6),
+        road_distance_m:  dist * 1.25,
         road_distance_km: ((dist * 1.25) / 1000).toFixed(1),
+        duration_s:       (dist * 1.25) / (30 / 3.6),
         source: 'haversine_fallback'
       };
+      routeCache.set(cacheKey, { result: fallback, timestamp: now, busLat: bLat, busLon: bLon });
       return res.json({ success: true, ...fallback, cached: false });
     }
 
-    // Call ORS Directions API
+    // Call OpenRouteService Directions API
     const orsUrl = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ORS_KEY}&start=${bLon},${bLat}&end=${dLon},${dLat}`;
-
-    const orsResp = await fetch(orsUrl, {
-      headers: { 'Accept': 'application/json, application/geo+json' },
+    const orsRes = await fetch(orsUrl, {
+      headers: { 'Accept': 'application/json' },
       signal: AbortSignal.timeout(8000)
     });
 
-    if (!orsResp.ok) {
-      // On ORS error, fall back to haversine with circuity factor
-      const dist = haversineMeters(bLat, bLon, dLat, dLon);
-      const fallback = {
-        road_distance_m: dist * 1.25,
-        duration_s: (dist * 1.25) / (30 / 3.6),
-        road_distance_km: ((dist * 1.25) / 1000).toFixed(1),
-        source: 'haversine_fallback'
-      };
-      return res.json({ success: true, ...fallback, cached: false });
+    if (!orsRes.ok) {
+      const errText = await orsRes.text();
+      throw new Error(`ORS ${orsRes.status}: ${errText.slice(0, 200)}`);
     }
 
-    const orsData = await orsResp.json();
+    const orsData = await orsRes.json();
     const segment = orsData?.features?.[0]?.properties?.segments?.[0];
     const summary = orsData?.features?.[0]?.properties?.summary;
 
@@ -1450,12 +1438,7 @@ app.get('/api/route/eta', async (req, res) => {
     };
 
     // Cache the result
-    routeCache.set(cacheKey, {
-      result,
-      timestamp: now,
-      busLat: bLat,
-      busLon: bLon
-    });
+    routeCache.set(cacheKey, { result, timestamp: now, busLat: bLat, busLon: bLon });
 
     res.json({ success: true, ...result, cached: false });
   } catch (err) {
@@ -1463,17 +1446,21 @@ app.get('/api/route/eta', async (req, res) => {
     // Always return something so UI doesn't break
     const bLat = parseFloat(req.query.fromLat) || 0;
     const bLon = parseFloat(req.query.fromLon) || 0;
-    const dLat = parseFloat(req.query.toLat) || 0;
-    const dLon = parseFloat(req.query.toLon) || 0;
+    const dLat = parseFloat(req.query.toLat)   || 0;
+    const dLon = parseFloat(req.query.toLon)   || 0;
     const dist = haversineMeters(bLat, bLon, dLat, dLon);
     res.json({
       success: true,
-      road_distance_m: dist * 1.25,
+      road_distance_m:  dist * 1.25,
       road_distance_km: ((dist * 1.25) / 1000).toFixed(1),
-      duration_s: (dist * 1.25) / (30 / 3.6),
+      duration_s:       (dist * 1.25) / (30 / 3.6),
       source: 'haversine_fallback',
       cached: false
     });
   }
 });
 
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

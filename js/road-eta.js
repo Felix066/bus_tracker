@@ -180,30 +180,27 @@ window.RoadETA = (function () {
   }
 
   // =========================================================================
-  // COMPUTE ETA MINUTES — uses road distance + kalman-smoothed speed
+  // COMPUTE ETA MINUTES — uses road distance + pre-smoothed speed
+  // NOTE: speedKmh here is ALREADY Kalman-smoothed from updateDisplay()
   // =========================================================================
-  function computeETA(road_distance_m, speedKmh, avgSpeedKmh, duration_s) {
-    // If ORS gave us a duration, use it as base and adjust for current speed
-    if (duration_s && duration_s > 0 && speedKmh > 2) {
-      const smoothedSpeed = speedKalman.update(speedKmh);
-      const effectiveSpeed = Math.max(smoothedSpeed, 5); // min 5 km/h
-      // ORS duration assumes average 30 km/h; scale by actual speed
-      const scaledDuration = duration_s * (30 / effectiveSpeed);
-      // Traffic time-of-day adjustment
-      const hour = new Date().getHours();
-      const trafficFactor = ((hour >= 7 && hour <= 9) || (hour >= 16 && hour <= 19)) ? 1.3
-        : ((hour >= 10 && hour <= 15) || (hour >= 20 && hour <= 22)) ? 1.1 : 0.9;
-      return Math.round((scaledDuration * trafficFactor) / 60);
-    }
+  function computeETA(road_distance_m, smoothedSpeedKmh, avgSpeedKmh, duration_s) {
+    const effectiveSpeed = Math.max(smoothedSpeedKmh || avgSpeedKmh || 20, 5);
 
-    // Pure distance-based fallback (Kalman-smoothed speed)
-    const smoothedSpeed = speedKalman.update(speedKmh || avgSpeedKmh || 20);
-    const effectiveSpeedMs = Math.max(smoothedSpeed, 5) / 3.6;
+    // Traffic time-of-day adjustment
     const hour = new Date().getHours();
     const trafficFactor = ((hour >= 7 && hour <= 9) || (hour >= 16 && hour <= 19)) ? 1.3
       : ((hour >= 10 && hour <= 15) || (hour >= 20 && hour <= 22)) ? 1.1 : 0.9;
+
+    // If ORS gave us a duration, scale by actual speed relative to ORS assumption (30 km/h)
+    if (duration_s && duration_s > 0) {
+      const scaledDuration = duration_s * (30 / effectiveSpeed);
+      return Math.max(1, Math.round((scaledDuration * trafficFactor) / 60));
+    }
+
+    // Pure distance-based fallback
+    const effectiveSpeedMs = effectiveSpeed / 3.6;
     const etaSec = (road_distance_m / effectiveSpeedMs) * trafficFactor;
-    return Math.max(Math.round(etaSec / 60), 1);
+    return Math.max(1, Math.round(etaSec / 60));
   }
 
   // =========================================================================
@@ -213,7 +210,8 @@ window.RoadETA = (function () {
     if (!busLat || !busLon) return;
 
     const avgSpeed = updateAverageSpeed(speedKmh);
-    const smoothedSpeed = speedKalman.update(speedKmh || 0);
+    // Kalman-smooth speed ONCE per update (used both for display and ETA)
+    const smoothedSpeed = speedKalman.update(speedKmh !== null ? speedKmh : 0);
 
     // ── Update Speed Cards ───────────────────────────────────────────────
     const speedEl   = document.getElementById('road-speed-display');
@@ -260,10 +258,14 @@ window.RoadETA = (function () {
 
         if (distM < 100) {
           // Arrived
-          if (destEtaEl)  { destEtaEl.textContent = 'Arrived'; destEtaEl.style.color = '#10b981'; }
+          if (destEtaEl)  { destEtaEl.textContent = 'Arrived! ✅'; destEtaEl.style.color = '#10b981'; }
           if (destDistEl) destDistEl.textContent = `< 100m to ${destination.name}`;
+        } else if (smoothedSpeed < 1) {
+          // Bus is completely stopped — ETA is not calculable
+          if (destEtaEl)  { destEtaEl.textContent = 'Bus Stopped'; destEtaEl.style.color = '#f59e0b'; }
+          if (destDistEl) destDistEl.textContent = `${distKm} km from bus to ${destination.name}`;
         } else {
-          const etaMins = computeETA(distM, speedKmh, avgSpeed, routeData.duration_s);
+          const etaMins = computeETA(distM, smoothedSpeed, avgSpeed, routeData.duration_s);
           const source  = routeData.source === 'ors' ? '🛣️ Road' : '📐 Estimated';
           if (destEtaEl)  { destEtaEl.textContent = `~${etaMins} min`; destEtaEl.style.color = '#059669'; }
           if (destDistEl) destDistEl.textContent = `${distKm} km from bus to ${destination.name} · ${source}`;
@@ -279,7 +281,7 @@ window.RoadETA = (function () {
     const studentStatusEl = document.getElementById('road-student-status');
 
     if (studentLat && studentLon) {
-      const nearStatus = getNearBusStatus(studentLat, studentLon, busLat, busLon, speedKmh);
+      const nearStatus = getNearBusStatus(studentLat, studentLon, busLat, busLon, smoothedSpeed);
 
       if (nearStatus) {
         if (studentStatusEl) {
@@ -289,16 +291,18 @@ window.RoadETA = (function () {
         }
       }
 
-      // Road distance: bus → student (via backend proxy)
-      const studentRoute = await fetchRoadRoute(busLat, busLon, studentLat, studentLon, `${busId || ''}_student`);
-      if (studentRoute) {
-        const etaMins = computeETA(studentRoute.road_distance_m, speedKmh, avgSpeed, studentRoute.duration_s);
-        if (studentDistEl) {
-          if (insideBusConfirmed) {
-            studentDistEl.textContent = 'You are currently on the bus';
-          } else {
-            studentDistEl.textContent = `${studentRoute.road_distance_km} km · ETA ~${etaMins} min for bus to reach you`;
-          }
+      // Use haversine for student proximity distance (saves ORS quota)
+      if (studentDistEl) {
+        const distM = haversineDist(studentLat, studentLon, busLat, busLon);
+        const distKm = (distM / 1000).toFixed(1);
+        if (insideBusConfirmed) {
+          studentDistEl.textContent = 'You are currently on the bus';
+        } else if (smoothedSpeed < 1) {
+          studentDistEl.textContent = `${distKm} km away · Bus is currently stopped`;
+        } else {
+          // ETA for bus to reach student position
+          const etaMins = Math.max(1, Math.round((distM / (Math.max(smoothedSpeed, 5) / 3.6)) / 60));
+          studentDistEl.textContent = `${distKm} km away · ETA ~${etaMins} min for bus to reach you`;
         }
       }
     } else {

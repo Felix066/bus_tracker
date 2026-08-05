@@ -329,19 +329,19 @@ function processNewLocation(lat, lon, speedKmh) {
     lastGPSLat = lat;
     lastGPSLon = lon;
     lastGPSTime = Date.now();
-    if (speedKmh && speedKmh > 5) {
-        lastGPSSpeedKmh = speedKmh;
-    } else {
-        lastGPSSpeedKmh = 30; // fallback default
+    if (speedKmh !== null && speedKmh !== undefined) {
+        lastGPSSpeedKmh = speedKmh; // preserve actual speed (including 0)
     }
 
     // Reset signal check timer upon receiving fresh update
     if (deadReckonTimer) clearInterval(deadReckonTimer);
     
-    // If we just recovered from a low signal state, immediately restore UI and resume timer
-    const statusText = document.getElementById('trip-status-text');
-    if (statusText && statusText.textContent !== 'Trip active — GPS tracking live') {
-        handleDriverOnline();
+    // If we just recovered from a low signal state, restore UI (only if trip is active)
+    if (activeTripId) {
+        const statusText = document.getElementById('trip-status-text');
+        if (statusText && statusText.textContent !== 'Trip active — GPS tracking live') {
+            handleDriverOnline();
+        }
     }
     
     // Periodically check if GPS stops updating
@@ -395,10 +395,11 @@ function processNewLocation(lat, lon, speedKmh) {
 
     // Restore standard active tracking style if we received standard update
     const statusBar2 = document.getElementById('trip-status-bar');
+    const statusText2 = document.getElementById('trip-status-text');
     const statusDot = statusBar2 ? statusBar2.querySelector('[class^="status-dot"]') : null;
-    if (statusText && activeTripId) {
-        statusText.textContent = 'Trip active — GPS tracking live';
-        statusText.style.color = '#2A7D55';
+    if (statusText2 && activeTripId) {
+        statusText2.textContent = 'Trip active — GPS tracking live';
+        statusText2.style.color = '#2A7D55';
         if (statusBar2) {
             statusBar2.style.background = '#F0FDF6';
             statusBar2.style.border = '1px solid #BBF0D6';
