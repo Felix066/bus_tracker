@@ -50,6 +50,10 @@ app.use(helmet({
   crossOriginResourcePolicy: false,
   crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+  // strict-origin-when-cross-origin is required so that Google's servers receive
+  // the Referer header when validating the login_uri in redirect mode.
+  // Helmet's default 'no-referrer' strips this header and breaks Android Chrome auth.
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -1357,6 +1361,7 @@ app.post('/api/admin/destination', requireRole(['admin']), async (req, res) => {
 
 // In-memory route cache: key = "busId" → { result, timestamp, busLat, busLon }
 const routeCache = new Map();
+const inFlightRequests = new Map(); // Add this line to prevent cache stampedes!
 const ROUTE_CACHE_TTL_MS = 30000;  // 30 seconds
 const ROUTE_MIN_MOVE_M   = 150;    // Re-fetch only if bus moved this far
 
@@ -1411,36 +1416,54 @@ app.get('/api/route/eta', async (req, res) => {
       return res.json({ success: true, ...fallback, cached: false });
     }
 
-    // Call OpenRouteService Directions API
-    const orsUrl = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ORS_KEY}&start=${bLon},${bLat}&end=${dLon},${dLat}`;
-    const orsRes = await fetch(orsUrl, {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(8000)
-    });
-
-    if (!orsRes.ok) {
-      const errText = await orsRes.text();
-      throw new Error(`ORS ${orsRes.status}: ${errText.slice(0, 200)}`);
+    // --- CACHE STAMPEDE PREVENTION ---
+    if (inFlightRequests.has(cacheKey)) {
+      try {
+        const inFlightResult = await inFlightRequests.get(cacheKey);
+        return res.json({ success: true, ...inFlightResult, cached: true });
+      } catch (e) {
+        // Fallthrough on error
+      }
     }
 
-    const orsData = await orsRes.json();
-    const segment = orsData?.features?.[0]?.properties?.segments?.[0];
-    const summary = orsData?.features?.[0]?.properties?.summary;
+    const fetchPromise = (async () => {
+      const orsUrl = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ORS_KEY}&start=${bLon},${bLat}&end=${dLon},${dLat}`;
+      const orsRes = await fetch(orsUrl, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(8000)
+      });
 
-    const road_distance_m = summary?.distance || segment?.distance || 0;
-    const duration_s      = summary?.duration  || segment?.duration  || 0;
+      if (!orsRes.ok) {
+        const errText = await orsRes.text();
+        throw new Error(`ORS ${orsRes.status}: ${errText.slice(0, 200)}`);
+      }
 
-    const result = {
-      road_distance_m,
-      road_distance_km: (road_distance_m / 1000).toFixed(1),
-      duration_s,
-      source: 'ors'
-    };
+      const orsData = await orsRes.json();
+      const segment = orsData?.features?.[0]?.properties?.segments?.[0];
+      const summary = orsData?.features?.[0]?.properties?.summary;
 
-    // Cache the result
-    routeCache.set(cacheKey, { result, timestamp: now, busLat: bLat, busLon: bLon });
+      const road_distance_m = summary?.distance || segment?.distance || 0;
+      const duration_s      = summary?.duration  || segment?.duration  || 0;
 
-    res.json({ success: true, ...result, cached: false });
+      const result = {
+        road_distance_m,
+        road_distance_km: (road_distance_m / 1000).toFixed(1),
+        duration_s,
+        source: 'ors'
+      };
+
+      routeCache.set(cacheKey, { result, timestamp: now, busLat: bLat, busLon: bLon });
+      return result;
+    })();
+
+    inFlightRequests.set(cacheKey, fetchPromise);
+    
+    try {
+      const result = await fetchPromise;
+      res.json({ success: true, ...result, cached: false });
+    } finally {
+      inFlightRequests.delete(cacheKey);
+    }
   } catch (err) {
     console.error('[route/eta] Error:', err.message);
     // Always return something so UI doesn't break

@@ -15,13 +15,14 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="BusTrack">
   <script>
-    // Proxy function to guarantee Google always finds the callback
-    // even if auth.js hasn't loaded yet
+    // This proxy handles the GIS callback. In redirect mode, Google sends the
+    // credential to google-callback.html, so this function is only a safety net
+    // for browsers that still use the One Tap / prompt flow on desktop.
     window.handleGoogleSignIn = function(response) {
+      if (!response || !response.credential) return;
       if (window._actualHandleGoogleSignIn) {
         window._actualHandleGoogleSignIn(response);
       } else {
-        // If auth.js is still loading, wait for it
         const interval = setInterval(() => {
           if (window._actualHandleGoogleSignIn) {
             clearInterval(interval);
@@ -31,7 +32,6 @@
       }
     };
   </script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="theme-student">
 <div id="offline-indicator" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1A1A1A; color:white; padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; font-family:Inter,sans-serif; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.3); align-items:center; gap:8px;">
@@ -73,15 +73,45 @@
 
         <div id="error-banner" class="error-banner hidden"></div>
 
+        <!--
+          REDIRECT MODE — works on ALL devices including Android Chrome, iOS Safari,
+          WebView, and desktop.
+
+          Why redirect instead of popup?
+          - popup mode depends on postMessage from accounts.google.com/gsi/transform
+            which is blocked by Android Chrome's stricter COOP policy.
+          - FedCM (data-use_fedcm_for_prompt) silently fails on Chrome < 117 (Redmi Note 8).
+          - redirect mode is a simple HTTP redirect — it works everywhere, always.
+
+          How it works:
+          1. User clicks the "Sign in with Google" button.
+          2. Google redirects the user to their Google account picker.
+          3. After selection, Google redirects back to data-login_uri with the credential.
+          4. google-callback.html reads the credential and calls our backend.
+        -->
         <div id="g_id_onload"
              data-client_id="47792284104-7dncvdit6ilh47snjfm8anekv3jvavko.apps.googleusercontent.com"
              data-context="signin"
-             data-ux_mode="popup"
-             data-callback="handleGoogleSignIn"
-             data-itp_support="true"
-             data-use_fedcm_for_prompt="true"
+             data-ux_mode="redirect"
+             data-login_uri="https://where-is-my-bus-639k.onrender.com/google-callback.html"
              data-auto_prompt="false">
         </div>
+        <script>
+          // On localhost, update login_uri to point to local callback.
+          // On production, the hardcoded Render URL is already correct.
+          // NOTE: localhost must also be registered as an Authorized JavaScript Origin
+          // in Google Cloud Console > APIs & Services > Credentials.
+          (function() {
+            const h = window.location.hostname;
+            if (h === 'localhost' || h === '127.0.0.1' || h === '') {
+              const el = document.getElementById('g_id_onload');
+              if (el) {
+                el.setAttribute('data-login_uri',
+                  window.location.origin + '/google-callback.html');
+              }
+            }
+          })();
+        </script>
 
         <div class="g_id_signin"
              data-type="standard"
@@ -104,6 +134,8 @@
   <script src="js/supabase.min.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/auth.js?v=4"></script>
+  <!-- GIS loaded last so our callback proxy (handleGoogleSignIn) is defined first -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
     // Google Sign-In is handled via the callback function handleGoogleSignIn 
     // which is defined in js/auth.js.
