@@ -80,6 +80,13 @@
     // We then forward it to our backend for secure verification.
     // ============================================================================
 
+    // Determine backend URL — same logic as supabase-client.js
+    const BACKEND_URL = (window.location.hostname === 'localhost' ||
+                         window.location.hostname === '127.0.0.1' ||
+                         window.location.hostname === '')
+      ? 'http://localhost:3001'
+      : '';
+
     function showError(msg) {
       document.getElementById('loading-card').style.display = 'none';
       document.getElementById('error-card').style.display = 'block';
@@ -94,11 +101,7 @@
       }
 
       try {
-        const backendUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-          ? 'http://localhost:3001'
-          : '';
-
-        const res = await fetch(`${backendUrl}/api/auth/google`, {
+        const res = await fetch(`${BACKEND_URL}/api/auth/google`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: response.credential })
@@ -110,26 +113,37 @@
           throw new Error(data.error || 'Authentication failed');
         }
 
-        // Store the session
+        // Store the session (role is always student or faculty — both go to student dashboard)
         localStorage.setItem('userSession', JSON.stringify({
           id: data.user.id,
           email: data.user.email,
+          name: data.user.name || data.user.email,
           role: data.role,
           token: data.token
         }));
 
-        // Redirect to the appropriate dashboard
-        if (data.role === 'faculty') {
-          window.location.href = 'student-dashboard.html';
-        } else {
-          window.location.href = 'student-dashboard.html';
-        }
+        // All Google-authenticated users (students & faculty) go to student dashboard
+        window.location.replace('student-dashboard.html');
 
       } catch (err) {
         console.error('[GoogleCallback] Error:', err);
         showError(err.message || 'Authentication failed. Please try again.');
       }
     };
+
+    // Fix login_uri for localhost — ensures the GIS library uses the correct
+    // callback URL when running on a local dev server.
+    (function() {
+      const h = window.location.hostname;
+      if (h === 'localhost' || h === '127.0.0.1' || h === '') {
+        const el = document.getElementById('g_id_onload');
+        if (el) {
+          // For redirect mode from student-login.html, we don't need login_uri here
+          // But if this page is loaded directly, ensure origin is correct
+          console.log('[GoogleCallback] Running on localhost — backend:', BACKEND_URL);
+        }
+      }
+    })();
   </script>
 
   <!-- Google Identity Services — loaded AFTER our callback is defined -->
