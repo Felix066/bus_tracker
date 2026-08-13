@@ -162,7 +162,43 @@
     </div>
   </div>
 
+  <!-- ROAD ETA PANEL (Admin-set destination + student proximity) -->
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px; padding: 0 28px; margin-top:14px;">
 
+    <!-- CARD: Destination ETA -->
+    <div style="background:rgba(255,255,255,0.88); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(226,232,240,0.9); border-radius:20px; padding:18px 22px; box-shadow:0 8px 20px -5px rgba(15,23,42,0.06); position:relative; overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#059669,#34d399);"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#059669;display:flex;align-items:center;gap:5px;"><i class="fas fa-flag-checkered"></i> Bus to Destination</span>
+        <span id="road-source-badge" style="background:rgba(5,150,105,.1);color:#059669;font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px;">ROAD</span>
+      </div>
+      <div id="road-eta-dest" style="font-size:26px;font-weight:800;color:#1e293b;letter-spacing:-.5px;margin-bottom:3px;">Loading...</div>
+      <div id="road-dist-dest" style="font-size:12px;color:#64748b;font-weight:600;"><span id="dest-name-display">—</span></div>
+    </div>
+
+    <!-- CARD: Bus Status -->
+    <div style="background:rgba(255,255,255,0.88); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(226,232,240,0.9); border-radius:20px; padding:18px 22px; box-shadow:0 8px 20px -5px rgba(15,23,42,0.06); position:relative; overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#6366f1,#818cf8);"></div>
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#6366f1;margin-bottom:6px;display:flex;align-items:center;gap:5px;"><i class="fas fa-circle-info"></i> Bus Status</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div id="road-bus-status-dot" style="width:10px;height:10px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;flex-shrink:0;"></div>
+        <div id="road-bus-status" style="font-size:20px;font-weight:800;color:#1e293b;">Connecting...</div>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:10px;">
+        <div><div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;">Current</div><div id="road-speed-display" style="font-size:15px;font-weight:800;color:#1e293b;">— km/h</div></div>
+        <div><div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;">Average</div><div id="road-avg-speed" style="font-size:15px;font-weight:800;color:#1e293b;">— km/h</div></div>
+        <div><div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;">Last GPS</div><div id="road-last-gps" style="font-size:15px;font-weight:800;color:#1e293b;">—</div></div>
+      </div>
+    </div>
+
+    <!-- CARD: Your Location vs Bus -->
+    <div style="background:rgba(255,255,255,0.88); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(226,232,240,0.9); border-radius:20px; padding:18px 22px; box-shadow:0 8px 20px -5px rgba(15,23,42,0.06); position:relative; overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#4f46e5,#818cf8);"></div>
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#4f46e5;margin-bottom:6px;display:flex;align-items:center;gap:5px;"><i class="fas fa-person-walking"></i> Bus to You (Your Location)</div>
+      <div id="road-student-status" style="display:inline-block;font-size:14px;font-weight:800;padding:5px 14px;border-radius:20px;background:rgba(100,116,139,0.08);color:#64748b;margin-bottom:8px;">Allow Location</div>
+      <div id="road-dist-student" style="font-size:12px;color:#64748b;font-weight:600;">Share location for road distance to bus</div>
+    </div>
+  </div>
 
   <!-- Hidden next stop for JS reference — not visible on page -->
   <span id="next-stop-display" style="display:none;"></span>
@@ -203,6 +239,7 @@
   <script src="js/gps.js"></script>
   <script src="js/timer.js"></script>
   <script src="js/session-protection.js"></script>
+  <script src="js/road-eta.js"></script>
 
   <script src="js/student-console.js"></script>
 

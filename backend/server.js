@@ -100,9 +100,34 @@ const authLimiter = rateLimit({
 app.use('/api/auth/', authLimiter);
 
 app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+const path = require('path');
+const fs = require('fs');
+
+// Handle Google GIS Redirect POST callback
+app.post('/google-callback.html', (req, res) => {
+  const credential = req.body.credential;
+  if (!credential) {
+    return res.redirect('/student-login.html?error=NoCredential');
+  }
+  
+  let html = fs.readFileSync(path.join(__dirname, '../google-callback.html'), 'utf8');
+  
+  // Inject the script to trigger the callback manually since GIS won't do it for a server-side POST
+  const injection = `<script>
+    window.addEventListener('load', function() {
+      if (typeof window.handleGoogleCallback === 'function') {
+        window.handleGoogleCallback({ credential: "${credential}" });
+      }
+    });
+  </script>`;
+  
+  html = html.replace('</body>', injection + '\n</body>');
+  res.send(html);
+});
 
 // Serve static frontend files from the parent directory
-const path = require('path');
 app.use(express.static(path.join(__dirname, '../')));
 
 // ============================================================================
