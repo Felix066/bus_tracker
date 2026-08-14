@@ -192,12 +192,17 @@ if (typeof window.isFollowBusEnabled === 'undefined') {
   window.isFollowBusEnabled = true; // Auto-follow bus by default
 }
 
+let lastMarkerUpdateTime = 0;
+
 function updateBusMarker(lat, lon, label = 'Bus') {
     const targetZoom = (map && map.getZoom() < 13) ? 15 : (map ? map.getZoom() : 15);
+    const now = Date.now();
+    
     if (!busMarker) {
         busMarker = L.marker([lat, lon], { icon: createBusIcon(label) }).addTo(map);
         map.setView([lat, lon], targetZoom);
         if (typeof checkNearbyAlert === 'function') checkNearbyAlert(lat, lon);
+        lastMarkerUpdateTime = now;
     } else {
         const oldPos = busMarker.getLatLng();
         let distance = 100;
@@ -206,10 +211,20 @@ function updateBusMarker(lat, lon, label = 'Bus') {
         }
         
         if (distance >= 1) { // 1 meter threshold for smooth responsive tracking
-            animateMarker(busMarker, oldPos.lat, oldPos.lng, lat, lon, 2000);
+            // Calculate dynamic duration based on update frequency to avoid stop-and-go
+            let duration = 2500; 
+            if (lastMarkerUpdateTime > 0) {
+                duration = now - lastMarkerUpdateTime;
+                // Cap to reasonable limits (between 1.5s and 5s)
+                if (duration < 1500) duration = 1500;
+                if (duration > 5000) duration = 5000;
+            }
+            lastMarkerUpdateTime = now;
+            
+            animateMarker(busMarker, oldPos.lat, oldPos.lng, lat, lon, duration);
             busMarker.setIcon(createBusIcon(label));
             if (window.isFollowBusEnabled !== false && map) {
-                map.panTo([lat, lon], { animate: true, duration: 1.5 });
+                map.panTo([lat, lon], { animate: true, duration: duration / 1000 });
             }
             if (typeof checkNearbyAlert === 'function') checkNearbyAlert(lat, lon);
         }
