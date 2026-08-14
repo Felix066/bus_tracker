@@ -610,7 +610,7 @@ app.post('/api/auth/google', async (req, res) => {
     // If not found in either student or faculty, auto-register as a student
     const { data: newStudent, error: insertError } = await supabase
       .from('students')
-      .insert([{ email }])
+      .insert([{ id: crypto.randomUUID(), email }])
       .select('id, email')
       .single();
 
