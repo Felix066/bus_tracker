@@ -73,45 +73,13 @@
 
         <div id="error-banner" class="error-banner hidden"></div>
 
-        <!--
-          REDIRECT MODE — works on ALL devices including Android Chrome, iOS Safari,
-          WebView, and desktop.
-
-          Why redirect instead of popup?
-          - popup mode depends on postMessage from accounts.google.com/gsi/transform
-            which is blocked by Android Chrome's stricter COOP policy.
-          - FedCM (data-use_fedcm_for_prompt) silently fails on Chrome < 117 (Redmi Note 8).
-          - redirect mode is a simple HTTP redirect — it works everywhere, always.
-
-          How it works:
-          1. User clicks the "Sign in with Google" button.
-          2. Google redirects the user to their Google account picker.
-          3. After selection, Google redirects back to data-login_uri with the credential.
-          4. google-callback.html reads the credential and calls our backend.
+        <!-- 
+          Custom Google Sign-In Button using standard OpenID Connect.
+          This bypasses Google Identity Services' restrictive auto-select
+          so the user can ALWAYS choose which account to use.
         -->
-        <div id="g_id_onload"
-             data-client_id="47792284104-7dncvdit6ilh47snjfm8anekv3jvavko.apps.googleusercontent.com"
-             data-context="signin"
-             data-ux_mode="redirect"
-             data-login_uri="https://where-is-my-bus-639k.onrender.com/google-callback.html"
-             data-auto_prompt="false">
-        </div>
         <script>
-          // On localhost, update login_uri to point to the backend callback endpoint.
-          // On production, the hardcoded Render URL is already correct.
-          // NOTE: http://localhost:3001 must be registered as an Authorized JavaScript Origin
-          // and Authorized redirect URI in Google Cloud Console.
-          (function() {
-            const h = window.location.hostname;
-            if (h === 'localhost' || h === '127.0.0.1' || h === '') {
-              const el = document.getElementById('g_id_onload');
-              if (el) {
-                el.setAttribute('data-login_uri', 'http://localhost:3001/google-callback.html');
-              }
-            }
-          })();
-
-          function forceSwitchAccount(e) {
+          function startGoogleSignIn(e) {
             e.preventDefault();
             const clientId = '47792284104-7dncvdit6ilh47snjfm8anekv3jvavko.apps.googleusercontent.com';
             const h = window.location.hostname;
@@ -126,24 +94,13 @@
           }
         </script>
 
-        <div class="g_id_signin"
-             data-type="standard"
-             data-shape="rectangular"
-             data-theme="outline"
-             data-text="signin_with"
-             data-size="large"
-             data-logo_alignment="left"
-             style="margin-bottom: 20px;">
-        </div>
-
+        <button onclick="startGoogleSignIn(event)" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; background: white; color: #3c4043; border: 1px solid #dadce0; padding: 12px 16px; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; text-decoration: none; box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3); transition: background-color 0.2s, box-shadow 0.2s; margin-bottom: 24px;" onmouseover="this.style.backgroundColor='#f8f9fa'; this.style.boxShadow='0 1px 3px 1px rgba(60,64,67,0.15)';" onmouseout="this.style.backgroundColor='white'; this.style.boxShadow='0 1px 2px 0 rgba(60,64,67,0.3)';">
+          <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 48 48"><g><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></g></svg>
+          Sign in with Google
+        </button>
 
         <div class="bottom-link">
           Are you a driver? <a href="driver-login.html">Sign in here →</a>
-        </div>
-        
-        <div class="bottom-link" style="margin-top: 10px; font-size: 13px;">
-          Wrong account auto-selected?<br>
-          <a href="#" onclick="forceSwitchAccount(event)" style="color: #6B7280; text-decoration: underline;">Switch Google Account</a>
         </div>
       </div>
     </div>
@@ -155,7 +112,7 @@
     </div>
     <h3 style="margin-bottom:10px; font-weight:700;">Sign-In Error</h3>
     <p id="error-message" style="color:#6B7280; font-size:14px; margin-bottom:20px;"></p>
-    <button onclick="forceSwitchAccount(event)" class="google-btn" style="width:100%; justify-content:center;">
+    <button onclick="startGoogleSignIn(event)" class="google-btn" style="width:100%; justify-content:center;">
       Try a Different Account
     </button>
   </div>
