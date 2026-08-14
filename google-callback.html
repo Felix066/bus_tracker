@@ -80,12 +80,7 @@
     // We then forward it to our backend for secure verification.
     // ============================================================================
 
-    // Determine backend URL — same logic as supabase-client.js
-    const BACKEND_URL = (window.location.hostname === 'localhost' ||
-                         window.location.hostname === '127.0.0.1' ||
-                         window.location.hostname === '')
-      ? 'http://localhost:3001'
-      : '';
+    // BACKEND_URL is already defined in js/supabase-client.js which is loaded above
 
     function showError(msg) {
       document.getElementById('loading-card').style.display = 'none';
