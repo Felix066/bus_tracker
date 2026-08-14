@@ -113,8 +113,16 @@
 
           function forceSwitchAccount(e) {
             e.preventDefault();
-            localStorage.setItem('force_account_select', 'true');
-            window.location.reload();
+            const clientId = '47792284104-7dncvdit6ilh47snjfm8anekv3jvavko.apps.googleusercontent.com';
+            const h = window.location.hostname;
+            const redirectUri = (h === 'localhost' || h === '127.0.0.1' || h === '')
+              ? 'http://localhost:3001/google-callback.html'
+              : 'https://where-is-my-bus-639k.onrender.com/google-callback.html';
+            
+            // This manually forces the account chooser to appear by using standard OpenID Connect
+            const oidcUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=id_token&response_mode=form_post&scope=openid%20email%20profile&nonce=force_switch&prompt=select_account`;
+            
+            window.location.href = oidcUrl;
           }
         </script>
 

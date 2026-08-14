@@ -111,8 +111,10 @@ const fs = require('fs');
 // Handle Google GIS Redirect POST callback
 app.post('/google-callback.html', (req, res) => {
   try {
-    const credential = req.body && req.body.credential;
+    const credential = req.body && (req.body.credential || req.body.id_token);
+    
     if (!credential) {
+      console.error('[GoogleCallback] Missing credential in body:', req.body);
       return res.redirect('/student-login.html?error=NoCredential');
     }
     
