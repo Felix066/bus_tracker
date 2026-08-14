@@ -97,17 +97,16 @@
              data-auto_prompt="false">
         </div>
         <script>
-          // On localhost, update login_uri to point to local callback.
+          // On localhost, update login_uri to point to the backend callback endpoint.
           // On production, the hardcoded Render URL is already correct.
-          // NOTE: localhost must also be registered as an Authorized JavaScript Origin
-          // in Google Cloud Console > APIs & Services > Credentials.
+          // NOTE: http://localhost:3001 must be registered as an Authorized JavaScript Origin
+          // and Authorized redirect URI in Google Cloud Console.
           (function() {
             const h = window.location.hostname;
             if (h === 'localhost' || h === '127.0.0.1' || h === '') {
               const el = document.getElementById('g_id_onload');
               if (el) {
-                el.setAttribute('data-login_uri',
-                  window.location.origin + '/google-callback.html');
+                el.setAttribute('data-login_uri', 'http://localhost:3001/google-callback.html');
               }
             }
           })();

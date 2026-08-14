@@ -121,11 +121,11 @@ app.post('/google-callback.html', (req, res) => {
     
     // Inject the script to trigger the callback manually since GIS won't do it for a server-side POST
     const injection = `<script>
-      window.addEventListener('load', function() {
-        if (typeof window.handleGoogleCallback === 'function') {
-          window.handleGoogleCallback({ credential: "${credential}" });
-        }
-      });
+      if (typeof window.handleGoogleCallback === 'function') {
+        window.handleGoogleCallback({ credential: "${credential}" });
+      } else {
+        console.error('handleGoogleCallback not found');
+      }
     </script>`;
     
     html = html.replace('</body>', injection + '\n</body>');
