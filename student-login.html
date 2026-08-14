@@ -110,6 +110,12 @@
               }
             }
           })();
+
+          function forceSwitchAccount(e) {
+            e.preventDefault();
+            localStorage.setItem('force_account_select', 'true');
+            window.location.reload();
+          }
         </script>
 
         <div class="g_id_signin"
@@ -126,18 +132,44 @@
         <div class="bottom-link">
           Are you a driver? <a href="driver-login.html">Sign in here →</a>
         </div>
+        
+        <div class="bottom-link" style="margin-top: 10px; font-size: 13px;">
+          Wrong account auto-selected?<br>
+          <a href="#" onclick="forceSwitchAccount(event)" style="color: #6B7280; text-decoration: underline;">Switch Google Account</a>
+        </div>
       </div>
     </div>
+  </div>
+
+  <div id="error-card" class="auth-card" style="display:none; text-align:center; padding: 40px 20px;">
+    <div style="width:60px; height:60px; border-radius:50%; background:#FEE2E2; color:#DC2626; display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
+      <i class="fas fa-exclamation-triangle" style="font-size:24px;"></i>
+    </div>
+    <h3 style="margin-bottom:10px; font-weight:700;">Sign-In Error</h3>
+    <p id="error-message" style="color:#6B7280; font-size:14px; margin-bottom:20px;"></p>
+    <button onclick="forceSwitchAccount(event)" class="google-btn" style="width:100%; justify-content:center;">
+      Try a Different Account
+    </button>
   </div>
 
   <script src="js/supabase.min.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/auth.js?v=4"></script>
-  <!-- GIS loaded last so our callback proxy (handleGoogleSignIn) is defined first -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
     // Google Sign-In is handled via the callback function handleGoogleSignIn 
     // which is defined in js/auth.js.
+    
+    // Force account selection if the user just logged out
+    window.addEventListener('load', () => {
+      if (localStorage.getItem('force_account_select') === 'true') {
+        if (window.google && window.google.accounts) {
+          google.accounts.id.disableAutoSelect();
+          localStorage.removeItem('force_account_select');
+          console.log('Disabled Google Auto Select to allow switching accounts.');
+        }
+      }
+    });
   </script>
 <script>
 window.addEventListener('online', () => {

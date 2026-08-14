@@ -83,7 +83,35 @@ window._actualHandleGoogleSignIn = async function(response) {
 
 async function logout() {
   await supabase.auth.signOut();
-  localStorage.clear();
-  window.location.href = 'index.html';
+  
+  const session = JSON.parse(localStorage.getItem('userSession'));
+  
+  const finishLogout = () => {
+    localStorage.removeItem('userSession');
+    localStorage.removeItem('driverSession');
+    window.location.href = 'student-login.html';
+  };
+
+  // Revoke Google consent to force the account chooser next time
+  if (session && session.email) {
+    if (window.google && window.google.accounts) {
+      google.accounts.id.revoke(session.email, () => {
+        finishLogout();
+      });
+    } else {
+      // Load Google script dynamically if not present
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.onload = () => {
+        google.accounts.id.revoke(session.email, () => {
+          finishLogout();
+        });
+      };
+      script.onerror = finishLogout;
+      document.head.appendChild(script);
+    }
+  } else {
+    finishLogout();
+  }
 }
  
