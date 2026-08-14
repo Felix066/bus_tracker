@@ -48,6 +48,11 @@ window._actualHandleGoogleSignIn = async function(response) {
       body: JSON.stringify({ token: response.credential })
     });
 
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Server is currently unavailable or deploying. Please try again in a few minutes.');
+    }
+
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error || 'Authentication failed');
