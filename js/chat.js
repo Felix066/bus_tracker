@@ -363,18 +363,25 @@ function appendMessage(msg) {
     bubble.appendChild(safe);
   }
 
-  // Long-press to delete (driver only, own messages)
+  // Delete trigger (driver only, own messages)
   if (isMine && window.chatUserRole === 'driver' && msg.id) {
+    // 1. Long press (Mobile & PC hold)
     const onLongPress = () => {
       longPressTimer = setTimeout(() => showDeletePopup(msg.id, wrap), 600);
     };
     const cancelPress = () => clearTimeout(longPressTimer);
+    
     bubble.addEventListener('mousedown',  onLongPress);
     bubble.addEventListener('touchstart', onLongPress, { passive: true });
     bubble.addEventListener('mouseup',    cancelPress);
     bubble.addEventListener('mouseleave', cancelPress);
     bubble.addEventListener('touchend',   cancelPress);
+    
+    // 2. Right click (PC)
     bubble.addEventListener('contextmenu', e => { e.preventDefault(); showDeletePopup(msg.id, wrap); });
+    
+    // 3. Double click (PC - very intuitive)
+    bubble.addEventListener('dblclick', e => { e.preventDefault(); showDeletePopup(msg.id, wrap); });
   }
 
   wrap.appendChild(label);
