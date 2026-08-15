@@ -522,6 +522,16 @@ function renderBusTable() {
     div4.className = 'actions-cell';
     div4.style.justifyContent = 'flex-end';
     
+    // Chat button for Admin
+    const btnChat = document.createElement('button');
+    btnChat.className = 'btn-icon btn-edit-row'; // Use same styling as edit
+    btnChat.style.color = '#6366f1'; // Indigo color to distinguish
+    btnChat.title = 'View Chat';
+    btnChat.onclick = () => openAdminChat(bus.id);
+    const iChat = document.createElement('i');
+    iChat.className = 'fas fa-comments';
+    btnChat.appendChild(iChat);
+
     const btnEdit = document.createElement('button');
     btnEdit.className = 'btn-icon btn-edit-row';
     btnEdit.title = 'Edit Bus Details';
@@ -538,6 +548,7 @@ function renderBusTable() {
     iTrash.className = 'fas fa-trash';
     btnRem.appendChild(iTrash);
     
+    div4.appendChild(btnChat);
     div4.appendChild(btnEdit);
     div4.appendChild(btnRem);
     td4.appendChild(div4);
@@ -547,10 +558,35 @@ function renderBusTable() {
 }
 
 function filterBuses() {
-  renderBusTable();
+  renderPagination();
 }
 
-// --- INLINE EDITING ---
+// ----------------------------------------------------------------------------
+// ADMIN CHAT INTEGRATION
+// ----------------------------------------------------------------------------
+function openAdminChat(busId) {
+  if (typeof initChat === 'function') {
+    // If chat panel is closed, open it. If it's already open for a DIFFERENT bus, 
+    // we need to re-init. If it's open for the SAME bus, just toggle.
+    if (!document.getElementById('chat-panel') || document.getElementById('chat-panel').style.display === 'none') {
+      initChat(busId, 'admin');
+      toggleChat();
+    } else {
+      // It's open. Is it the same bus?
+      if (window.currentChatBusId !== busId) {
+        initChat(busId, 'admin'); // Switch bus without closing
+      } else {
+        toggleChat(); // Close it
+      }
+    }
+  } else {
+    console.error("chat.js is not loaded");
+  }
+}
+
+// ----------------------------------------------------------------------------
+// INLINE EDITING
+// ----------------------------------------------------------------------------
 function enableInlineEdit(busId) {
   editingDriverForBusId = busId;
   renderBusTable();

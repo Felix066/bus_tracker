@@ -1313,11 +1313,19 @@ app.post('/api/chat/send', requireRole(['driver']), async (req, res) => {
   }
 });
 
-// DELETE single message — driver can only delete their own messages
-app.delete('/api/chat/message/:id', requireRole(['driver']), async (req, res) => {
+// DELETE single message — driver can delete own messages, admin can delete any message
+app.delete('/api/chat/message/:id', requireRole(['admin', 'driver']), async (req, res) => {
   try {
     const { id } = req.params;
-    // Verify the message belongs to this bus (driver token has assignedBus)
+    
+    // Admin bypasses ownership check
+    if (req.user.role === 'admin') {
+      const { error } = await supabase.from('driver_messages').delete().eq('id', id);
+      if (error) throw error;
+      return res.json({ success: true });
+    }
+
+    // Driver ownership check
     const { data: msg, error: fetchErr } = await supabase
       .from('driver_messages')
       .select('id, bus_id, sender_role')

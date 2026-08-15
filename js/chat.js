@@ -35,6 +35,7 @@ function toggleChat() {
 // ============================================================================
 async function initChat(busId, userRole) {
   currentChatBusId = busId;
+  window.currentChatBusId = busId;
   window.chatUserRole = userRole;
 
   _injectStyles();
@@ -363,8 +364,8 @@ function appendMessage(msg) {
     bubble.appendChild(safe);
   }
 
-  // Delete trigger (driver only, own messages)
-  if (isMine && window.chatUserRole === 'driver') {
+  // Delete trigger (admin can delete any, driver can delete own messages)
+  if (window.chatUserRole === 'admin' || (isMine && window.chatUserRole === 'driver')) {
     // 1. Long press (Mobile & PC hold)
     const onLongPress = () => {
       const currentId = wrap.getAttribute('data-msg-id');
