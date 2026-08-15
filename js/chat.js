@@ -364,10 +364,12 @@ function appendMessage(msg) {
   }
 
   // Delete trigger (driver only, own messages)
-  if (isMine && window.chatUserRole === 'driver' && msg.id) {
+  if (isMine && window.chatUserRole === 'driver') {
     // 1. Long press (Mobile & PC hold)
     const onLongPress = () => {
-      longPressTimer = setTimeout(() => showDeletePopup(msg.id, wrap), 600);
+      const currentId = wrap.getAttribute('data-msg-id');
+      if (!currentId) return; // Wait for server to confirm ID
+      longPressTimer = setTimeout(() => showDeletePopup(currentId, wrap), 600);
     };
     const cancelPress = () => clearTimeout(longPressTimer);
     
@@ -378,10 +380,18 @@ function appendMessage(msg) {
     bubble.addEventListener('touchend',   cancelPress);
     
     // 2. Right click (PC)
-    bubble.addEventListener('contextmenu', e => { e.preventDefault(); showDeletePopup(msg.id, wrap); });
+    bubble.addEventListener('contextmenu', e => { 
+      e.preventDefault(); 
+      const currentId = wrap.getAttribute('data-msg-id');
+      if (currentId) showDeletePopup(currentId, wrap); 
+    });
     
     // 3. Double click (PC - very intuitive)
-    bubble.addEventListener('dblclick', e => { e.preventDefault(); showDeletePopup(msg.id, wrap); });
+    bubble.addEventListener('dblclick', e => { 
+      e.preventDefault(); 
+      const currentId = wrap.getAttribute('data-msg-id');
+      if (currentId) showDeletePopup(currentId, wrap); 
+    });
   }
 
   wrap.appendChild(label);
