@@ -26,8 +26,8 @@ const supabase = createClient(
 );
 
 // Initialize ETA optimization subsystems
+// ETAPollerManager.init() internally calls ETACache.init() and ETALock.init() — do NOT call ETACache.init() separately.
 ETAPollerManager.init(supabase);
-ETACache.init(supabase);
 ViewerService.startCleanupInterval();
 
 // Load current destination into ETAPollerManager memory on startup (non-blocking)
@@ -432,28 +432,8 @@ app.post('/api/auth/register-with-token', async (req, res) => {
   }
 });
 
-app.post('/api/auth/register-driver', requireRole(['admin']), async (req, res) => {
-  try {
-    const { username, password, busId } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Missing username or password' });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const password_hash = await bcrypt.hash(password, salt);
-
-    const driverPayload = { username, password_hash, assigned_bus: busId };
-    const { data, error } = await supabase.from('drivers').upsert(driverPayload, { onConflict: 'username' });
-
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-
-    res.json({ success: true, message: 'Driver registered successfully' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// NOTE: POST /api/auth/register-driver is defined later (line ~660) with full validation.
+// The incomplete early duplicate has been removed.
 
 app.post('/api/auth/login-admin', async (req, res) => {
   try {
@@ -1573,12 +1553,29 @@ app.post('/api/buses/:busId/view', verifyRole, (req, res) => {
   }
 });
 
-// DELETE /api/buses/:busId/view — Unregister viewer (best-effort, TTL handles the rest)
+// DELETE /api/buses/:busId/view — Unregister viewer (authenticated clients)
 app.delete('/api/buses/:busId/view', verifyRole, (req, res) => {
   try {
     const busId = decodeURIComponent(req.params.busId);
     const { sessionId } = req.body;
     if (sessionId) ViewerService.unregisterViewer(busId, sessionId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/buses/:busId/leave — Unregister viewer via sendBeacon (no auth header possible).
+// navigator.sendBeacon() always sends POST and cannot attach Authorization headers,
+// so this endpoint does NOT use verifyRole. Security is maintained by the sessionId UUID:
+// a random UUID that an attacker would need to guess to affect another student's session.
+app.post('/api/buses/:busId/leave', (req, res) => {
+  try {
+    const busId = decodeURIComponent(req.params.busId);
+    const { sessionId } = req.body || {};
+    if (busId && busId.length <= 50 && sessionId) {
+      ViewerService.unregisterViewer(busId, sessionId);
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });

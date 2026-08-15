@@ -126,14 +126,16 @@ function subscribeToETAChannel() {
 
 /**
  * Clean up viewer session on page close (best-effort — TTL handles it anyway).
+ * Uses /api/buses/:busId/leave (POST) because navigator.sendBeacon() always sends
+ * HTTP POST and cannot attach Authorization headers — the server /leave route is
+ * intentionally auth-free, secured only by the random sessionId UUID.
  */
 function unregisterViewer() {
-    const session = JSON.parse(localStorage.getItem('userSession') || '{}');
-    const token = session.token;
-    if (!viewerSessionId || !token || !busId) return;
+    if (!viewerSessionId || !busId) return;
 
-    // Use sendBeacon for reliability on page close
-    const url = `${BACKEND_URL}/api/buses/${encodeURIComponent(busId)}/view`;
+    // Use sendBeacon for reliability on page close.
+    // NOTE: sendBeacon sends POST — we use /leave (not DELETE /view) for this reason.
+    const url = `${BACKEND_URL}/api/buses/${encodeURIComponent(busId)}/leave`;
     const data = JSON.stringify({ sessionId: viewerSessionId });
     try {
         navigator.sendBeacon(url, new Blob([data], { type: 'application/json' }));
