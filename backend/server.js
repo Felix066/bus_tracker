@@ -1264,6 +1264,8 @@ app.put('/api/trip/stop-index', requireRole(['driver']), async (req, res) => {
 // ============================================================================
 // CHAT API
 // ============================================================================
+
+// GET all messages for a bus (admin + driver can read)
 app.get('/api/chat/:busId', requireRole(['admin', 'driver']), async (req, res) => {
   try {
     const { busId } = req.params;
@@ -1272,7 +1274,7 @@ app.get('/api/chat/:busId', requireRole(['admin', 'driver']), async (req, res) =
       .select('*')
       .eq('bus_id', busId)
       .order('created_at', { ascending: true })
-      .limit(100);
+      .limit(200);
     if (error) throw error;
 
     // Check SOS status
@@ -1281,28 +1283,91 @@ app.get('/api/chat/:busId', requireRole(['admin', 'driver']), async (req, res) =
       .select('id')
       .eq('bus_id', busId)
       .eq('status', 'active');
-      
-    const isSosActive = sosAlerts && sosAlerts.length > 0;
 
+    const isSosActive = sosAlerts && sosAlerts.length > 0;
     res.json({ success: true, messages: messages || [], isSosActive });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post('/api/chat/send', requireRole(['admin', 'driver']), async (req, res) => {
+// POST send message — DRIVER ONLY (admin is read-only)
+app.post('/api/chat/send', requireRole(['driver']), async (req, res) => {
   try {
     const { bus_id, message } = req.body;
     if (!bus_id || !message) return res.status(400).json({ error: 'bus_id and message required' });
+    if (typeof message !== 'string' || message.length > 2000) {
+      return res.status(400).json({ error: 'Message too long (max 2000 chars)' });
+    }
 
-    const sender_role = req.user.role;
+    const sender_role = req.user.role; // always 'driver'
     const { data, error } = await supabase
       .from('driver_messages')
-      .insert([{ bus_id, message, sender_role }])
+      .insert([{ bus_id, message: message.trim(), sender_role }])
       .select()
       .single();
     if (error) throw error;
     res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE single message — driver can only delete their own messages
+app.delete('/api/chat/message/:id', requireRole(['driver']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Verify the message belongs to this bus (driver token has assignedBus)
+    const { data: msg, error: fetchErr } = await supabase
+      .from('driver_messages')
+      .select('id, bus_id, sender_role')
+      .eq('id', id)
+      .single();
+    if (fetchErr || !msg) return res.status(404).json({ error: 'Message not found' });
+    if (msg.bus_id !== req.user.assignedBus) {
+      return res.status(403).json({ error: 'Forbidden: not your bus' });
+    }
+    const { error } = await supabase.from('driver_messages').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE all messages for a bus — admin only (Clear Chat button)
+app.delete('/api/chat/:busId', requireRole(['admin']), async (req, res) => {
+  try {
+    const { busId } = req.params;
+    const { error } = await supabase
+      .from('driver_messages')
+      .delete()
+      .eq('bus_id', busId);
+    if (error) throw error;
+    await supabase.from('admin_logs').insert({
+      admin_username: req.user.username,
+      action_text: `Cleared chat history for ${busId}`
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE trip-end auto-clear — driver calls this when trip ends
+app.delete('/api/chat/:busId/trip-end', requireRole(['driver']), async (req, res) => {
+  try {
+    const { busId } = req.params;
+    // Only clear if driver owns this bus
+    if (busId !== req.user.assignedBus) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    const { error } = await supabase
+      .from('driver_messages')
+      .delete()
+      .eq('bus_id', busId);
+    if (error) throw error;
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

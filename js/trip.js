@@ -474,6 +474,13 @@ async function endTrip() {
     // DO NOT clear bustrack_last_location, so the map can instantly show a marker on next start
 
     releaseWakeLock(); // Release wake lock
+
+    // Auto-clear chat for this bus when the trip ends
+    const endedBusId = localStorage.getItem('activeBusId') || activeBusId || null;
+    if (endedBusId && typeof clearChatOnTripEnd === 'function') {
+        await clearChatOnTripEnd(endedBusId).catch(() => {});
+    }
+
     location.reload();
 }
 
