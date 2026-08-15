@@ -125,21 +125,6 @@ async function loadSOSAlerts() {
           </button>
         </div>
 
-        <!-- EMBEDDED CHAT -->
-        <div class="card-chat">
-          <div class="chat-label">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;display:inline;vertical-align:middle;margin-right:4px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Live Chat with Driver
-          </div>
-          <div class="chat-messages-wrap">
-            <div class="chat-empty-msg">No messages yet. Say something to the driver.</div>
-          </div>
-          <div class="chat-input-row">
-            <input type="text" class="chat-text-input" placeholder="Type a message to the driver…" autocomplete="off">
-            <button class="chat-send-btn" title="Send">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            </button>
-          </div>
         </div>
       `;
 
@@ -167,41 +152,20 @@ async function loadSOSAlerts() {
       // Resolve button
       card.querySelector('.btn-resolve').addEventListener('click', () => resolveAlert(alert.bus_id));
 
-      // Chat toggle button
-      const chatSection = card.querySelector('.card-chat');
+      // Chat toggle button (now uses the global floating chat)
       const chatToggleBtn = card.querySelector('.btn-chat-toggle');
-      let chatOpen = false;
-      let chatLoaded = false;
-
       chatToggleBtn.addEventListener('click', () => {
-        chatOpen = !chatOpen;
-        if (chatOpen) {
-          chatSection.classList.add('open');
-          chatToggleBtn.style.background = '#4f46e5';
-          chatToggleBtn.style.color = 'white';
-          chatToggleBtn.style.border = '1.5px solid #4f46e5';
-          chatToggleBtn.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            Close Chat
-          `;
-          // Load messages only on first open
-          if (!chatLoaded) {
-            loadChatMessages(card, alert.bus_id);
-            chatLoaded = true;
-            // Poll for new messages every 5s while open
-            chatPolls[alert.bus_id] = setInterval(() => {
-              if (chatOpen) loadChatMessages(card, alert.bus_id);
-            }, 5000);
+        if (typeof initChat === 'function') {
+          if (!document.getElementById('chat-panel') || document.getElementById('chat-panel').style.display === 'none') {
+            initChat(alert.bus_id, 'admin');
+            toggleChat();
+          } else {
+            if (window.currentChatBusId !== alert.bus_id) {
+              initChat(alert.bus_id, 'admin');
+            } else {
+              toggleChat();
+            }
           }
-        } else {
-          chatSection.classList.remove('open');
-          chatToggleBtn.style.background = 'var(--accent-dim)';
-          chatToggleBtn.style.color = 'var(--accent)';
-          chatToggleBtn.style.border = '1.5px solid #c7d2fe';
-          chatToggleBtn.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Message Driver
-          `;
         }
       });
 
@@ -236,65 +200,9 @@ async function loadSOSAlerts() {
   }
 }
 
-async function loadChatMessages(card, busId) {
-  const messagesWrap = card.querySelector('.chat-messages-wrap');
-  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+// Removed inline loadChatMessages since we use the global floating chat now
 
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/chat/${encodeURIComponent(busId)}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    const messages = data.messages || [];
 
-    if (messages.length === 0) {
-      messagesWrap.innerHTML = '<div class="chat-empty-msg">No messages yet. Say something to the driver.</div>';
-      return;
-    }
-
-    const wasAtBottom = messagesWrap.scrollHeight - messagesWrap.scrollTop <= messagesWrap.clientHeight + 40;
-    messagesWrap.innerHTML = '';
-
-    messages.forEach(msg => {
-      const isAdmin = msg.sender_role === 'admin';
-      const bubble = document.createElement('div');
-      bubble.className = `chat-bubble ${isAdmin ? 'admin' : 'driver'}`;
-      const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-      const safeText = document.createTextNode(msg.message);
-      const metaEl = document.createElement('div');
-      metaEl.className = 'bubble-meta';
-      metaEl.textContent = `${isAdmin ? 'You' : 'Driver'} · ${time}`;
-      bubble.appendChild(safeText);
-      bubble.appendChild(metaEl);
-      messagesWrap.appendChild(bubble);
-    });
-
-    if (wasAtBottom) {
-      messagesWrap.scrollTop = messagesWrap.scrollHeight;
-    }
-  } catch (e) {
-    console.error('[Chat] Load error:', e);
-  }
-}
-
-async function sendChatToDriver(card, busId, text) {
-  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/chat/send`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bus_id: busId, message: text })
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to send');
-    }
-    await loadChatMessages(card, busId);
-  } catch (e) {
-    console.error('[Chat] Send error:', e);
-  }
-}
 
 async function resolveAlert(busId) {
   if (!confirm(`Resolve the SOS alert for ${String(busId)}?`)) return;

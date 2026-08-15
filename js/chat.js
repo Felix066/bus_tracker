@@ -328,7 +328,7 @@ function _injectPanel(userRole) {
 // HELPER
 // ============================================================================
 function _getToken() {
-  const s = JSON.parse(localStorage.getItem('driverSession') || localStorage.getItem('userSession') || '{}');
+  const s = JSON.parse(localStorage.getItem('driverSession') || localStorage.getItem('adminSession') || localStorage.getItem('userSession') || '{}');
   return s.token || null;
 }
 
