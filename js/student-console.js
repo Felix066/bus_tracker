@@ -15,6 +15,139 @@ let studentLatGlobal = null;
 let studentLonGlobal = null;
 let studentAccuracyGlobal = null;
 
+// ============================================================================
+// SHARED ETA — Viewer session & heartbeat (new architecture)
+// ETA is computed server-side once per bus and broadcast via Supabase Realtime.
+// Students NEVER call /api/route/eta directly.
+// ============================================================================
+let viewerSessionId = null;         // Session ID returned by /api/buses/:busId/view
+let etaHeartbeatTimer = null;       // setInterval handle for heartbeat
+let etaRealtimeChannel = null;      // Supabase Realtime channel for ETA updates
+const HEARTBEAT_INTERVAL_MS = 20000; // 20s — must be < VIEWER_TTL_MS (60s) on server
+
+/**
+ * Register this browser tab as an active viewer of the bus.
+ * Triggers backend ETA polling if not already running for this bus.
+ */
+async function registerAsViewer() {
+    const session = JSON.parse(localStorage.getItem('userSession') || '{}');
+    const token = session.token;
+    if (!token || !busId) return;
+
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/buses/${encodeURIComponent(busId)}/view`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        });
+        if (res.ok) {
+            const data = await res.json();
+            viewerSessionId = data.sessionId;
+            console.log('[SharedETA] Registered as viewer, sessionId:', viewerSessionId?.slice(0, 8));
+
+            // Start heartbeat to keep session alive
+            startETAHeartbeat(token);
+
+            // Fetch the latest cached ETA immediately (no wait for next broadcast)
+            fetchLatestETA(token);
+        }
+    } catch (e) {
+        console.warn('[SharedETA] Could not register viewer:', e.message);
+    }
+}
+
+/**
+ * Fetch the current cached ETA from the backend (one-time on page load).
+ * Subsequent updates arrive via Realtime.
+ */
+async function fetchLatestETA(token) {
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/buses/${encodeURIComponent(busId)}/eta`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.status !== 'UNAVAILABLE' && typeof RoadETA !== 'undefined') {
+                RoadETA.applySharedETA(data, 0, 0);
+            }
+        }
+    } catch (e) {
+        console.warn('[SharedETA] Could not fetch initial ETA:', e.message);
+    }
+}
+
+/**
+ * Send periodic heartbeat to keep the viewer session alive.
+ * If session expires (410 response), re-register automatically.
+ */
+function startETAHeartbeat(token) {
+    if (etaHeartbeatTimer) clearInterval(etaHeartbeatTimer);
+
+    etaHeartbeatTimer = setInterval(async () => {
+        if (!viewerSessionId) return;
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/buses/${encodeURIComponent(busId)}/heartbeat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ sessionId: viewerSessionId })
+            });
+            if (res.status === 410) {
+                // Session expired — re-register
+                console.warn('[SharedETA] Session expired, re-registering...');
+                viewerSessionId = null;
+                await registerAsViewer();
+            }
+        } catch (e) {
+            // Non-fatal — server TTL will handle cleanup
+        }
+    }, HEARTBEAT_INTERVAL_MS);
+}
+
+/**
+ * Subscribe to Supabase Realtime channel for ETA broadcasts from the backend.
+ * ALL students watching the same bus share ONE ETA calculation.
+ */
+function subscribeToETAChannel() {
+    if (!busId || !window.supabase) return;
+    if (etaRealtimeChannel) supabase.removeChannel(etaRealtimeChannel);
+
+    etaRealtimeChannel = supabase
+        .channel(`bus-eta-${busId}`)
+        .on('broadcast', { event: 'eta_update' }, ({ payload }) => {
+            if (typeof RoadETA !== 'undefined') {
+                // Get current smoothed speed for local ETA computation if needed
+                const lastSpeed = typeof lastGPSSpeedKmh !== 'undefined' ? lastGPSSpeedKmh : 0;
+                RoadETA.applySharedETA(payload, lastSpeed, lastSpeed);
+            }
+        })
+        .subscribe();
+
+    console.log(`[SharedETA] Subscribed to bus-eta-${busId}`);
+}
+
+/**
+ * Clean up viewer session on page close (best-effort — TTL handles it anyway).
+ */
+function unregisterViewer() {
+    const session = JSON.parse(localStorage.getItem('userSession') || '{}');
+    const token = session.token;
+    if (!viewerSessionId || !token || !busId) return;
+
+    // Use sendBeacon for reliability on page close
+    const url = `${BACKEND_URL}/api/buses/${encodeURIComponent(busId)}/view`;
+    const data = JSON.stringify({ sessionId: viewerSessionId });
+    try {
+        navigator.sendBeacon(url, new Blob([data], { type: 'application/json' }));
+    } catch (e) {
+        // Ignored — server TTL handles cleanup
+    }
+
+    if (etaHeartbeatTimer) clearInterval(etaHeartbeatTimer);
+    if (etaRealtimeChannel) supabase.removeChannel(etaRealtimeChannel);
+}
+
+window.addEventListener('beforeunload', unregisterViewer);
+window.addEventListener('pagehide', unregisterViewer); // Safari/iOS
+
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Get Bus ID from URL
     const params = new URLSearchParams(window.location.search);
@@ -30,6 +163,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof RoadETA !== 'undefined') {
         RoadETA.init().catch(() => {});
     }
+
+    // 1c. Register as a viewer and subscribe to shared ETA Realtime channel
+    // This triggers backend ETA polling if not already running for this bus.
+    // ALL students on the same bus share ONE ETA computation.
+    subscribeToETAChannel();
+    registerAsViewer(); // non-blocking — updates arrive via Realtime
 
     // 2. Fetch Active Trip and Initial Location in parallel
     const trip = await getTripInfo(busId);
@@ -417,10 +556,12 @@ function processNewLocation(lat, lon, speedKmh) {
         updateBusMarker(lat, lon, busLabel);
     }
 
-    // D. Road-Based ETA Engine (replaces old AIEta)
+    // D. Road-Based ETA: update speed, status, proximity display
+    // ETA minutes are NOT computed here — they arrive via Supabase Realtime broadcast.
+    // applySharedETA() is called by the Realtime listener in subscribeToETAChannel().
+    // If no Realtime ETA received in 90s, road-eta.js falls back to local haversine.
     if (typeof RoadETA !== 'undefined') {
-        RoadETA.update(lat, lon, speedKmh || lastGPSSpeedKmh, studentLatGlobal, studentLonGlobal, lastGPSTime, busId, studentAccuracyGlobal)
-            .catch(() => {}); // never crash the GPS loop
+        RoadETA.update(lat, lon, speedKmh || lastGPSSpeedKmh, studentLatGlobal, studentLonGlobal, lastGPSTime, busId, studentAccuracyGlobal);
     }
 }
 

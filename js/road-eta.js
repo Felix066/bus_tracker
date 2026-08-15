@@ -1,13 +1,20 @@
-// js/road-eta.js — Road-Based ETA Engine
-// Replaces ai-eta.js haversine logic with real road distance via ORS proxy.
-// All routing calls go through /api/route/eta (backend protects ORS API key).
-// Smart caching: only calls backend when bus moves >150m or 30s elapsed.
-// Never calls routing API every 3 seconds — respects ORS free tier (2000/day).
+// js/road-eta.js — Road-Based ETA Engine (Shared Architecture)
+//
+// NEW ARCHITECTURE: ETA is computed ONCE on the backend per bus and broadcast
+// via Supabase Realtime to ALL students watching that bus.
+//
+// This file:
+//   - Renders received ETA data into the UI (applySharedETA)
+//   - Provides a local haversine fallback (applyFallback) for when no broadcast arrives
+//   - Handles bus status, speed smoothing, and student proximity (all local, no API cost)
+//
+// REMOVED: fetchRoadRoute() — students NO LONGER call /api/route/eta directly.
+// REMOVED: per-student ETA cache state (lastRouteResult, lastRouteFetchTime, etc.)
 
 window.RoadETA = (function () {
 
   // =========================================================================
-  // KALMAN FILTER — Smooth noisy GPS speed readings
+  // KALMAN FILTER — Smooth noisy GPS speed readings (local, no API cost)
   // =========================================================================
   const speedKalman = {
     q: 0.01, r: 1.0, p: 1.0, x: null,
@@ -22,30 +29,25 @@ window.RoadETA = (function () {
   };
 
   // =========================================================================
-  // STATE — Persistent across updates, kept in memory only (no DB writes)
+  // STATE
   // =========================================================================
-  let destination = null;       // { name, latitude, longitude } — from admin
-  let lastRouteResult = null;   // Last successful ORS response
-  let lastRouteFetchTime = 0;   // Timestamp of last ORS call
-  let lastRouteBusLat = null;
-  let lastRouteBusLon = null;
+  let destination = null;           // { name, latitude, longitude }
+  let lastSharedETA = null;         // Last payload received from Realtime broadcast
+  let lastSharedETATime = 0;        // Timestamp when lastSharedETA was received
+  let lastBusStatus = 'Offline';
 
-  const ROUTE_CACHE_MS = 30000; // 30 seconds between API calls
-  const ROUTE_MOVE_M   = 150;   // Minimum bus movement to trigger new fetch
+  const STALE_FALLBACK_MS = 90000; // If no Realtime ETA in 90s, switch to haversine fallback
 
-  // Average speed tracking (rolling window of last 10 readings)
+  // Average speed tracking
   const speedHistory = [];
   const SPEED_WINDOW = 10;
 
-  // Inside-bus detection state
+  // Inside-bus detection
   let insideBusStartTime = null;
   let insideBusConfirmed = false;
 
-  // Bus status state
-  let lastBusStatus = 'Offline';
-
   // =========================================================================
-  // HAVERSINE — Client-side, used only for proximity/near-bus detection
+  // HAVERSINE — Used for student proximity detection ONLY (free, local)
   // =========================================================================
   function haversineDist(lat1, lon1, lat2, lon2) {
     const R = 6371000;
@@ -67,7 +69,6 @@ window.RoadETA = (function () {
         const data = await res.json();
         if (data.success && data.destination) {
           destination = data.destination;
-          // Update destination name in UI
           const el = document.getElementById('dest-name-display');
           if (el) el.textContent = destination.name;
         }
@@ -91,18 +92,16 @@ window.RoadETA = (function () {
   }
 
   // =========================================================================
-  // BUS STATUS ENGINE — automatically determine bus operating state
+  // BUS STATUS ENGINE — local, no API cost
   // =========================================================================
   function determineBusStatus(speedKmh, lastGPSTime, hasDestination) {
     const now = Date.now();
     const gpsAge = lastGPSTime ? (now - lastGPSTime) : Infinity;
 
     if (gpsAge > 90000) return { label: 'Offline', color: '#ef4444', icon: 'fa-wifi-slash' };
-
     if (!hasDestination) return { label: 'Active', color: '#10b981', icon: 'fa-bus' };
 
-    // Check if reached destination (use last route result)
-    if (lastRouteResult && lastRouteResult.road_distance_m < 100) {
+    if (lastSharedETA && lastSharedETA.distance_meters < 100) {
       return { label: 'Reached Destination', color: '#6366f1', icon: 'fa-flag-checkered' };
     }
 
@@ -114,14 +113,13 @@ window.RoadETA = (function () {
   }
 
   // =========================================================================
-  // NEAR BUS DETECTION — based on student GPS vs bus GPS (haversine only)
+  // NEAR BUS DETECTION — local haversine, no API cost
   // =========================================================================
   function getNearBusStatus(studentLat, studentLon, busLat, busLon, busSpeedKmh) {
     if (!studentLat || !studentLon || !busLat || !busLon) return null;
 
     const dist = haversineDist(studentLat, studentLon, busLat, busLon);
 
-    // Inside-bus detection: student within 40m of moving bus for 60+ seconds
     if (dist <= 40 && busSpeedKmh > 5) {
       if (!insideBusStartTime) {
         insideBusStartTime = Date.now();
@@ -129,92 +127,131 @@ window.RoadETA = (function () {
         insideBusConfirmed = true;
       }
     } else {
-      if (insideBusConfirmed && dist > 100) {
-        insideBusConfirmed = false; // Exited bus
-      }
+      if (insideBusConfirmed && dist > 100) insideBusConfirmed = false;
       if (dist > 60) insideBusStartTime = null;
     }
 
-    if (insideBusConfirmed) {
-      return { label: 'Inside Bus', color: '#6366f1', bg: 'rgba(99,102,241,0.12)', icon: 'fa-person-seat' };
-    }
-    if (dist <= 50)  return { label: 'Very Close', color: '#10b981', bg: 'rgba(16,185,129,0.12)', icon: 'fa-circle-check' };
-    if (dist <= 100) return { label: 'Near Bus', color: '#22c55e', bg: 'rgba(34,197,94,0.12)', icon: 'fa-location-arrow' };
-    if (dist <= 150) return { label: 'Boarding Zone', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', icon: 'fa-circle-dot' };
+    if (insideBusConfirmed) return { label: 'Inside Bus',   color: '#6366f1', bg: 'rgba(99,102,241,0.12)',  icon: 'fa-person-seat' };
+    if (dist <= 50)          return { label: 'Very Close',  color: '#10b981', bg: 'rgba(16,185,129,0.12)',  icon: 'fa-circle-check' };
+    if (dist <= 100)         return { label: 'Near Bus',    color: '#22c55e', bg: 'rgba(34,197,94,0.12)',   icon: 'fa-location-arrow' };
+    if (dist <= 150)         return { label: 'Boarding Zone', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', icon: 'fa-circle-dot' };
     return { label: 'Away', color: '#64748b', bg: 'rgba(100,116,139,0.08)', icon: 'fa-location-dot' };
   }
 
   // =========================================================================
-  // FETCH ROAD ETA — from backend ORS proxy (smart caching enforced here too)
-  // =========================================================================
-  async function fetchRoadRoute(busLat, busLon, targetLat, targetLon, busId) {
-    const now = Date.now();
-
-    // Check if we can reuse the last result
-    if (lastRouteResult && lastRouteBusLat !== null) {
-      const age = now - lastRouteFetchTime;
-      const moved = haversineDist(lastRouteBusLat, lastRouteBusLon, busLat, busLon);
-      if (age < ROUTE_CACHE_MS && moved < ROUTE_MOVE_M) {
-        return { ...lastRouteResult, cached: true };
-      }
-    }
-
-    try {
-      const url = `${BACKEND_URL}/api/route/eta?fromLat=${busLat}&fromLon=${busLon}&toLat=${targetLat}&toLon=${targetLon}&busId=${encodeURIComponent(busId || '')}`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-      if (!res.ok) throw new Error('Backend route error');
-      const data = await res.json();
-      if (data.success) {
-        lastRouteResult = data;
-        lastRouteFetchTime = now;
-        lastRouteBusLat = busLat;
-        lastRouteBusLon = busLon;
-        return data;
-      }
-    } catch (e) {
-      console.warn('[RoadETA] fetchRoadRoute failed:', e.message);
-    }
-
-    // Return last known result as fallback
-    return lastRouteResult;
-  }
-
-  // =========================================================================
-  // COMPUTE ETA MINUTES — uses road distance + pre-smoothed speed
-  // NOTE: speedKmh here is ALREADY Kalman-smoothed from updateDisplay()
+  // ETA COMPUTATION — converts road distance + speed to minutes
+  // Used by both applySharedETA (for display) and applyFallback
   // =========================================================================
   function computeETA(road_distance_m, smoothedSpeedKmh, avgSpeedKmh, duration_s) {
     const effectiveSpeed = Math.max(smoothedSpeedKmh || avgSpeedKmh || 20, 5);
-
-    // Traffic time-of-day adjustment
     const hour = new Date().getHours();
     const trafficFactor = ((hour >= 7 && hour <= 9) || (hour >= 16 && hour <= 19)) ? 1.3
       : ((hour >= 10 && hour <= 15) || (hour >= 20 && hour <= 22)) ? 1.1 : 0.9;
 
-    // If ORS gave us a duration, scale by actual speed relative to ORS assumption (30 km/h)
     if (duration_s && duration_s > 0) {
       const scaledDuration = duration_s * (30 / effectiveSpeed);
       return Math.max(1, Math.round((scaledDuration * trafficFactor) / 60));
     }
 
-    // Pure distance-based fallback
     const effectiveSpeedMs = effectiveSpeed / 3.6;
     const etaSec = (road_distance_m / effectiveSpeedMs) * trafficFactor;
     return Math.max(1, Math.round(etaSec / 60));
   }
 
   // =========================================================================
-  // MAIN UPDATE FUNCTION — called by student-console.js on every GPS update
+  // applySharedETA — called when Supabase Realtime delivers a shared ETA payload
+  // NO API call is made here — this just renders what the backend computed.
   // =========================================================================
-  async function updateDisplay(busLat, busLon, speedKmh, studentLat, studentLon, lastGPSTime, busId, studentAccuracyGlobal) {
+  function applySharedETA(payload, smoothedSpeed, avgSpeed) {
+    lastSharedETA = payload;
+    lastSharedETATime = Date.now();
+
+    const destEtaEl  = document.getElementById('road-eta-dest');
+    const destDistEl = document.getElementById('road-dist-dest');
+    const destNameEl = document.getElementById('dest-name-display');
+
+    if (destNameEl && destination) destNameEl.textContent = destination.name;
+
+    const distM  = payload.distance_meters;
+    const distKm = distM != null ? (distM / 1000).toFixed(1) : '?';
+    const destName = destination?.name || 'Destination';
+
+    if (payload.status === 'UNAVAILABLE' || payload.status === 'GPS_STALE') {
+      if (destEtaEl)  { destEtaEl.textContent = 'ETA Unavailable'; destEtaEl.style.color = '#94a3b8'; }
+      if (destDistEl) destDistEl.textContent = payload.status === 'GPS_STALE' ? 'Bus location outdated' : 'ETA service unavailable';
+      return;
+    }
+
+    if (distM != null && distM < 100) {
+      if (destEtaEl)  { destEtaEl.textContent = 'Arrived! ✅'; destEtaEl.style.color = '#10b981'; }
+      if (destDistEl) destDistEl.textContent = `< 100m to ${destName}`;
+      return;
+    }
+
+    if (smoothedSpeed < 1) {
+      if (destEtaEl)  { destEtaEl.textContent = 'Bus Stopped'; destEtaEl.style.color = '#f59e0b'; }
+      if (destDistEl) destDistEl.textContent = `${distKm} km from bus to ${destName}`;
+      return;
+    }
+
+    // Use backend-computed ETA minutes if available, otherwise compute locally
+    let etaMins;
+    if (payload.eta_minutes != null) {
+      etaMins = payload.eta_minutes;
+    } else {
+      etaMins = computeETA(distM, smoothedSpeed, avgSpeed, null);
+    }
+
+    const sourceLabel = payload.provider === 'ors' ? '🛣️ Road' : '📐 Estimated';
+    const isStale = payload.status === 'STALE';
+    const staleWarning = isStale ? ' ⚠️ (updating...)' : '';
+
+    if (destEtaEl)  {
+      destEtaEl.textContent = `~${etaMins} min${staleWarning}`;
+      destEtaEl.style.color = isStale ? '#f59e0b' : '#059669';
+    }
+    if (destDistEl) destDistEl.textContent = `${distKm} km from bus to ${destName} · ${sourceLabel}`;
+  }
+
+  // =========================================================================
+  // applyFallback — used when no Realtime ETA has been received in 90s
+  // Uses local haversine to give a rough estimate without any API call.
+  // =========================================================================
+  function applyFallback(busLat, busLon, smoothedSpeed, avgSpeed) {
+    if (!destination || !busLat || !busLon) return;
+
+    const distM = haversineDist(busLat, busLon, destination.latitude, destination.longitude) * 1.25;
+    const distKm = (distM / 1000).toFixed(1);
+    const destName = destination?.name || 'Destination';
+
+    const destEtaEl  = document.getElementById('road-eta-dest');
+    const destDistEl = document.getElementById('road-dist-dest');
+
+    if (smoothedSpeed < 1) {
+      if (destEtaEl)  { destEtaEl.textContent = 'Bus Stopped'; destEtaEl.style.color = '#f59e0b'; }
+      if (destDistEl) destDistEl.textContent = `${distKm} km from bus to ${destName} · 📐 Estimated`;
+      return;
+    }
+
+    const etaMins = computeETA(distM, smoothedSpeed, avgSpeed, null);
+    if (destEtaEl)  { destEtaEl.textContent = `~${etaMins} min`; destEtaEl.style.color = '#94a3b8'; }
+    if (destDistEl) destDistEl.textContent = `${distKm} km from bus to ${destName} · 📐 Estimated`;
+  }
+
+  // =========================================================================
+  // MAIN UPDATE FUNCTION — called by student-console.js on every GPS update
+  // Updates speed cards, bus status, student proximity — does NOT call any API.
+  // ETA rendering happens in applySharedETA (called by Realtime listener) or
+  // applyFallback (called when no Realtime ETA received in 90s).
+  // =========================================================================
+  function updateDisplay(busLat, busLon, speedKmh, studentLat, studentLon, lastGPSTime, busId, studentAccuracyGlobal) {
     if (!busLat || !busLon) return;
 
     const avgSpeed = updateAverageSpeed(speedKmh);
-    // Kalman-smooth speed ONCE per update (used both for display and ETA)
     const smoothedSpeed = speedKalman.update(speedKmh !== null ? speedKmh : 0);
 
     // ── Update Speed Cards ───────────────────────────────────────────────
-    const speedEl   = document.getElementById('road-speed-display');
+    const speedEl    = document.getElementById('road-speed-display');
     const avgSpeedEl = document.getElementById('road-avg-speed');
     if (speedEl) speedEl.textContent = `${Math.round(smoothedSpeed)} km/h`;
     if (avgSpeedEl) avgSpeedEl.textContent = `${Math.round(avgSpeed)} km/h`;
@@ -231,75 +268,44 @@ window.RoadETA = (function () {
     lastBusStatus = busStatus.label;
     const statusEl    = document.getElementById('road-bus-status');
     const statusDotEl = document.getElementById('road-bus-status-dot');
-    if (statusEl) {
-      statusEl.textContent = busStatus.label;
-      statusEl.style.color = busStatus.color;
-    }
-    if (statusDotEl) statusDotEl.style.background = busStatus.color;
+    if (statusEl)    { statusEl.textContent = busStatus.label; statusEl.style.color = busStatus.color; }
+    if (statusDotEl)   statusDotEl.style.background = busStatus.color;
 
-    // ── Destination ETA (road distance) ─────────────────────────────────
-    const destEtaEl  = document.getElementById('road-eta-dest');
-    const destDistEl = document.getElementById('road-dist-dest');
-    const destNameEl = document.getElementById('dest-name-display');
-
-    if (!destination) {
-      // Destination not yet loaded — try loading
-      await loadDestination();
-    }
-
-    if (destination) {
-      if (destNameEl) destNameEl.textContent = destination.name;
-
-      const routeData = await fetchRoadRoute(busLat, busLon, destination.latitude, destination.longitude, busId);
-
-      if (routeData) {
-        const distM  = routeData.road_distance_m;
-        const distKm = routeData.road_distance_km;
-
-        if (distM < 100) {
-          // Arrived
-          if (destEtaEl)  { destEtaEl.textContent = 'Arrived! ✅'; destEtaEl.style.color = '#10b981'; }
-          if (destDistEl) destDistEl.textContent = `< 100m to ${destination.name}`;
-        } else if (smoothedSpeed < 1) {
-          // Bus is completely stopped — ETA is not calculable
-          if (destEtaEl)  { destEtaEl.textContent = 'Bus Stopped'; destEtaEl.style.color = '#f59e0b'; }
-          if (destDistEl) destDistEl.textContent = `${distKm} km from bus to ${destination.name}`;
-        } else {
-          const etaMins = computeETA(distM, smoothedSpeed, avgSpeed, routeData.duration_s);
-          const source  = routeData.source === 'ors' ? '🛣️ Road' : '📐 Estimated';
-          if (destEtaEl)  { destEtaEl.textContent = `~${etaMins} min`; destEtaEl.style.color = '#059669'; }
-          if (destDistEl) destDistEl.textContent = `${distKm} km from bus to ${destination.name} · ${source}`;
-        }
-      }
+    // ── ETA: use shared ETA if fresh, otherwise fallback ────────────────
+    const etaAge = Date.now() - lastSharedETATime;
+    if (lastSharedETA && etaAge < STALE_FALLBACK_MS) {
+      applySharedETA(lastSharedETA, smoothedSpeed, avgSpeed);
+    } else if (destination) {
+      applyFallback(busLat, busLon, smoothedSpeed, avgSpeed);
     } else {
-      if (destEtaEl)  destEtaEl.textContent = 'No destination set';
-      if (destDistEl) destDistEl.textContent = 'Admin has not set a destination yet';
+      // No destination set yet — try loading
+      if (!destination) loadDestination().catch(() => {});
+      const destEtaEl = document.getElementById('road-eta-dest');
+      if (destEtaEl && destEtaEl.textContent === 'Loading...') {
+        destEtaEl.textContent = 'No destination set';
+      }
     }
 
-    // ── Student → Bus (road distance) ────────────────────────────────────
+    // ── Student → Bus proximity (local haversine, no API) ────────────────
     const studentDistEl   = document.getElementById('road-dist-student');
     const studentStatusEl = document.getElementById('road-student-status');
 
     if (studentLat && studentLon) {
       const nearStatus = getNearBusStatus(studentLat, studentLon, busLat, busLon, smoothedSpeed);
-
-      if (nearStatus) {
-        if (studentStatusEl) {
-          studentStatusEl.textContent = nearStatus.label;
-          studentStatusEl.style.color = nearStatus.color;
-          studentStatusEl.style.background = nearStatus.bg;
-        }
+      if (nearStatus && studentStatusEl) {
+        studentStatusEl.textContent = nearStatus.label;
+        studentStatusEl.style.color = nearStatus.color;
+        studentStatusEl.style.background = nearStatus.bg;
       }
 
-      // Use haversine for student proximity distance (saves ORS quota)
       if (studentDistEl) {
         const distM = haversineDist(studentLat, studentLon, busLat, busLon);
         const distKm = (distM / 1000).toFixed(1);
 
         let accWarning = '';
-        if (studentAccuracyGlobal !== null && studentAccuracyGlobal !== undefined) {
+        if (studentAccuracyGlobal != null) {
           if (studentAccuracyGlobal > 1000) {
-            accWarning = ` ⚠️ GPS accuracy poor (±${(studentAccuracyGlobal/1000).toFixed(1)}km)`;
+            accWarning = ` ⚠️ GPS accuracy poor (±${(studentAccuracyGlobal / 1000).toFixed(1)}km)`;
           } else if (studentAccuracyGlobal > 50) {
             accWarning = ` (±${Math.round(studentAccuracyGlobal)}m)`;
           }
@@ -310,7 +316,6 @@ window.RoadETA = (function () {
         } else if (smoothedSpeed < 1) {
           studentDistEl.textContent = `${distKm} km away${accWarning} · Bus is currently stopped`;
         } else {
-          // ETA for bus to reach student position
           const etaMins = Math.max(1, Math.round((distM / (Math.max(smoothedSpeed, 5) / 3.6)) / 60));
           studentDistEl.textContent = `${distKm} km away${accWarning} · ETA ~${etaMins} min for bus to reach you`;
         }
@@ -326,11 +331,14 @@ window.RoadETA = (function () {
   // =========================================================================
   return {
     init: loadDestination,
-    update: updateDisplay,
+    update: updateDisplay,         // still called on every GPS update for speed/status/proximity
+    applySharedETA,                // called by Realtime ETA listener
+    applyFallback,                 // called when Realtime ETA is stale
     loadDestination,
     haversineDist,
     getNearBusStatus,
-    getBusStatus: () => lastBusStatus
+    getBusStatus: () => lastBusStatus,
+    getLastSharedETA: () => lastSharedETA,
   };
 
 })();

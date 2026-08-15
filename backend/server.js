@@ -9,6 +9,13 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { OAuth2Client } = require('google-auth-library');
 
+// ============================================================================
+// ETA OPTIMIZATION MODULES
+// ============================================================================
+const ViewerService    = require('./src/presence/ViewerService');
+const ETAPollerManager = require('./src/eta/ETAPollerManager');
+const ETACache         = require('./src/eta/ETACache');
+
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || '47792284104-7dncvdit6ilh47snjfm8anekv3jvavko.apps.googleusercontent.com');
 
 const app = express();
@@ -17,6 +24,24 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
+// Initialize ETA optimization subsystems
+ETAPollerManager.init(supabase);
+ETACache.init(supabase);
+ViewerService.startCleanupInterval();
+
+// Load current destination into ETAPollerManager memory on startup (non-blocking)
+(async () => {
+  try {
+    const { data } = await supabase.from('destinations').select('*').eq('id', 1).single();
+    if (data) {
+      ETAPollerManager.setDestination(data);
+      console.log('[Startup] Destination loaded:', data.name);
+    }
+  } catch (e) {
+    console.warn('[Startup] Could not load destination:', e.message);
+  }
+})();
 
 // 1. JWT Secret Security Enforcement
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -1379,6 +1404,9 @@ app.post('/api/admin/destination', requireRole(['admin']), async (req, res) => {
 
     // Invalidate routing cache for all buses when destination changes
     routeCache.clear();
+    // Also invalidate the shared ETA cache and update in-memory destination
+    await ETACache.invalidateAll();
+    ETAPollerManager.setDestination(data);
 
     res.json({ success: true, destination: data });
   } catch (err) {
@@ -1411,7 +1439,8 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
 }
 
 // GET road route info: distance + duration from bus to destination
-// Called by student console; proxied to ORS; API key never exposed to browser
+// INTERNAL USE ONLY — called by ETAPollerManager, NOT by student browsers.
+// Students receive ETA via Supabase Realtime broadcast or GET /api/buses/:busId/eta.
 app.get('/api/route/eta', async (req, res) => {
   try {
     const { fromLat, fromLon, toLat, toLon, busId } = req.query;
@@ -1516,6 +1545,140 @@ app.get('/api/route/eta', async (req, res) => {
       source: 'haversine_fallback',
       cached: false
     });
+  }
+});
+
+// ============================================================================
+// SHARED ETA VIEWER ENDPOINTS
+// Students register as viewers, get heartbeat, and receive ETA via Realtime.
+// This is the NEW architecture — replaces per-student /api/route/eta calls.
+// ============================================================================
+
+// POST /api/buses/:busId/view — Register as an active viewer of a bus
+// Returns sessionId the client must use for heartbeat and unregister calls.
+app.post('/api/buses/:busId/view', verifyRole, (req, res) => {
+  try {
+    const busId = decodeURIComponent(req.params.busId);
+    const studentId = req.user.user_id || req.user.email || 'anonymous';
+
+    if (!busId || busId.length > 50) {
+      return res.status(400).json({ error: 'Invalid busId' });
+    }
+
+    const sessionId = ViewerService.registerViewer(busId, studentId);
+    res.json({ success: true, sessionId, busId });
+  } catch (err) {
+    console.error('[view-register] Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/buses/:busId/view — Unregister viewer (best-effort, TTL handles the rest)
+app.delete('/api/buses/:busId/view', verifyRole, (req, res) => {
+  try {
+    const busId = decodeURIComponent(req.params.busId);
+    const { sessionId } = req.body;
+    if (sessionId) ViewerService.unregisterViewer(busId, sessionId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/buses/:busId/heartbeat — Refresh viewer TTL (called every 20s by client)
+app.post('/api/buses/:busId/heartbeat', verifyRole, (req, res) => {
+  try {
+    const busId = decodeURIComponent(req.params.busId);
+    const { sessionId } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId required' });
+    }
+
+    const valid = ViewerService.heartbeat(busId, sessionId);
+    if (!valid) {
+      // Session expired — client should re-register
+      return res.status(410).json({ error: 'Session expired', reregister: true });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/buses/:busId/eta — Get current shared ETA (instant, from cache)
+// Students call this ONCE on page load to get the last computed ETA immediately.
+// Subsequent updates arrive via Supabase Realtime (no polling).
+app.get('/api/buses/:busId/eta', verifyRole, async (req, res) => {
+  try {
+    const busId = decodeURIComponent(req.params.busId);
+
+    // Try fresh cache first
+    let cached = await ETACache.get(busId);
+    let status = 'FRESH';
+
+    if (!cached) {
+      // Try stale cache as fallback
+      cached = await ETACache.getStale(busId);
+      status = cached ? 'STALE' : 'UNAVAILABLE';
+    }
+
+    if (!cached) {
+      return res.json({
+        success: true,
+        status: 'UNAVAILABLE',
+        eta_minutes: null,
+        viewer_count: ViewerService.getViewerCount(busId)
+      });
+    }
+
+    res.json({
+      success: true,
+      status,
+      bus_id: busId,
+      eta_seconds: cached.eta_seconds,
+      eta_minutes: cached.eta_minutes,
+      distance_meters: cached.distance_meters,
+      provider: cached.provider,
+      calculated_at: cached.calculated_at,
+      viewer_count: ViewerService.getViewerCount(busId)
+    });
+  } catch (err) {
+    console.error('[bus-eta] Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/admin/eta-monitor — Admin monitoring of ETA optimization metrics
+app.get('/api/admin/eta-monitor', requireRole(['admin']), (req, res) => {
+  try {
+    const busData = ETAPollerManager.getMonitoringData();
+    const viewerCounts = ViewerService.getAllViewerCounts();
+
+    // Merge viewer counts in
+    for (const bus of busData) {
+      bus.viewer_count = viewerCounts[bus.bus_id] || bus.viewer_count;
+    }
+
+    const totalViewers    = busData.reduce((s, b) => s + b.viewer_count, 0);
+    const totalApiCalls   = busData.reduce((s, b) => s + b.api_call_count_session, 0);
+    const totalAvoided    = busData.reduce((s, b) => s + b.estimated_calls_avoided, 0);
+    const activeBuses     = busData.filter(b => b.poller_status === 'ACTIVE').length;
+
+    res.json({
+      success: true,
+      buses: busData,
+      totals: {
+        active_buses: activeBuses,
+        total_viewers: totalViewers,
+        total_api_calls_session: totalApiCalls,
+        total_calls_avoided: totalAvoided,
+        eta_poll_interval_ms: parseInt(process.env.ETA_POLL_INTERVAL_MS || '45000', 10),
+        viewer_ttl_ms: parseInt(process.env.VIEWER_TTL_MS || '60000', 10),
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
