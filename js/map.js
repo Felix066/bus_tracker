@@ -107,15 +107,6 @@ function initMap(tripType) {
   showCachedLocationIfAvailable();
   prewarmTileCache(map);
 
-  // Auto-disable Follow Bus mode if user manually drags map
-  map.on('dragstart', function() {
-    if (window.isFollowBusEnabled) {
-      if (typeof window.toggleFollowBusMode === 'function') {
-        window.toggleFollowBusMode(); // Toggle it off
-      }
-    }
-  });
-
   return map;
 }
 
