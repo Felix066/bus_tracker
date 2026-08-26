@@ -173,6 +173,38 @@ body {
   font-style: normal;
 }
 
+/* GPS Error state on location display card */
+.stat-value.gps-error {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ef4444;
+  animation: gpsErrorPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes gpsErrorPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+/* Screen-off warning banner */
+.screen-off-warning {
+  display: none;
+  margin: 0 28px 0;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.12), rgba(234, 179, 8, 0.06));
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #92400e;
+  align-items: center;
+  gap: 10px;
+}
+
+.screen-off-warning.visible {
+  display: flex;
+}
+
 /* MAP CONTAINER */
 .map-wrapper {
   margin: 24px 28px;

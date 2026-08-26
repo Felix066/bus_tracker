@@ -112,6 +112,10 @@ async function startTrip() {
     btn.textContent = 'End Trip';
     btn.style.background = '#DC2626';
     btn.onclick = endTrip;
+
+    // Show the screen-off warning banner
+    const screenWarn = document.getElementById('screen-off-warning');
+    if (screenWarn) screenWarn.classList.add('visible');
 }
 
 // UPDATE 4 — Safe Speed Calculation
@@ -263,15 +267,49 @@ function startDriverGPS(tripId, busId, tripType) {
         driverKalman = new window.KalmanFilter();
     }
 
-    // Aggressively grab ANY cached location instantly to prevent the 30-second blank map
-    navigator.geolocation.getCurrentPosition((pos) => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        if (typeof cacheCurrentLocation === 'function') {
-            cacheCurrentLocation(lat, lon, pos.coords.accuracy);
+    // FIX: Request a fresh GPS fix (maximumAge: 0) and give it 15 seconds to acquire.
+    // On mobile, initial high-accuracy GPS lock can take 10-15s; the old 5s timeout caused silent failures.
+    const forceFetchGPS = () => {
+        const locationDisplay = document.getElementById('location-display');
+        navigator.geolocation.getCurrentPosition((pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            if (typeof cacheCurrentLocation === 'function') {
+                cacheCurrentLocation(lat, lon, pos.coords.accuracy);
+            }
+            updateBusMarker(lat, lon, busLabel);
+            // Clear any GPS error state on the UI
+            if (locationDisplay) locationDisplay.classList.remove('gps-error');
+            
+            // If this is the first successful fetch or a recovery, process it immediately
+            if (!lastTime || (Date.now() - lastTime > 15000)) {
+                processNewDriverLocation(tripId, busId, lat, lon);
+                lastLat = lat;
+                lastLon = lon;
+                lastTime = Date.now();
+            }
+        }, (err) => {
+            // FIX: Show visible error on the UI instead of silently swallowing it
+            console.warn("GPS Force Fetch Error:", err.code, err.message);
+            if (locationDisplay) {
+                locationDisplay.textContent = 'GPS Error — Retrying...';
+                locationDisplay.classList.add('gps-error');
+            }
+        }, { maximumAge: 0, timeout: 15000, enableHighAccuracy: true });
+    };
+
+    forceFetchGPS();
+    
+    // GPS Auto-Retry Mechanism for initial failures & network drops
+    if (window.gpsRetryInterval) clearInterval(window.gpsRetryInterval);
+    window.gpsRetryInterval = setInterval(() => {
+        const now = Date.now();
+        // If we haven't received a location yet, or it's been > 15s since the last ping
+        if (!lastTime || (now - lastTime) > 15000) {
+            console.log("No recent GPS update, forcing fetch...");
+            forceFetchGPS();
         }
-        updateBusMarker(lat, lon, busLabel);
-    }, () => {}, { maximumAge: Infinity, timeout: 3000 });
+    }, 10000); // Check every 10 seconds
 
     watchId = navigator.geolocation.watchPosition(async (pos) => {
         const now = Date.now();
@@ -437,13 +475,20 @@ async function endTrip() {
     btn.disabled = true;
     btn.textContent = 'Ending...';
 
+    // FIX: Use AbortController so the request cannot hang indefinitely.
+    // If the backend takes more than 10 seconds to respond, we abort and let the driver retry.
+    const controller = new AbortController();
+    const endTripTimeout = setTimeout(() => controller.abort(), 10000);
+
     const token = JSON.parse(localStorage.getItem('driverSession'))?.token;
     try {
         const res = await fetch(`${BACKEND_URL}/api/trip/end`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ trip_id: tripId })
+            body: JSON.stringify({ trip_id: tripId }),
+            signal: controller.signal
         });
+        clearTimeout(endTripTimeout);
         
         if (!res.ok) {
             const errData = await res.json();
@@ -454,8 +499,14 @@ async function endTrip() {
             return;
         }
     } catch (err) {
-        console.error("Network error ending trip:", err);
-        alert("Failed to end trip due to network error.");
+        clearTimeout(endTripTimeout);
+        if (err.name === 'AbortError') {
+            console.error("End trip request timed out after 10 seconds.");
+            alert("Request timed out. The server took too long to respond. Please try again.");
+        } else {
+            console.error("Network error ending trip:", err);
+            alert("Failed to end trip due to network error.");
+        }
         btn.textContent = 'End Trip';
         btn.disabled = false;
         return;
@@ -466,6 +517,11 @@ async function endTrip() {
         watchId = null;
     }
     
+    if (window.gpsRetryInterval) {
+        clearInterval(window.gpsRetryInterval);
+        window.gpsRetryInterval = null;
+    }
+
     stopTripTimer();
 
     localStorage.removeItem('activeTripId');
@@ -475,8 +531,12 @@ async function endTrip() {
 
     releaseWakeLock(); // Release wake lock
 
+    // Hide the screen-off warning banner
+    const screenWarn = document.getElementById('screen-off-warning');
+    if (screenWarn) screenWarn.classList.remove('visible');
+
     // Auto-clear chat for this bus when the trip ends
-    const endedBusId = localStorage.getItem('activeBusId') || activeBusId || null;
+    const endedBusId = localStorage.getItem('activeBusId');
     if (endedBusId && typeof clearChatOnTripEnd === 'function') {
         await clearChatOnTripEnd(endedBusId).catch(() => {});
     }
@@ -534,6 +594,10 @@ async function recoverActiveTrip() {
         btn.style.background = '#DC2626';
         btn.onclick      = endTrip;
     }
+
+    // Show the screen-off warning banner on recovery too
+    const screenWarn = document.getElementById('screen-off-warning');
+    if (screenWarn) screenWarn.classList.add('visible');
 
     const nextStopDisplay = document.getElementById('next-stop-display');
     if (nextStopDisplay) {
