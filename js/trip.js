@@ -267,35 +267,64 @@ function startDriverGPS(tripId, busId, tripType) {
         driverKalman = new window.KalmanFilter();
     }
 
-    // FIX: Request a fresh GPS fix (maximumAge: 0) and give it 15 seconds to acquire.
-    // On mobile, initial high-accuracy GPS lock can take 10-15s; the old 5s timeout caused silent failures.
+    // Resilient GPS Fetch with High-Accuracy -> Standard Fallback
     const forceFetchGPS = () => {
         const locationDisplay = document.getElementById('location-display');
-        navigator.geolocation.getCurrentPosition((pos) => {
+        
+        const onGpsSuccess = (pos) => {
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
             if (typeof cacheCurrentLocation === 'function') {
                 cacheCurrentLocation(lat, lon, pos.coords.accuracy);
             }
             updateBusMarker(lat, lon, busLabel);
-            // Clear any GPS error state on the UI
-            if (locationDisplay) locationDisplay.classList.remove('gps-error');
             
-            // If this is the first successful fetch or a recovery, process it immediately
+            // Clear any error states immediately
+            if (locationDisplay) {
+                locationDisplay.classList.remove('gps-error', 'searching');
+                if (locationDisplay.textContent.includes('Error') || locationDisplay.textContent.includes('Searching')) {
+                    locationDisplay.textContent = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
+                }
+            }
+            
             if (!lastTime || (Date.now() - lastTime > 15000)) {
                 processNewDriverLocation(tripId, busId, lat, lon);
                 lastLat = lat;
                 lastLon = lon;
                 lastTime = Date.now();
             }
-        }, (err) => {
-            // FIX: Show visible error on the UI instead of silently swallowing it
-            console.warn("GPS Force Fetch Error:", err.code, err.message);
-            if (locationDisplay) {
-                locationDisplay.textContent = 'GPS Error — Retrying...';
-                locationDisplay.classList.add('gps-error');
+        };
+
+        const onGpsError = (err) => {
+            console.warn("High-accuracy GPS failed, trying fallback...", err.code, err.message);
+            
+            if (err.code === 1) { // PERMISSION_DENIED
+                if (locationDisplay) {
+                    locationDisplay.textContent = 'Location Permission Denied';
+                    locationDisplay.classList.add('gps-error');
+                }
+                return;
             }
-        }, { maximumAge: 0, timeout: 15000, enableHighAccuracy: true });
+
+            // Fallback: Try standard accuracy (cellular/WiFi/IP) if GPS hardware times out
+            navigator.geolocation.getCurrentPosition(
+                onGpsSuccess,
+                (fallbackErr) => {
+                    console.warn("GPS Fallback Error:", fallbackErr.code, fallbackErr.message);
+                    if (locationDisplay) {
+                        locationDisplay.textContent = 'Weak GPS — Retrying...';
+                        locationDisplay.classList.add('gps-error');
+                    }
+                },
+                { maximumAge: 30000, timeout: 10000, enableHighAccuracy: false }
+            );
+        };
+
+        navigator.geolocation.getCurrentPosition(
+            onGpsSuccess,
+            onGpsError,
+            { maximumAge: 0, timeout: 10000, enableHighAccuracy: true }
+        );
     };
 
     forceFetchGPS();
@@ -317,6 +346,12 @@ function startDriverGPS(tripId, busId, tripType) {
         let lat = pos.coords.latitude;
         let lon = pos.coords.longitude;
         const accuracy = pos.coords.accuracy;
+
+        // Immediately clear error indicators on live GPS ping
+        const locationDisplay = document.getElementById('location-display');
+        if (locationDisplay) {
+            locationDisplay.classList.remove('gps-error', 'searching');
+        }
 
         // ==========================================
         // GPS SPIKE FILTERING (100m+ Jump Protection)
@@ -369,7 +404,6 @@ function startDriverGPS(tripId, busId, tripType) {
         const speedDisplay = document.getElementById('speed-display');
         if (speedDisplay) speedDisplay.textContent = lastSpeedKmh + ' km/h';
 
-        const locationDisplay = document.getElementById('location-display');
         if (locationDisplay) {
             let shouldGeocode = (now - lastReverseGeocodeTime > 25000);
             if (!shouldGeocode && lastReverseGeocodeLat !== null) {
@@ -379,10 +413,17 @@ function startDriverGPS(tripId, busId, tripType) {
 
             if (shouldGeocode || lastReverseGeocodeLat === null) {
                 geocodeIfNeeded(lat, lon).then(name => {
-                    locationDisplay.textContent = name;
+                    if (locationDisplay) {
+                        locationDisplay.textContent = name;
+                        locationDisplay.classList.remove('gps-error', 'searching');
+                    }
                     lastReverseGeocodeTime = now;
                     lastReverseGeocodeLat  = lat;
                     lastReverseGeocodeLon  = lon;
+                }).catch(() => {
+                    if (locationDisplay) {
+                        locationDisplay.textContent = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
+                    }
                 });
             }
         }
@@ -394,7 +435,12 @@ function startDriverGPS(tripId, busId, tripType) {
 
     }, (err) => {
         console.error("GPS Watch Error:", err);
-    }, { enableHighAccuracy: true, maximumAge: 60000, timeout: 15000 });
+        const locationDisplay = document.getElementById('location-display');
+        if (locationDisplay && !lastLat) {
+            locationDisplay.textContent = err.code === 1 ? 'Location Permission Denied' : 'GPS Signal Lost';
+            locationDisplay.classList.add('gps-error');
+        }
+    }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
 }
 
 function advanceStopIndex(newIndex, tripId) {
