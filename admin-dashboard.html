@@ -1078,6 +1078,10 @@
       .main-container {
         grid-template-columns: 1fr;
       }
+      /* Fix specificity bug so fleet list & activity logs stack instead of squishing side-by-side */
+      #tab-fleet.active {
+        grid-template-columns: 1fr;
+      }
       .content-right {
         margin-bottom: 30px;
       }
@@ -1108,15 +1112,36 @@
         font-size: 24px;
       }
       .tabs-nav {
-        flex-wrap: wrap;
-        gap: 8px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 4px;
+        scrollbar-width: none;
+      }
+      .tabs-nav::-webkit-scrollbar {
+        display: none;
       }
       .tab-btn {
-        flex: 1 1 calc(50% - 8px);
+        flex: 1 1 0;
+        min-width: 100px;
         justify-content: center;
         text-align: center;
-        padding: 10px;
+        padding: 12px 6px;
         font-size: 13px;
+        white-space: nowrap;
+      }
+      /* Prevent inline edit inputs from overflowing card on mobile */
+      .inline-input {
+        width: 100% !important;
+        max-width: 120px !important;
+        padding: 8px 10px !important;
+        font-size: 13px !important;
+        height: auto !important;
+      }
+      .btn-inline-save {
+        padding: 8px 12px !important;
+        font-size: 12px !important;
+        margin-left: 6px !important;
       }
       .header-actions {
         width: 100%;
