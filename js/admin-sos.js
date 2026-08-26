@@ -169,20 +169,6 @@ async function loadSOSAlerts() {
         }
       });
 
-      // Send button
-      const input = card.querySelector('.chat-text-input');
-      const sendBtn = card.querySelector('.chat-send-btn');
-
-      const doSend = async () => {
-        const text = input.value.trim();
-        if (!text) return;
-        input.value = '';
-        await sendChatToDriver(card, alert.bus_id, text);
-      };
-
-      sendBtn.addEventListener('click', doSend);
-      input.addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
-
       container.appendChild(card);
     });
 
