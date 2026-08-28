@@ -87,7 +87,13 @@ window._actualHandleGoogleSignIn = async function(response) {
 }
 
 async function logout() {
-  await supabase.auth.signOut();
+  try {
+    if (window.supabase) {
+      await supabase.auth.signOut();
+    }
+  } catch (e) {
+    console.warn("Supabase signout failed", e);
+  }
   
   const session = JSON.parse(localStorage.getItem('userSession'));
   

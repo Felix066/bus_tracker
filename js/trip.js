@@ -311,7 +311,7 @@ function startDriverGPS(tripId, busId, tripType) {
                 onGpsSuccess,
                 (fallbackErr) => {
                     console.warn("GPS Fallback Error:", fallbackErr.code, fallbackErr.message);
-                    if (locationDisplay) {
+                    if (locationDisplay && !lastLat) {
                         locationDisplay.textContent = 'Weak GPS — Retrying...';
                         locationDisplay.classList.add('gps-error');
                     }

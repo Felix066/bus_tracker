@@ -1219,6 +1219,8 @@
       }
     }
   </style>
+  <script src="js/session-protection.js"></script>
+  <script>protectRoute('admin');</script>
 </head>
 <body>
 
@@ -1236,10 +1238,7 @@
         <i class="fas fa-bell"></i>
         <div id="sos-badge">0</div>
       </a>
-      <div class="user-profile">
-        <div class="avatar"><i class="fas fa-user-shield"></i></div>
-        <span class="user-greeting" id="adminGreeting">Admin</span>
-      </div>
+
       <button class="logout-btn" onclick="logoutAdmin()">
         <i class="fas fa-sign-out-alt"></i> Logout
       </button>

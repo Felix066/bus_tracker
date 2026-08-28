@@ -46,14 +46,14 @@
         </div>
       </div>
 
-      <div class="login-panel-right" style="position: relative;">
-        <div style="position: absolute; top: 30px; right: 40px;">
-          <a href="index.html" style="text-decoration: none; font-size: 13px; font-weight: 600; color: #4B5563; border: 1.5px solid #E5E7EB; padding: 8px 16px; border-radius: 20px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;" onmouseover="this.style.borderColor='#4B5563'; this.style.color='#111827';" onmouseout="this.style.borderColor='#E5E7EB'; this.style.color='#4B5563';">
+      <div class="login-panel-right">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;">
+          <span style="font-size: 12px; font-weight: 800; background: linear-gradient(135deg, var(--accent-blue-light), var(--accent-blue-dark)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; letter-spacing: 1.5px; display: inline-block; margin-top: 8px;">Driver / Admin Portal</span>
+          <a href="index.html" style="text-decoration: none; font-size: 13px; font-weight: 600; color: #4B5563; border: 1.5px solid #E5E7EB; padding: 6px 12px; border-radius: 20px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px;" onmouseover="this.style.borderColor='#4B5563'; this.style.color='#111827';" onmouseout="this.style.borderColor='#E5E7EB'; this.style.color='#4B5563';">
             ← Student Portal
           </a>
         </div>
-        <span style="font-size: 12px; font-weight: 800; background: linear-gradient(135deg, var(--accent-blue-light), var(--accent-blue-dark)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: inline-block;">Driver / Admin Portal</span>
-        <h2 style="font-size: 42px; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px;">Welcome back</h2>
+        <h2 style="font-size: 42px; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; margin-top: 0;">Welcome back</h2>
         <p style="color: #6B7280; font-size: 16px; margin-bottom: 40px;">Sign in with your credentials to begin your shift or manage fleet.</p>
 
         <div id="error-banner" class="error-banner hidden"></div>
@@ -75,13 +75,22 @@
             </div>
           </div>
 
-
+          <div style="margin-bottom: 24px; display: flex; align-items: flex-start; gap: 8px;">
+            <input type="checkbox" id="privacy-consent" required style="margin-top: 4px; accent-color: var(--accent-blue-dark);">
+            <label for="privacy-consent" style="font-size: 13px; color: #4B5563; font-weight: 500; line-height: 1.4; text-transform: none; margin: 0;">
+              I agree to the <a href="privacy-policy.html" target="_blank" style="color: var(--accent-blue-dark); text-decoration: underline;">Privacy Policy & Data Security Terms</a>.
+            </label>
+          </div>
 
           <button type="submit" class="btn-primary br-14">Sign In <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 4px;"></i></button>
         </form>
 
         <div class="bottom-link">
           Are you a student? <a href="index.html">Sign in here →</a>
+        </div>
+        
+        <div style="text-align: center; margin-top: 16px;">
+          <a href="#" onclick="openPermissionsModal(event)" style="font-size: 13px; color: #9CA3AF; text-decoration: underline; transition: color 0.2s;" onmouseover="this.style.color='#4B5563'" onmouseout="this.style.color='#9CA3AF'">Permissions & Data Management</a>
         </div>
       </div>
     </div>
@@ -162,5 +171,73 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+  <!-- Permissions & Management Modal -->
+  <div id="permissions-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; border-radius: 20px; width: 100%; max-width: 440px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); animation: modal-slide-up 0.3s ease-out;">
+      <div style="padding: 24px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #111827; display: flex; align-items: center; gap: 8px;">
+          <i class="fas fa-shield-alt" style="color: var(--accent-blue-dark);"></i>
+          Permissions & Data Management
+        </h3>
+        <button onclick="closePermissionsModal()" style="background: none; border: none; font-size: 18px; color: #6B7280; cursor: pointer; padding: 4px; transition: color 0.2s;" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#6B7280'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div style="padding: 24px; max-height: 60vh; overflow-y: auto;">
+        <p style="font-size: 14px; color: #4B5563; margin-bottom: 20px; line-height: 1.5;">
+          BusTrack requires certain permissions to provide core features like live bus tracking and SOS alerts. We value your privacy and are completely transparent about how your data is used.
+        </p>
+        
+        <div style="display: flex; gap: 16px; margin-bottom: 20px; background: #F3F4F6; padding: 16px; border-radius: 12px;">
+          <div style="width: 40px; height: 40px; border-radius: 10px; background: #E0E7FF; color: #4F46E5; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+            <i class="fas fa-map-marker-alt"></i>
+          </div>
+          <div>
+            <h4 style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #1F2937;">Location Access (Background)</h4>
+            <p style="margin: 0; font-size: 13px; color: #4B5563; line-height: 1.5;">
+              <strong>Prominent Disclosure:</strong> BusTrack collects location data to enable real-time tracking of the bus, provide ETAs to students, and update the live map <strong>even when the app is closed or not in use</strong> during an active trip.
+            </p>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 16px; background: #F3F4F6; padding: 16px; border-radius: 12px;">
+          <div style="width: 40px; height: 40px; border-radius: 10px; background: #FCE7F3; color: #DB2777; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+            <i class="fas fa-database"></i>
+          </div>
+          <div>
+            <h4 style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #1F2937;">Data Management</h4>
+            <p style="margin: 0; font-size: 13px; color: #4B5563; line-height: 1.5;">
+              Location data is securely transmitted over HTTPS and is only used temporarily to display the bus on the map. Data is not sold to third parties. You can manage your permissions in your device settings.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div style="padding: 16px 24px; background: #F9FAFB; border-top: 1px solid #E5E7EB; text-align: right;">
+        <button onclick="closePermissionsModal()" style="background: var(--accent-blue-dark); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer;">
+          I Understand
+        </button>
+      </div>
+    </div>
+  </div>
+  <style>
+    @keyframes modal-slide-up {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+  <script>
+    function openPermissionsModal(e) {
+      if(e) e.preventDefault();
+      const modal = document.getElementById('permissions-modal');
+      modal.style.display = 'flex';
+      // lock body scroll
+      document.body.style.overflow = 'hidden';
+    }
+    function closePermissionsModal() {
+      const modal = document.getElementById('permissions-modal');
+      modal.style.display = 'none';
+      document.body.style.overflow = 'auto';
+    }
+  </script>
 </body>
 </html>

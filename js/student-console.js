@@ -558,6 +558,28 @@ function processNewLocation(lat, lon, speedKmh) {
         updateBusMarker(lat, lon, busLabel);
     }
 
+    // Proximity Background Notification
+    if (studentLatGlobal && studentLonGlobal) {
+        const distMeters = haversineDistance(lat, lon, studentLatGlobal, studentLonGlobal);
+        if (distMeters < 1000 && !window.hasNotifiedNear) {
+            window.hasNotifiedNear = true;
+            if (window.Capacitor && window.Capacitor.Plugins.LocalNotifications) {
+                window.Capacitor.Plugins.LocalNotifications.requestPermissions().then(() => {
+                    window.Capacitor.Plugins.LocalNotifications.schedule({
+                        notifications: [{
+                            title: "Bus is Approaching!",
+                            body: "Your bus is within 1 km.",
+                            id: 1,
+                            schedule: { at: new Date(Date.now() + 1000) }
+                        }]
+                    });
+                });
+            } else if (window.Notification && Notification.permission === "granted") {
+                new Notification("Bus is Approaching!", { body: "Your bus is within 1 km." });
+            }
+        }
+    }
+
     // D. Road-Based ETA: update speed, status, proximity display
     // ETA minutes are NOT computed here — they arrive via Supabase Realtime broadcast.
     // applySharedETA() is called by the Realtime listener in subscribeToETAChannel().

@@ -15,22 +15,23 @@ window.AIEta = (function () {
   const MIN_SPEED_KMPH = 5;            // below this, bus is considered stopped
 
   // =========================================================================
-  // KALMAN FILTER — Smooth out GPS noise & jerky speed readings
+  // KALMAN FILTER — Smooth out GPS noise & jerky speed readings (Per Bus)
   // =========================================================================
-  const kalman = {
-    q: 0.01,   // process noise
-    r: 1.0,    // measurement noise
-    p: 1.0,    // estimation error
-    x: null,   // current estimate
-    update(measurement) {
-      if (this.x === null) { this.x = measurement; return measurement; }
-      this.p = this.p + this.q;
-      const K = this.p / (this.p + this.r);
-      this.x = this.x + K * (measurement - this.x);
-      this.p = (1 - K) * this.p;
-      return this.x;
+  const kalmanStates = {};
+  
+  function getKalmanFilteredSpeed(busId, measurement) {
+    if (!busId) busId = 'default';
+    if (!kalmanStates[busId]) {
+      kalmanStates[busId] = { q: 0.01, r: 1.0, p: 1.0, x: measurement };
+      return measurement;
     }
-  };
+    const state = kalmanStates[busId];
+    state.p = state.p + state.q;
+    const K = state.p / (state.p + state.r);
+    state.x = state.x + K * (measurement - state.x);
+    state.p = (1 - K) * state.p;
+    return state.x;
+  }
 
   // =========================================================================
   // TIME-OF-DAY TRAFFIC SCALING
@@ -73,18 +74,21 @@ window.AIEta = (function () {
   // CORE AI PREDICTION FUNCTION
   // Returns: { etaMinutes, distanceM, status, label }
   // =========================================================================
-  function predict(busLat, busLon, targetLat, targetLon, rawSpeedKmph) {
+  function predict(busLat, busLon, targetLat, targetLon, rawSpeedKmph, busId = 'default') {
     if (!busLat || !busLon || !targetLat || !targetLon) return null;
 
-    const distanceM = haversineDist(busLat, busLon, targetLat, targetLon);
+    // Apply a road tortuosity factor to convert straight-line haversine to realistic road distance
+    const ROAD_FACTOR = 1.35;
+    const rawDistanceM = haversineDist(busLat, busLon, targetLat, targetLon);
+    const distanceM = rawDistanceM * ROAD_FACTOR;
 
-    // Check proximity states first
-    if (distanceM <= INSIDE_BUS_THRESHOLD_M) {
-      return { etaMinutes: 0, distanceM, status: 'inside_bus', label: '✅ Status: Inside Bus' };
+    // Check proximity states first (using raw straight-line distance for accuracy)
+    if (rawDistanceM <= INSIDE_BUS_THRESHOLD_M) {
+      return { etaMinutes: 0, distanceM: rawDistanceM, status: 'inside_bus', label: '✅ Status: Inside Bus' };
     }
 
-    // Apply Kalman filter to speed
-    const smoothedSpeedKmph = kalman.update(rawSpeedKmph || MIN_SPEED_KMPH);
+    // Apply Kalman filter to speed per bus
+    const smoothedSpeedKmph = getKalmanFilteredSpeed(busId, rawSpeedKmph || MIN_SPEED_KMPH);
     const effectiveSpeedKmph = Math.max(smoothedSpeedKmph, MIN_SPEED_KMPH);
 
     // Apply AI traffic factor
@@ -99,7 +103,11 @@ window.AIEta = (function () {
 
     // ETA in seconds → minutes
     const etaSeconds = distanceM / adjustedSpeedMs;
-    const etaMinutes = Math.round(etaSeconds / 60);
+    let etaMinutes = Math.round(etaSeconds / 60);
+
+    // Add +1 minute penalty for every 1.5km to account for bus stops and traffic lights
+    const stopPenaltyMins = Math.floor(distanceM / 1500);
+    etaMinutes += stopPenaltyMins;
 
     let label;
     if (etaMinutes < 1) {
@@ -115,7 +123,7 @@ window.AIEta = (function () {
   // =========================================================================
   // UPDATE UI — Renders prediction to target DOM element
   // =========================================================================
-  function updateETADisplay(busLat, busLon, rawSpeedKmph, studentLat, studentLon) {
+  function updateETADisplay(busLat, busLon, rawSpeedKmph, studentLat, studentLon, busId = 'default') {
     const etaEl = document.getElementById('eta-student');
     const etaSubEl = document.getElementById('eta-student-sub');
     const etaCollegeEl = document.getElementById('eta-college');
@@ -124,7 +132,7 @@ window.AIEta = (function () {
     // Student ETA
     if (etaEl) {
       if (studentLat && studentLon) {
-        const result = predict(busLat, busLon, studentLat, studentLon, rawSpeedKmph);
+        const result = predict(busLat, busLon, studentLat, studentLon, rawSpeedKmph, busId);
         if (result) {
           if (result.status === 'inside_bus') {
             etaEl.textContent = 'On Board';
@@ -151,7 +159,7 @@ window.AIEta = (function () {
         etaCollegeEl.style.color = '#10b981';
         if (etaCollegeSubEl) etaCollegeSubEl.innerHTML = '<i class="fas fa-graduation-cap" style="color:#10b981;"></i> Bus has arrived at Campus';
       } else {
-        const result = predict(busLat, busLon, COLLEGE_LAT, COLLEGE_LON, rawSpeedKmph);
+        const result = predict(busLat, busLon, COLLEGE_LAT, COLLEGE_LON, rawSpeedKmph, busId);
         if (result) {
           etaCollegeEl.textContent = result.etaMinutes < 1 ? '< 1 min' : `~${result.etaMinutes} mins`;
           etaCollegeEl.style.color = '#059669';

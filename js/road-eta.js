@@ -253,7 +253,7 @@ window.RoadETA = (function () {
     // ── Update Speed Cards ───────────────────────────────────────────────
     const speedEl    = document.getElementById('road-speed-display');
     const avgSpeedEl = document.getElementById('road-avg-speed');
-    if (speedEl) speedEl.textContent = `${Math.round(smoothedSpeed)} km/h`;
+    if (speedEl) speedEl.textContent = `${Math.round(speedKmh !== null ? speedKmh : 0)} km/h`;
     if (avgSpeedEl) avgSpeedEl.textContent = `${Math.round(avgSpeed)} km/h`;
 
     // ── Last GPS Update ──────────────────────────────────────────────────
