@@ -586,6 +586,11 @@ app.post('/api/auth/google', async (req, res) => {
       .limit(1)
       .maybeSingle();
 
+    if (studentError) {
+      console.error('[auth-google] Error checking students table:', studentError);
+      return res.status(500).json({ error: 'Database connection failed. Please try again later.' });
+    }
+
     if (studentData) {
       const token = jwt.sign(
         { user_id: studentData.id, email, role: 'student' },
@@ -602,6 +607,11 @@ app.post('/api/auth/google', async (req, res) => {
       .eq('email', email)
       .limit(1)
       .maybeSingle();
+
+    if (facultyError) {
+      console.error('[auth-google] Error checking faculty table:', facultyError);
+      return res.status(500).json({ error: 'Database connection failed. Please try again later.' });
+    }
 
     if (facultyData) {
       const token = jwt.sign(
