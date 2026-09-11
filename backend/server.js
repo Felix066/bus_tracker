@@ -453,7 +453,12 @@ app.post('/api/auth/login-admin', async (req, res) => {
       .eq('username', username)
       .single();
 
-    if (adminError || !adminData) {
+    if (adminError && adminError.code !== 'PGRST116') { // PGRST116 is no rows found
+      console.error('[login-admin] DB Error:', adminError);
+      return res.status(500).json({ error: 'Database connection failed. Please try again later.' });
+    }
+
+    if (!adminData) {
       return res.status(401).json({ error: 'Invalid admin credentials' });
     }
 
@@ -492,7 +497,12 @@ app.post('/api/auth/login-driver', async (req, res) => {
       .eq('username', username)
       .single();
 
-    if (driverError || !driverData) {
+    if (driverError && driverError.code !== 'PGRST116') {
+      console.error('[login-driver] DB Error:', driverError);
+      return res.status(500).json({ error: 'Database connection failed. Please try again later.' });
+    }
+
+    if (!driverData) {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
