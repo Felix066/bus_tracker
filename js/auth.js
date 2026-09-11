@@ -103,26 +103,42 @@ async function logout() {
     window.location.href = 'student-login.html';
   };
 
+  // Always guarantee logout within 2 seconds, even if Google revoke never fires
+  const logoutTimer = setTimeout(finishLogout, 2000);
+
+  const doRevoke = () => {
+    if (session && session.email && window.google && window.google.accounts) {
+      try {
+        google.accounts.id.revoke(session.email, () => {
+          clearTimeout(logoutTimer);
+          finishLogout();
+        });
+      } catch (e) {
+        clearTimeout(logoutTimer);
+        finishLogout();
+      }
+    } else {
+      clearTimeout(logoutTimer);
+      finishLogout();
+    }
+  };
+
   // Revoke Google consent to force the account chooser next time
   if (session && session.email) {
     if (window.google && window.google.accounts) {
-      google.accounts.id.revoke(session.email, () => {
-        finishLogout();
-      });
+      doRevoke();
     } else {
       // Load Google script dynamically if not present
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
-      script.onload = () => {
-        google.accounts.id.revoke(session.email, () => {
-          finishLogout();
-        });
-      };
-      script.onerror = finishLogout;
+      script.onload = doRevoke;
+      script.onerror = () => { clearTimeout(logoutTimer); finishLogout(); };
       document.head.appendChild(script);
     }
   } else {
+    clearTimeout(logoutTimer);
     finishLogout();
   }
 }
+
  
