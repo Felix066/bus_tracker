@@ -95,7 +95,12 @@ async function logout() {
     console.warn("Supabase signout failed", e);
   }
   
-  const session = JSON.parse(localStorage.getItem('userSession'));
+  let session = null;
+  try {
+    session = JSON.parse(localStorage.getItem('userSession'));
+  } catch(e) {
+    console.warn("Failed to parse session", e);
+  }
   
   const finishLogout = () => {
     localStorage.removeItem('userSession');
