@@ -18,8 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="BusTrack">
   </style>
-  <script src="js/session-protection.js"></script>
-  <script>protectRoute('driver');</script>
+  <!-- session-protection loaded below after supabase-client.js defines BACKEND_URL -->
 </head>
 <body>
 <div id="offline-indicator" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1A1A1A; color:white; padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; font-family:Inter,sans-serif; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.3); align-items:center; gap:8px;">
@@ -304,6 +303,7 @@
   <script src="js/sync.js?v=5"></script>
   <script src="js/driver-auth.js?v=5"></script>
   <script src="js/session-protection.js"></script>
+  <script>protectRoute('driver');</script>
   <script src="js/chat.js"></script>
 
   <script>
