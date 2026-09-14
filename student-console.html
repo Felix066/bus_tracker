@@ -122,10 +122,7 @@
       transform: scale(1.05);
     }
   </style>
-  <script src="js/supabase.min.js"></script>
-  <script src="js/supabase-client.js"></script>
-  <script src="js/session-protection.js"></script>
-  <script>protectRoute('student');</script>
+  <!-- supabase and session-protection are loaded in the body to ensure correct initialization order -->
 </head>
 <body>
 <div id="offline-indicator" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1A1A1A; color:white; padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; font-family:Inter,sans-serif; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.3); align-items:center; gap:8px;">
@@ -234,6 +231,7 @@
   </div>
 
   <script src="js/leaflet.js?v=12"></script>
+  <!-- supabase and session-protection are loaded in the body to ensure correct initialization order -->
   <script src="js/supabase.min.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/haversine.js"></script>
@@ -242,6 +240,7 @@
   <script src="js/location.js"></script>
   <script src="js/gps.js"></script>
   <script src="js/timer.js"></script>
+  <script src="js/auth.js?v=3"></script>
   <script src="js/session-protection.js"></script>
   <script src="js/road-eta.js"></script>
 

@@ -18,7 +18,7 @@ function _isTokenExpired(token) {
 async function protectRoute(requiredRole) {
   if (requiredRole === 'admin') {
     const session = JSON.parse(localStorage.getItem('adminSession'));
-    if (!session || session.role !== 'admin' || !session.token) {
+    if (!session || session.role !== 'admin' ||  !session.token) {
       window.location.href = 'driver-login.html';
       return;
     }
@@ -76,10 +76,14 @@ async function protectRoute(requiredRole) {
     const localSession = JSON.parse(localStorage.getItem('userSession'));
     if (localSession && (localSession.token || (localSession.id && localSession.id.startsWith('demo-student-')))) return;
 
-    const { data: { session } } = await supabase.auth.getSession();
+    // Guard: supabase may be null if the CDN failed to load
+    if (!window.supabase) {
+      window.location.href = 'student-login.html';
+      return;
+    }
+    const { data: { session } } = await window.supabase.auth.getSession();
     if (!session) {
       window.location.href = 'student-login.html';
     }
   }
 }
-

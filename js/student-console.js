@@ -283,6 +283,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function subscribeToLiveUpdates() {
+    if (!window.supabase) {
+        console.warn('[Realtime] Supabase not available — relying on 3s polling fallback.');
+        return;
+    }
     supabase.channel(`bus-${busId}-live`)
         .on('postgres_changes', {
             event: '*', // Listen to INSERT and UPDATE since we are using UPSERT
@@ -351,7 +355,7 @@ function subscribeToLiveUpdates() {
             }
             
             // 2. Fetch live location as fallback for Realtime
-            const locRes = await fetch(`${BACKEND_URL}/api/location/bus/${busId}`);
+            const locRes = await fetch(`${BACKEND_URL}/api/location/bus/${encodeURIComponent(busId)}`);
             if (locRes.ok) {
                 const locData = await locRes.json();
                 if (locData.success && locData.location) {

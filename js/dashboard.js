@@ -5,6 +5,13 @@ let driverSessions = [];
 
 let activeTripsData = [];
 
+// Normalize bus_id to strip the "Bus " prefix for comparison,
+// so both "1" and "Bus 1" are treated as the same bus.
+function normalizeBusId(id) {
+  if (!id) return '';
+  return String(id).replace(/^Bus\s*/i, '').trim();
+}
+
 async function loadStudentDashboard() {
   const container = document.getElementById('bus-grid');
   if (!container) return;
@@ -37,8 +44,9 @@ function renderBusCards() {
   }
 
   busesData.forEach(bus => {
-    const session = driverSessions.find(s => s.bus_id === bus.id);
-    const hasActiveTrip = activeTripsData.some(t => t.bus_id === bus.id);
+    const busNorm = normalizeBusId(bus.id);
+    const session = driverSessions.find(s => normalizeBusId(s.bus_id) === busNorm);
+    const hasActiveTrip = activeTripsData.some(t => normalizeBusId(t.bus_id) === busNorm);
     
     // Bus is only "Online" to the student if the driver is connected AND has an active trip running
     let isOnline = session && session.is_online && hasActiveTrip;
