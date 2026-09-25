@@ -121,6 +121,158 @@
     #follow-bus-button:hover {
       transform: scale(1.05);
     }
+
+    /* =====================================================================
+       STUDENT CONSOLE — MOBILE RESPONSIVE OVERRIDES
+       Only layout/sizing changes; no logic or content is altered.
+    ====================================================================== */
+    @media (max-width: 640px) {
+
+      /* --- NAVBAR: compact single-row layout on mobile --- */
+      .navbar {
+        padding: 0 12px;
+        height: 56px;
+        gap: 8px;
+        flex-wrap: nowrap;
+      }
+      /* Shrink the brand text so it doesn't overflow */
+      .brand {
+        margin-right: 0;
+        gap: 4px;
+        flex-shrink: 1;
+        min-width: 0;
+      }
+      .brand svg {
+        width: 26px !important;
+        height: 26px !important;
+        flex-shrink: 0;
+      }
+      .brand > span {
+        font-size: 13px !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      /* Hide "Student Console" subtitle tag on very small screens to save space */
+      .brand em {
+        display: none;
+      }
+      /* Back arrow — tighten */
+      .brand > span[style*="font-size:18px"] {
+        font-size: 16px !important;
+      }
+      /* Bus badge — slim pill */
+      .bus-badge {
+        font-size: 12px;
+        padding: 4px 10px;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      /* Logout button — icon only on mobile to save space */
+      .logout-btn {
+        padding: 8px 10px !important;
+        font-size: 13px !important;
+        margin-right: 0 !important;
+        border-radius: 8px !important;
+        flex-shrink: 0;
+      }
+      /* Hide logout button text, keep icon */
+      .logout-btn .fa-sign-out-alt ~ text,
+      .logout-btn > :not(i) {
+        display: none;
+      }
+
+      /* --- STAT CARDS: 2-column grid on mobile --- */
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+        padding: 12px 12px 0 !important;
+      }
+      /* "Current Position" spans full width so the address has room */
+      .stats-grid .stat-card:last-child {
+        grid-column: 1 / -1;
+      }
+      .stat-card {
+        padding: 14px 16px !important;
+        border-radius: 16px !important;
+      }
+      .stat-label {
+        font-size: 10px !important;
+        margin-bottom: 6px !important;
+      }
+      .stat-value {
+        font-size: 22px !important;
+      }
+      .stat-value.searching {
+        font-size: 13px !important;
+      }
+
+      /* --- ETA PANEL: tighten padding & reduce card text --- */
+      /* The ETA row div uses inline style padding:0 28px — override via adjacent selectors */
+      .stats-grid + div {
+        padding: 0 12px !important;
+        margin-top: 10px !important;
+        gap: 10px !important;
+      }
+      /* ETA card inner text sizes */
+      .stats-grid + div [style*="font-size:26px"] {
+        font-size: 20px !important;
+      }
+      .stats-grid + div [style*="font-size:20px"] {
+        font-size: 17px !important;
+      }
+      .stats-grid + div [style*="padding:18px 22px"] {
+        padding: 14px 16px !important;
+        border-radius: 14px !important;
+      }
+
+      /* --- TRIP STATUS BAR: tighter margins --- */
+      .trip-status-bar {
+        margin: 8px 12px 0 !important;
+        padding: 10px 14px !important;
+        font-size: 13px !important;
+        border-radius: 12px !important;
+      }
+
+      /* --- MAP: fills remaining vertical space nicely --- */
+      .map-wrapper {
+        margin: 10px 12px 12px !important;
+        border-radius: 16px !important;
+        height: calc(100svh - 56px - 220px) !important;
+        min-height: 260px !important;
+      }
+
+      /* --- Map overlay buttons: smaller on mobile --- */
+      #alert-nearby-btn {
+        padding: 8px 12px !important;
+        font-size: 12px !important;
+        border-radius: 10px !important;
+        top: 10px !important;
+        left: 10px !important;
+        gap: 5px !important;
+      }
+      #follow-bus-button {
+        padding: 8px 12px !important;
+        font-size: 12px !important;
+        border-radius: 10px !important;
+        top: 10px !important;
+        right: 10px !important;
+      }
+    }
+
+    /* Extra-small phones (≤380px) */
+    @media (max-width: 380px) {
+      .stats-grid {
+        grid-template-columns: 1fr !important;
+      }
+      .stats-grid .stat-card:last-child {
+        grid-column: auto;
+      }
+      .map-wrapper {
+        height: calc(100svh - 56px - 300px) !important;
+        min-height: 220px !important;
+      }
+    }
   </style>
   <!-- supabase and session-protection are loaded in the body to ensure correct initialization order -->
 </head>
