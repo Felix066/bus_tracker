@@ -11,7 +11,7 @@ window.AIEta = (function () {
   const COLLEGE_LON = 76.5710;  // ← Replace with your actual college longitude
 
   const INSIDE_BUS_THRESHOLD_M = 30;   // meters — triggers "Inside Bus" status
-  const ARRIVED_COLLEGE_THRESHOLD_M = 120; // meters — triggers "Arrived at College"
+  const ARRIVED_COLLEGE_THRESHOLD_M = 500; // meters — triggers "Arrived at College"
   const MIN_SPEED_KMPH = 5;            // below this, bus is considered stopped
 
   // =========================================================================

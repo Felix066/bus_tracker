@@ -466,8 +466,9 @@ async function checkStopArrivalDualRadius(lat, lon, tripType, tripId) {
     const dist = haversineDistance(lat, lon, next.lat, next.lon);
     const nextStopDisplay = document.getElementById('next-stop-display');
 
-    const REACHED_RADIUS = 60;
-    const APPROACHING_RADIUS = 100;
+    const isFinalStop = currentStopIndex === route.length - 1;
+    const REACHED_RADIUS = isFinalStop ? 500 : 60;
+    const APPROACHING_RADIUS = isFinalStop ? 700 : 100;
     const CONFIRM_DURATION = 7000;
 
     if (dist <= REACHED_RADIUS) {

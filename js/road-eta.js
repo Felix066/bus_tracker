@@ -182,9 +182,9 @@ window.RoadETA = (function () {
       return;
     }
 
-    if (distM != null && distM < 100) {
+    if (distM != null && distM < 500) {
       if (destEtaEl)  { destEtaEl.textContent = 'Arrived! ✅'; destEtaEl.style.color = '#10b981'; }
-      if (destDistEl) destDistEl.textContent = `< 100m to ${destName}`;
+      if (destDistEl) destDistEl.textContent = `< 500m to ${destName}`;
       return;
     }
 
@@ -226,6 +226,12 @@ window.RoadETA = (function () {
 
     const destEtaEl  = document.getElementById('road-eta-dest');
     const destDistEl = document.getElementById('road-dist-dest');
+
+    if (distM < 500) {
+      if (destEtaEl)  { destEtaEl.textContent = 'Arrived! ✅'; destEtaEl.style.color = '#10b981'; }
+      if (destDistEl) destDistEl.textContent = `< 500m to ${destName} · 📐 Estimated`;
+      return;
+    }
 
     if (smoothedSpeed < 1) {
       if (destEtaEl)  { destEtaEl.textContent = 'Bus Stopped'; destEtaEl.style.color = '#f59e0b'; }
