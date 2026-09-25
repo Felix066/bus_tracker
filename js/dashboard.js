@@ -45,7 +45,13 @@ function renderBusCards() {
 
   busesData.forEach(bus => {
     const busNorm = normalizeBusId(bus.id);
-    const session = driverSessions.find(s => normalizeBusId(s.bus_id) === busNorm);
+    
+    // Sort sessions by last_seen to get the most recent one
+    const sessionsForBus = driverSessions
+      .filter(s => normalizeBusId(s.bus_id) === busNorm)
+      .sort((a, b) => new Date(b.last_seen) - new Date(a.last_seen));
+    const session = sessionsForBus.length > 0 ? sessionsForBus[0] : null;
+    
     const hasActiveTrip = activeTripsData.some(t => normalizeBusId(t.bus_id) === busNorm);
     
     // Bus is only "Online" to the student if the driver is connected AND has an active trip running

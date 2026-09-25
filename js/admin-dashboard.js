@@ -344,7 +344,14 @@ function renderBusTable() {
   }
 
   filteredBuses.forEach(bus => {
-    const session = driverSessions.find(s => s.bus_id === bus.id);
+    // Normalize bus ID
+    const busNorm = String(bus.id || '').replace(/^Bus\s*/i, '').trim();
+    
+    const sessionsForBus = driverSessions
+      .filter(s => String(s.bus_id || '').replace(/^Bus\s*/i, '').trim() === busNorm)
+      .sort((a, b) => new Date(b.last_seen) - new Date(a.last_seen));
+      
+    const session = sessionsForBus.length > 0 ? sessionsForBus[0] : null;
     const isOnline = session && session.is_online;
     
     // Status Logic

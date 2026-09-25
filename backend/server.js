@@ -968,7 +968,7 @@ app.get('/api/public/bus-status/:bus_id', async (req, res) => {
 
     const [busRes, sessionRes] = await Promise.all([
       supabase.from('buses').select('driver_name').or(`id.eq."${searchId}",id.eq."Bus${busNum}",id.eq."${bus_id}"`).limit(1),
-      supabase.from('driver_sessions').select('driver_name, is_online').or(`bus_id.eq."${searchId}",bus_id.eq."Bus${busNum}",bus_id.eq."${bus_id}"`).limit(1)
+      supabase.from('driver_sessions').select('driver_name, is_online').or(`bus_id.eq."${searchId}",bus_id.eq."Bus${busNum}",bus_id.eq."${bus_id}"`).order('last_seen', { ascending: false }).limit(1)
     ]);
 
     let tripStatus = null;
