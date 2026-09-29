@@ -15,54 +15,7 @@
   <meta name="theme-color" content="#1A1A1A">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <style>
-    /* Single Screen Enforcement */
-    body {
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      height: 100svh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: #f8fafc;
-    }
-    .map-wrapper {
-      flex: 1;
-      margin: 10px 12px 12px !important;
-      border-radius: 16px !important;
-      position: relative;
-      min-height: 0;
-      height: auto !important; /* overrides previous fixed calc heights */
-    }
-    
-    /* Make stat cards smaller to fit */
-    .stats-grid {
-      padding: 10px 12px 0 !important;
-      gap: 10px !important;
-      margin-bottom: 0 !important;
-    }
-    .stat-card {
-      padding: 10px 14px !important;
-    }
-    
-    @media (max-width: 500px) {
-      .stats-grid {
-        grid-template-columns: repeat(3, 1fr) !important;
-      }
-      .stat-value {
-        font-size: 14px !important;
-      }
-      .stat-label {
-        font-size: 9px !important;
-        margin-bottom: 4px !important;
-      }
-      .stat-card {
-        padding: 8px 10px !important;
-      }
-    }
-  </style>
+  <meta name="apple-mobile-web-app-title" content="Where Is My Bus">
   <!-- session-protection loaded below after supabase-client.js defines BACKEND_URL -->
 </head>
 <body>
