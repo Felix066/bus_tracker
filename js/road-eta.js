@@ -194,13 +194,10 @@ window.RoadETA = (function () {
       return;
     }
 
-    // Use backend-computed ETA minutes if available, otherwise compute locally
-    let etaMins;
-    if (payload.eta_minutes != null) {
-      etaMins = payload.eta_minutes;
-    } else {
-      etaMins = computeETA(distM, smoothedSpeed, avgSpeed, null);
-    }
+    // Compute locally based on the broadcasted road distance and current live speed,
+    // combined with the backend's highly accurate ORS duration (if available).
+    // This perfectly combines the "fine ETA" from ORS with instant local updates.
+    let etaMins = computeETA(distM, smoothedSpeed, avgSpeed, payload.base_duration_s);
 
     const sourceLabel = payload.provider === 'ors' ? '🛣️ Road' : '📐 Estimated';
     const isStale = payload.status === 'STALE';

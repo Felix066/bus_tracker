@@ -184,10 +184,11 @@ async function pollBus(busId) {
     return;
   }
 
-  // 3. Get destination
+  // 3. Get destination & Time Check
   const dest = cachedDestination;
-  if (!dest || !dest.latitude || !dest.longitude) {
-    // No destination set — nothing to compute
+  const currentHour = new Date().getHours();
+  if (!dest || !dest.latitude || !dest.longitude || currentHour >= 12) {
+    // No destination set or evening trip (after 12 PM, ETA to college is not needed)
     return;
   }
 
@@ -289,6 +290,7 @@ async function pollBus(busId) {
     eta_seconds: etaSeconds,
     eta_minutes: etaMinutes,
     distance_meters: routeResult.road_distance_m,
+    base_duration_s: routeResult.duration_s,
     origin_lat: loc.latitude,
     origin_lon: loc.longitude,
     destination_lat: dest.latitude,
@@ -310,6 +312,7 @@ async function pollBus(busId) {
     eta_seconds: etaSeconds,
     eta_minutes: etaMinutes,
     distance_meters: routeResult.road_distance_m,
+    base_duration_s: routeResult.duration_s,
     status: 'FRESH',
     provider: routeResult.source,
     calculated_at: new Date().toISOString(),

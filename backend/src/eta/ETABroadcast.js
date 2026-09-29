@@ -46,6 +46,7 @@ async function broadcastStatus(busId, status, lastKnown = null) {
     eta_seconds: lastKnown?.eta_seconds ?? null,
     eta_minutes: lastKnown?.eta_minutes ?? null,
     distance_meters: lastKnown?.distance_meters ?? null,
+    base_duration_s: lastKnown?.base_duration_s ?? null,
     calculated_at: lastKnown?.calculated_at ?? null,
     provider: lastKnown?.provider ?? null,
   });
