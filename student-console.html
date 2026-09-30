@@ -45,7 +45,7 @@
       height: 56px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: space-between;
       position: relative;
       z-index: 200;
       flex-shrink: 0;
@@ -60,7 +60,7 @@
       color: #0f172a;
       letter-spacing: -0.3px;
       cursor: pointer;
-      flex-shrink: 1;
+      flex-shrink: 0;
       min-width: 0;
     }
     .sc-brand svg {
@@ -70,8 +70,14 @@
     }
     .sc-brand-text {
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    }
+
+    .sc-header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      position: relative;
     }
 
     .sc-bus-badge {
@@ -84,37 +90,14 @@
       border-radius: 20px;
       white-space: nowrap;
       flex-shrink: 0;
-    }
-
-    .sc-spacer { flex: 1; }
-
-    /* Profile icon + dropdown */
-    .sc-profile-wrapper {
-      position: relative;
-      flex-shrink: 0;
-    }
-    .sc-profile-btn {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      background: #f1f5f9;
-      border: 1.5px solid #e2e8f0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       cursor: pointer;
-      transition: all 0.2s ease;
-      color: #64748b;
-      font-size: 18px;
     }
-    .sc-profile-btn:hover {
-      background: #e2e8f0;
-      border-color: #cbd5e1;
-    }
+
+    /* Dropdown for logout — appears under bus badge */
     .sc-dropdown {
       display: none;
       position: absolute;
-      top: 46px;
+      top: 36px;
       right: 0;
       background: #fff;
       border: 1px solid #e5e7eb;
@@ -189,54 +172,7 @@
       50% { opacity: 0.5; transform: scale(0.7); }
     }
 
-    /* Map overlay buttons */
-    #alert-nearby-btn {
-      position: absolute;
-      top: 14px;
-      left: 14px;
-      z-index: 1000;
-      padding: 8px 14px;
-      background: rgba(255,255,255,0.92);
-      border: 1px solid rgba(226,232,240,0.8);
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 700;
-      color: #0f172a;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      transition: all 0.3s ease;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-family: 'Inter', sans-serif;
-      border: none;
-    }
-    #follow-bus-button {
-      position: absolute;
-      top: 14px;
-      right: 14px;
-      z-index: 1000;
-      padding: 8px 14px;
-      background: rgba(255,255,255,0.92);
-      border: 1px solid rgba(226,232,240,0.8);
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 700;
-      color: #0f172a;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      transition: all 0.3s ease;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      font-family: 'Inter', sans-serif;
-    }
-    #follow-bus-button.active {
-      color: white;
-      background: #059669;
-      border-color: #059669;
-    }
+    /* Map overlay buttons removed — alert-nearby and follow-bus no longer used */
 
     /* --- INFO PANEL (below map) --- */
     .sc-info-panel {
@@ -461,6 +397,7 @@
       .sc-brand-text { font-size: 14px; }
       .sc-status-text { font-size: 18px; }
       .sc-info-row-text { font-size: 14px; }
+      .sc-bus-badge { font-size: 12px; padding: 3px 10px; }
     }
   </style>
 </head>
@@ -476,12 +413,8 @@
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 462 244" role="img" aria-label="Where Is My Bus" width="30" height="30"><path fill-rule="evenodd" fill="currentColor" d="M406.66 132.0 L428.16 111.0 L445.38 91.0 L453.18 76.0 L455.31 68.0 L456.2 57.0 L455.31 48.0 L451.19 35.0 L441.0 20.37 L433.0 13.89 L425.0 9.72 L415.0 6.68 L405.0 5.83 L396.0 6.7 L386.0 9.66 L377.0 14.62 L369.0 21.38 L363.67 28.0 L358.74 37.0 L355.69 47.0 L354.6 60.0 L357.58 76.0 L365.85 92.0 L396.63 126.0 L404.0 132.24 L406.66 132.0 Z M320.22 238.0 L331.0 236.31 L342.0 232.2 L353.0 225.19 L361.33 217.0 L369.37 205.0 L400.82 145.0 L381.0 127.84 L357.0 171.82 L352.58 175.0 L340.17 199.0 L335.94 204.0 L327.0 209.23 L314.0 211.33 L303.0 209.34 L292.31 203.0 L284.6 193.0 L252.69 131.0 L278.0 82.24 L332.0 185.4 L347.66 160.0 L289.3 45.0 L281.21 34.0 L272.0 25.69 L257.0 17.88 L239.0 14.76 L223.0 16.62 L208.0 22.76 L197.33 31.0 L188.89 41.0 L159.0 97.67 L155.62 93.0 L129.37 41.0 L120.0 29.62 L109.0 21.59 L98.0 16.84 L86.0 14.65 L5.43 15.0 L103.76 206.0 L112.0 217.56 L123.0 227.27 L139.0 235.2 L158.0 238.15 L175.0 236.27 L191.0 229.34 L202.0 220.51 L210.27 210.0 L237.0 159.79 L260.65 205.0 L267.8 216.0 L273.38 222.0 L283.0 229.37 L296.0 235.36 L304.0 237.35 L320.22 238.0 Z M409.0 77.03 L403.0 77.3 L395.0 74.38 L388.82 68.0 L386.55 63.0 L385.72 55.0 L387.79 48.0 L394.0 40.71 L400.0 37.67 L407.0 36.95 L414.0 38.78 L421.35 45.0 L424.41 51.0 L425.21 59.0 L422.29 68.0 L416.0 74.38 L409.0 77.03 Z M118.0 175.46 L49.0 41.52 L83.0 41.34 L91.0 42.69 L100.53 48.0 L107.45 57.0 L142.95 127.0 L118.0 175.46 Z M163.0 211.01 L156.0 211.11 L147.0 209.17 L139.0 205.13 L135.46 201.0 L208.8 60.0 L217.32 49.0 L230.0 42.65 L241.0 41.89 L249.0 43.71 L255.0 46.67 L262.34 54.0 L188.33 195.0 L183.29 202.0 L178.0 206.28 L171.0 209.45 L163.0 211.01 Z"/></svg>
       <span class="sc-brand-text">Where Is My Bus</span>
     </div>
-    <span class="sc-bus-badge" id="assigned-bus-label">Loading...</span>
-    <div class="sc-spacer"></div>
-    <div class="sc-profile-wrapper">
-      <button class="sc-profile-btn" id="profile-toggle" aria-label="Profile menu">
-        <i class="fas fa-user"></i>
-      </button>
+    <div class="sc-header-right">
+      <span class="sc-bus-badge" id="assigned-bus-label" onclick="toggleBusDropdown(event)">Loading...</span>
       <div class="sc-dropdown" id="profile-dropdown">
         <button class="sc-dropdown-item" onclick="studentLogout()">Logout</button>
       </div>
@@ -489,15 +422,13 @@
   </nav>
 
   <script>
-    // Profile dropdown toggle
-    const profileToggle = document.getElementById('profile-toggle');
-    const profileDropdown = document.getElementById('profile-dropdown');
-    profileToggle.addEventListener('click', (e) => {
+    // Dropdown toggle via bus badge tap
+    function toggleBusDropdown(e) {
       e.stopPropagation();
-      profileDropdown.classList.toggle('open');
-    });
+      document.getElementById('profile-dropdown').classList.toggle('open');
+    }
     document.addEventListener('click', () => {
-      profileDropdown.classList.remove('open');
+      document.getElementById('profile-dropdown').classList.remove('open');
     });
 
     function studentLogout() {
@@ -508,10 +439,6 @@
 
   <!-- MAP (primary area — fills remaining space) -->
   <div class="sc-map-area">
-    <button id="alert-nearby-btn" onclick="toggleNearbyAlert()">
-      <i class="fas fa-bell"></i> Alert when nearby
-    </button>
-    <button id="follow-bus-button" onclick="toggleFollowBusMode()" class="active">📍 Following Bus</button>
     <div id="map"></div>
     <div class="sc-live-badge" id="live-badge">Live GPS Tracking Active</div>
   </div>
@@ -577,10 +504,9 @@
     <div id="driver-name-display"></div>
   </div>
 
-  <!-- Trip status bar (hidden by default, shown by JS via .visible class) -->
-  <div class="trip-status-bar" id="trip-status-bar" style="position:fixed; bottom:70px; left:50%; transform:translateX(-50%); z-index:1000; margin:0; padding:10px 18px; border-radius:12px; font-size:13px; max-width:90%; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.15);">
-    <div class="status-dot-green"></div>
-    <span id="trip-status-text">Trip active — GPS tracking live</span>
+  <!-- Trip status bar removed — only the sc-live-badge on the map is used -->
+  <div class="sc-hidden" id="trip-status-bar">
+    <span id="trip-status-text"></span>
   </div>
 
   <!-- Optional Location Prompt -->

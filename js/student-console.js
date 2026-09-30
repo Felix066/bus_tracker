@@ -643,21 +643,9 @@ function startStudentGPS() {
             studentLatGlobal = sLat;
             studentLonGlobal = sLon;
             studentAccuracyGlobal = accuracy;
-            
-            // Update student marker locally (no database upload, avoiding DB growth)
-            if (typeof L !== 'undefined' && window.map) {
-                if (window.userMarker) {
-                    window.userMarker.setLatLng([sLat, sLon]);
-                } else {
-                    window.userMarker = L.circleMarker([sLat, sLon], {
-                        radius: 8,
-                        fillColor: '#6366f1',
-                        color: '#ffffff',
-                        weight: 3,
-                        fillOpacity: 0.9
-                    }).addTo(window.map).bindPopup('Your Location');
-                }
-            }
+
+            // NOTE: Student marker removed from map per design requirements.
+            // Student location is used internally for proximity/ETA only.
             
             // Road ETA update with student coords
             if (lastGPSLat && lastGPSLon && typeof RoadETA !== 'undefined') {
@@ -666,81 +654,16 @@ function startStudentGPS() {
             }
         }, (err) => {
             console.warn("Student GPS tracking error:", err);
-            const etaEl = document.getElementById('road-eta-dest');
-            if (etaEl && etaEl.textContent === 'Loading...') {
-                // Don't change destination ETA — only affects student proximity
-            }
         }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
     }
 }
 
 // ============================================================================
-// FOLLOW BUS MODE - User-Controlled Map Panning
+// FOLLOW BUS MODE — Always enabled (button removed, map always follows bus)
 // ============================================================================
+window.isFollowBusEnabled = true;
 
-window.isFollowBusEnabled = true; // Default: automatically track bus movement on map
-
-function toggleFollowBusMode() {
-  window.isFollowBusEnabled = !window.isFollowBusEnabled;
-  
-  const button = document.getElementById('follow-bus-button');
-  if (window.isFollowBusEnabled) {
-    button.classList.add('active');
-    button.textContent = '📍 Following Bus (click to explore)';
-    console.log('🎯 Follow mode ON - map will track bus');
-    
-    // Center immediately if possible
-    if (window.busMarker && window.map) {
-      window.map.panTo(window.busMarker.getLatLng(), { animate: true, duration: 1 });
-    }
-  } else {
-    button.classList.remove('active');
-    button.textContent = '📍 Explore Map (click to follow)';
-    console.log('🗺️ Follow mode OFF - explore freely');
-  }
-}
-window.toggleFollowBusMode = toggleFollowBusMode;
-
-// ============================================================================
-// NEARBY ALERT FEATURE
-// ============================================================================
-
-let isNearbyAlertEnabled = false;
-let alertTriggered = false;
-
-function toggleNearbyAlert() {
-  isNearbyAlertEnabled = !isNearbyAlertEnabled;
-  const btn = document.getElementById('alert-nearby-btn');
-  if (isNearbyAlertEnabled) {
-    btn.style.background = '#059669';
-    btn.style.color = 'white';
-    btn.innerHTML = '<i class="fas fa-bell-slash"></i> Disable Alert';
-    alertTriggered = false; // Reset trigger
-    alert('You will be alerted when the bus is within 1km of your location.');
-  } else {
-    btn.style.background = 'rgba(255, 255, 255, 0.9)';
-    btn.style.color = '#0f172a';
-    btn.innerHTML = '<i class="fas fa-bell"></i> Alert when nearby';
-  }
-}
-
-function checkNearbyAlert(busLat, busLon) {
-  if (!isNearbyAlertEnabled || alertTriggered) return;
-  if (typeof userMarker !== 'undefined' && userMarker && typeof haversineDistance === 'function') {
-    const userPos = userMarker.getLatLng();
-    const dist = haversineDistance(userPos.lat, userPos.lng, busLat, busLon);
-    if (dist < 1000) {
-      alertTriggered = true;
-      alert('The bus is within 1km of your location!');
-      if(window.Notification && window.Notification.permission === 'granted') {
-        new window.Notification('Bus Approaching', { body: 'The bus is within 1km of your location!' });
-      } else if (window.Notification && window.Notification.permission !== 'denied') {
-        window.Notification.requestPermission().then(perm => {
-          if(perm === 'granted') {
-            new window.Notification('Bus Approaching', { body: 'The bus is within 1km of your location!' });
-          }
-        });
-      }
-    }
-  }
-}
+// toggleFollowBusMode and toggleNearbyAlert removed — UI buttons no longer exist.
+// checkNearbyAlert is a no-op stub so map.js calls don't throw errors.
+function checkNearbyAlert() {}
+window.checkNearbyAlert = checkNearbyAlert;
