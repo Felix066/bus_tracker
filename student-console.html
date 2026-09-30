@@ -181,7 +181,7 @@
       border-top: 1px solid #e5e7eb;
       padding: 0;
       overflow-y: auto;
-      max-height: 45vh;
+      /* removed max-height to ensure all content including "Bus to You" is visible */
     }
 
     /* Status row (STOPPED / MOVING) */
@@ -393,11 +393,20 @@
     .sc-hidden { display: none !important; }
 
     /* ---- Responsive ---- */
+    @media (max-width: 420px) {
+      .sc-status-row { padding: 12px 16px 6px; }
+      .sc-info-row, .sc-split-row { padding: 10px 16px; }
+      .sc-proximity-section { padding: 12px 16px 14px; }
+      .sc-divider { margin: 0 16px; }
+    }
     @media (max-width: 380px) {
       .sc-brand-text { font-size: 14px; }
       .sc-status-text { font-size: 18px; }
       .sc-info-row-text { font-size: 14px; }
       .sc-bus-badge { font-size: 12px; padding: 3px 10px; }
+      .sc-status-row { padding: 10px 16px 4px; }
+      .sc-info-row, .sc-split-row { padding: 8px 16px; }
+      .sc-proximity-section { padding: 10px 16px 12px; }
     }
   </style>
 </head>
