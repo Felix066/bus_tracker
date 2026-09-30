@@ -138,50 +138,59 @@
       height: 100%;
     }
 
-    /* Live GPS tracking badge on map */
-    .sc-live-badge {
+    /* Live GPS tracking badge (now part of the panel) */
+    .sc-badge-container {
       position: absolute;
-      bottom: 14px;
+      top: -32px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 1000;
-      background: #059669;
-      color: white;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      padding: 7px 18px;
-      border-radius: 20px;
+      background: #fff;
+      padding: 10px 16px 14px;
+      border-radius: 24px 24px 0 0;
       display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 1001;
+    }
+    .sc-pull-tab {
+      width: 32px;
+      height: 4px;
+      background: #cbd5e1;
+      border-radius: 2px;
+      margin-bottom: 8px;
+    }
+    .sc-live-badge {
+      background: #15803d;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 6px 16px;
+      border-radius: 16px;
+      display: inline-flex;
       align-items: center;
       gap: 6px;
-      box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
       text-transform: uppercase;
-      pointer-events: none;
+      box-shadow: 0 4px 10px rgba(21, 128, 61, 0.2);
     }
     .sc-live-badge::before {
       content: '';
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
       background: #fff;
       border-radius: 50%;
-      animation: sc-pulse 1.5s infinite;
     }
-    @keyframes sc-pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.7); }
-    }
-
-    /* Map overlay buttons removed — alert-nearby and follow-bus no longer used */
 
     /* --- INFO PANEL (below map) --- */
     .sc-info-panel {
+      position: relative;
       flex-shrink: 0;
       background: #fff;
-      border-top: 1px solid #e5e7eb;
-      padding: 0;
-      overflow-y: auto;
-      /* removed max-height to ensure all content including "Bus to You" is visible */
+      border-radius: 24px 24px 0 0;
+      padding: 20px 0 0;
+      box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+      z-index: 1000;
+      margin-top: 20px;
     }
 
     /* Status row (STOPPED / MOVING) */
@@ -189,16 +198,16 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 14px 20px 8px;
+      padding: 4px 20px 6px;
     }
     .sc-status-icon {
-      width: 42px;
-      height: 42px;
+      width: 40px;
+      height: 40px;
       border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
+      font-size: 22px;
       flex-shrink: 0;
     }
     .sc-status-icon.stopped {
@@ -226,7 +235,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 12px 20px;
+      padding: 8px 20px;
     }
     .sc-info-row-icon {
       width: 20px;
@@ -257,7 +266,7 @@
     .sc-split-row {
       display: flex;
       align-items: center;
-      padding: 12px 20px;
+      padding: 8px 20px;
       gap: 0;
     }
     .sc-split-item {
@@ -275,7 +284,7 @@
     .sc-proximity-section {
       background: #fafbfc;
       border-top: 1px solid #f1f5f9;
-      padding: 14px 20px 18px;
+      padding: 10px 20px 14px;
     }
     .sc-proximity-title {
       font-size: 11px;
@@ -394,9 +403,9 @@
 
     /* ---- Responsive ---- */
     @media (max-width: 420px) {
-      .sc-status-row { padding: 12px 16px 6px; }
-      .sc-info-row, .sc-split-row { padding: 10px 16px; }
-      .sc-proximity-section { padding: 12px 16px 14px; }
+      .sc-status-row { padding: 4px 16px 6px; }
+      .sc-info-row, .sc-split-row { padding: 8px 16px; }
+      .sc-proximity-section { padding: 10px 16px 14px; }
       .sc-divider { margin: 0 16px; }
     }
     @media (max-width: 380px) {
@@ -404,9 +413,6 @@
       .sc-status-text { font-size: 18px; }
       .sc-info-row-text { font-size: 14px; }
       .sc-bus-badge { font-size: 12px; padding: 3px 10px; }
-      .sc-status-row { padding: 10px 16px 4px; }
-      .sc-info-row, .sc-split-row { padding: 8px 16px; }
-      .sc-proximity-section { padding: 10px 16px 12px; }
     }
   </style>
 </head>
@@ -449,11 +455,14 @@
   <!-- MAP (primary area — fills remaining space) -->
   <div class="sc-map-area">
     <div id="map"></div>
-    <div class="sc-live-badge" id="live-badge">Live GPS Tracking Active</div>
   </div>
 
   <!-- INFO PANEL (below map) -->
   <div class="sc-info-panel">
+    <div class="sc-badge-container">
+      <div class="sc-pull-tab"></div>
+      <div class="sc-live-badge" id="live-badge">Live GPS Tracking Active</div>
+    </div>
 
     <!-- Status: STOPPED / MOVING -->
     <div class="sc-status-row">
