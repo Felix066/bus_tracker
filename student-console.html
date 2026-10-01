@@ -29,12 +29,19 @@
       background: #f8fafc;
       margin: 0;
       padding: 0;
-      height: 100vh;
-      height: 100dvh; /* Dynamic viewport height to prevent cutoff on mobile */
+      
+      /* BULLETPROOF MOBILE VIEWPORT LOCK */
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      
       display: flex;
       flex-direction: column;
-      overflow-x: hidden;
-      overflow-y: auto; /* Allow scrolling if screen is too small */
       -webkit-font-smoothing: antialiased;
     }
 
@@ -115,7 +122,7 @@
     .sc-map-area {
       flex: 1;
       position: relative;
-      min-height: 250px; /* Ensure map doesn't collapse entirely on tiny screens */
+      min-height: 0; /* Allow map to shrink to fit info panel on any device size */
     }
     .sc-map-area #map {
       width: 100%;
@@ -168,6 +175,8 @@
       box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
       z-index: 1000;
       margin-top: -24px;
+      overflow-y: auto; /* Scrollable if screen is impossibly small */
+      max-height: calc(100% - 56px);
     }
 
     /* Status row (STOPPED / MOVING) */
