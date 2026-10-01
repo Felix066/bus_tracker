@@ -122,7 +122,7 @@
     .sc-map-area {
       flex: 1;
       position: relative;
-      min-height: 0; /* Allow map to shrink to fit info panel on any device size */
+      min-height: 35vh; /* Map should stay at least 35% of the screen height, forcing info panel to scroll if needed */
     }
     .sc-map-area #map {
       width: 100%;
@@ -162,15 +162,16 @@
     /* --- INFO PANEL (below map) --- */
     .sc-info-panel {
       position: relative;
-      flex-shrink: 0;
+      flex-shrink: 1; /* ALLOW it to shrink so it can scroll! */
+      flex-grow: 0;
+      min-height: 0;  /* REQUIRED for flex shrinking to work */
       background: #fff;
       border-radius: 24px 24px 0 0;
-      padding: 12px 0 0;
+      padding: 12px 0 24px; /* Added 24px bottom padding for scroll clearance */
       box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
       z-index: 1000;
       margin-top: -24px;
-      overflow-y: auto; /* Scrollable if screen is impossibly small */
-      max-height: calc(100% - 56px);
+      overflow-y: auto; /* Scrollable when screen is too small */
     }
 
     /* Status row (STOPPED / MOVING) */
