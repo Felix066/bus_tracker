@@ -29,9 +29,9 @@
 </style>
 <!-- END: Custom Map Styles -->
 </head>
-<body class="flex justify-center items-center h-[100dvh] bg-slate-200 m-0 p-0 sm:py-6 select-none overflow-hidden">
-<!-- BEGIN: MobileDeviceFrame -->
-<div class="relative w-full max-w-[420px] h-full sm:h-[844px] bg-[#a8d3e6] overflow-hidden flex flex-col sm:rounded-[36px] sm:shadow-2xl border-0 sm:border-[8px] sm:border-slate-800">
+<body class="flex justify-center items-center h-[100dvh] bg-slate-50 m-0 p-0 select-none overflow-hidden">
+<!-- BEGIN: AppContainer -->
+<div class="relative w-full h-full bg-white overflow-hidden flex flex-col">
 
 <!-- Hidden offline indicator -->
 <div id="offline-indicator" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1A1A1A; color:white; padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.3); align-items:center; gap:8px;">
@@ -39,7 +39,7 @@
 </div>
 
 <!-- BEGIN: MainHeader -->
-<header class="relative z-30 bg-white/95 backdrop-blur-md px-4 pt-3.5 pb-3 flex items-center justify-between shadow-sm border-b border-gray-100 flex-shrink-0">
+<header class="relative z-30 bg-white/95 backdrop-blur-md px-4 py-4 md:px-8 flex items-center justify-between shadow-sm border-b border-gray-200 flex-shrink-0">
   <!-- App Brand Logo & Title -->
   <div class="flex items-center space-x-2.5 cursor-pointer" onclick="window.location.href='student-dashboard.html'">
     <!-- Stylized "W" logo -->
@@ -59,22 +59,25 @@
 </header>
 <!-- END: MainHeader -->
 
+<!-- BEGIN: Main Content Wrapper -->
+<div class="flex-1 flex flex-col md:flex-row relative overflow-hidden">
+
 <!-- BEGIN: MapView -->
-<main class="relative flex-1 w-full overflow-hidden bg-[#a6cfe2]" data-purpose="interactive-map">
+<main class="relative flex-1 w-full overflow-hidden bg-[#a6cfe2] md:order-2" data-purpose="interactive-map">
   <!-- Leaflet Map Container (replaces static SVG map to wire up real tracking logic) -->
   <div id="map" class="absolute inset-0 w-full h-full z-0"></div>
 </main>
 <!-- END: MapView -->
 
-<!-- BEGIN: BottomSheetStatusCard -->
-<section class="relative z-30 bg-white rounded-t-[32px] px-5 pt-3 pb-7 sheet-shadow -mt-6 flex-shrink-0" data-purpose="bus-status-sheet">
-  <!-- Top Center Drag Handle -->
-  <div class="flex justify-center w-full mb-2">
+<!-- BEGIN: BottomSheetStatusCard / Desktop Sidebar -->
+<section class="relative z-30 bg-white rounded-t-[32px] md:rounded-none px-5 pt-3 pb-7 sheet-shadow md:shadow-[4px_0_24px_rgba(0,0,0,0.06)] -mt-6 md:mt-0 flex-shrink-0 md:w-[380px] lg:w-[420px] md:h-full md:overflow-y-auto md:border-r md:border-gray-200 md:order-1 flex flex-col justify-start" data-purpose="bus-status-sheet">
+  <!-- Top Center Drag Handle (Mobile Only) -->
+  <div class="flex justify-center w-full mb-2 md:hidden">
     <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
   </div>
   
   <!-- Live GPS Tracking Active Pill Badge -->
-  <div class="flex justify-center -mt-1 mb-4">
+  <div class="flex justify-center -mt-1 mb-4 md:mt-4">
     <span class="inline-flex items-center px-4 py-1.5 rounded-full text-[11px] font-extrabold tracking-wider text-white bg-[#1e6f43] uppercase shadow-sm">
       LIVE GPS TRACKING ACTIVE
     </span>
@@ -150,10 +153,13 @@
     </div>
   </div>
 </section>
-<!-- END: BottomSheetStatusCard -->
+<!-- END: BottomSheetStatusCard / Desktop Sidebar -->
 
 </div>
-<!-- END: MobileDeviceFrame -->
+<!-- END: Main Content Wrapper -->
+
+</div>
+<!-- END: AppContainer -->
 
 <!-- Hidden elements for JS compatibility -->
 <div class="hidden">
