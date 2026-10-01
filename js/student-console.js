@@ -396,6 +396,12 @@ function handleDriverOffline() {
             statusDot.style.boxShadow = '0 0 8px #ef4444';
         }
     }
+    const liveBadge = document.getElementById('live-badge');
+    if (liveBadge) {
+        liveBadge.style.background = '#64748b';
+        liveBadge.textContent = 'OFFLINE';
+        liveBadge.style.boxShadow = 'none';
+    }
 }
 
 function handleTripEnded() {
@@ -416,6 +422,14 @@ function handleTripEnded() {
             statusDot.style.boxShadow = '0 0 8px #f59e0b';
         }
     }
+    
+    const liveBadge = document.getElementById('live-badge');
+    if (liveBadge) {
+        liveBadge.style.background = '#64748b';
+        liveBadge.textContent = 'TRIP ENDED';
+        liveBadge.style.boxShadow = 'none';
+    }
+
     const speedDisplay = document.getElementById('speed-display');
     if (speedDisplay) speedDisplay.textContent = '0 km/h';
     

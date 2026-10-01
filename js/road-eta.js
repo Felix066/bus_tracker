@@ -277,10 +277,10 @@ window.RoadETA = (function () {
         uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><rect x="18" y="10" width="28" height="44" rx="5" fill="none" stroke="#f59e0b" stroke-width="5"/><path d="M24 20h16M24 30h16M24 40h16" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/></svg>`
       };
     }
-    // 5. Stopped in traffic (30s+ stop, not at bus stop)
-    else if (stoppedInTraffic) {
+    // 5. Stopped (stationary)
+    else if (effectivelyStopped) {
       result = {
-        label: 'STOPPED', color: '#f97316', code: 'STOPPED_TRAFFIC', confidence: 0.90,
+        label: 'STOPPED', color: '#f97316', code: 'STOPPED', confidence: 0.90,
         uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><polygon points="20,4 44,4 60,20 60,44 44,60 20,60 4,44 4,20" fill="none" stroke="#f97316" stroke-width="3" stroke-linejoin="round"/><polygon points="22,7 42,7 57,22 57,42 42,57 22,57 7,42 7,22" fill="#f97316" /><path d="M27 38 V22 A2.5 2.5 0 0 1 32 22 V38 M32 37 V18 A2.5 2.5 0 0 1 37 18 V37 M37 38 V20 A2.5 2.5 0 0 1 42 20 V38 M42 40 V25 A2.5 2.5 0 0 1 47 25 V40 C47 46 42 50 37 50 H27 C21 50 17 46 17 40 V28 A2.5 2.5 0 0 1 22 28 V38" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`
       };
     }
@@ -315,11 +315,11 @@ window.RoadETA = (function () {
         uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><path d="M14 32h36" stroke="#10b981" stroke-width="6" stroke-linecap="round"/><path d="M38 20l12 12-12 12" fill="none" stroke="#10b981" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`
       };
     }
-    // 10. Temporarily stopped (< 30s, uncertain)
+    // 10. Fallback (Unknown)
     else {
       result = {
-        label: 'TEMPORARY STOPPED', color: '#334155', code: 'TEMP_STOP', confidence: 0.70,
-        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><circle cx="28" cy="32" r="18" fill="none" stroke="#334155" stroke-width="4"/><path d="M28 20v12l6 6" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 10h8" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round"/><rect x="36" y="36" width="16" height="20" fill="#fff" rx="2" /><path d="M38 38h12v4l-4 4 4 4v4H38v-4l4-4-4-4z" fill="none" stroke="#334155" stroke-width="3" stroke-linejoin="round"/></svg>`
+        label: 'UNKNOWN', color: '#64748b', code: 'UNKNOWN', confidence: 0.50,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><circle cx="32" cy="32" r="23" fill="none" stroke="#64748b" stroke-width="5"/><circle cx="32" cy="32" r="5" fill="#64748b"/></svg>`
       };
     }
 
@@ -548,6 +548,19 @@ window.RoadETA = (function () {
     if (newStatusIcon && busStatus.uiIcon) {
         newStatusIcon.innerHTML = busStatus.uiIcon;
         newStatusIcon.style.display = 'flex';
+    }
+
+    const liveBadge = document.getElementById('live-badge');
+    if (liveBadge) {
+        if (busStatus.code === 'OFFLINE' || busStatus.code === 'ARRIVED') {
+            liveBadge.style.background = '#64748b';
+            liveBadge.textContent = busStatus.code === 'OFFLINE' ? 'OFFLINE' : 'TRIP ENDED';
+            liveBadge.style.boxShadow = 'none';
+        } else {
+            liveBadge.style.background = '#15803d';
+            liveBadge.textContent = 'LIVE GPS TRACKING ACTIVE';
+            liveBadge.style.boxShadow = '0 4px 10px rgba(21, 128, 61, 0.2)';
+        }
     }
 
     // ── ETA: use shared ETA if fresh, otherwise fallback ────────────────
