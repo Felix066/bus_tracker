@@ -352,7 +352,7 @@ window.RoadETA = (function () {
 
     const state = busStatusEngines.get(busId || 'default') || {};
 
-    if (lastSharedETA) {
+    if (lastSharedETA && lastSharedETA.distance_meters != null) {
       if (lastSharedETA.distance_meters < 100) {
         state.hasReached = true;
       } else if (lastSharedETA.distance_meters > 300) {
