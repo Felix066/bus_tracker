@@ -488,6 +488,31 @@
 
     <div class="sc-divider"></div>
 
+    <!-- Bus to Destination -->
+    <div class="sc-proximity-section" style="padding-bottom: 4px;">
+      <div class="sc-proximity-title">BUS TO DESTINATION (<span id="dest-name-display" style="text-transform: uppercase;">—</span>)</div>
+      
+      <div class="sc-info-row" style="margin-top: 10px;">
+        <div class="sc-info-row-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#334155" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+        </div>
+        <div class="sc-info-row-text" id="road-eta-dest" style="font-weight: 700; color: #059669; font-size: 15px;">Loading...</div>
+      </div>
+      
+      <div class="sc-info-row">
+        <div class="sc-info-row-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#334155" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+        </div>
+        <div class="sc-info-row-text" id="road-dist-dest" style="font-size: 13px; color: #64748b;">--</div>
+      </div>
+    </div>
+
     <!-- Bus to You (Your Location) -->
     <div class="sc-proximity-section">
       <div class="sc-proximity-title">BUS TO YOU (YOUR LOCATION)</div>
@@ -504,8 +529,6 @@
   <!-- Hidden elements for JS compatibility (road-eta.js, student-console.js) -->
   <div class="sc-hidden">
     <span id="next-stop-display"></span>
-    <div id="road-eta-dest">Loading...</div>
-    <div id="road-dist-dest"><span id="dest-name-display">—</span></div>
     <div id="road-source-badge">ROAD</div>
     <div id="road-bus-status-dot"></div>
     <div id="road-bus-status">Connecting...</div>
