@@ -92,24 +92,276 @@ window.RoadETA = (function () {
   }
 
   // =========================================================================
-  // BUS STATUS ENGINE — local, no API cost
+  // REAL-WORLD BUS STATUS ENGINE
   // =========================================================================
-  function determineBusStatus(speedKmh, lastGPSTime, hasDestination) {
+  // Production-grade status detection with:
+  //   - Per-bus state isolation (supports multiple buses)
+  //   - Median-filtered speed smoothing (removes GPS jitter)
+  //   - Duration-based state confirmation (prevents flicker)
+  //   - Traffic detection via speed ratios (not raw thresholds)
+  //   - GPS quality awareness
+  //   - Bus stop proximity detection
+  //   - Route deviation detection (when data available)
+  //   - Custom SVG status icons
+  // =========================================================================
+
+  const busStatusEngines = new Map();
+
+  function getBusStatusResult(busId, {
+    speedKmh = 0,
+    expectedSpeedKmh = null,
+    speedLimitKmh = null,
+    gpsAccuracyM = null,
+    distanceFromRouteM = null,
+    distanceToNextStopM = null,
+    timestamp = Date.now(),
+    isNearBusStop = false,
+    headingDifferenceDeg = null
+  }) {
+
+    // ── Create independent state for every bus ──────────────────────────
+    if (!busStatusEngines.has(busId)) {
+      busStatusEngines.set(busId, {
+        samples: [],
+        stoppedSince: null,
+        slowSince: null,
+        heavySince: null,
+        offRouteSince: null,
+        overspeedSince: null,
+        lastValidTimestamp: null,
+        lastStatus: null
+      });
+    }
+
+    const state = busStatusEngines.get(busId);
+    const now = timestamp;
+
+    // ── Basic validation ────────────────────────────────────────────────
+    const validSpeed = Number.isFinite(speedKmh) && speedKmh >= 0 && speedKmh <= 180;
+    const speed = validSpeed ? speedKmh : 0;
+
+    // ── GPS quality checks ──────────────────────────────────────────────
+    const gpsIsPoor     = gpsAccuracyM != null && gpsAccuracyM > 50;
+    const gpsIsVeryPoor = gpsAccuracyM != null && gpsAccuracyM > 100;
+    const gpsStale      = state.lastValidTimestamp != null && (now - state.lastValidTimestamp > 15000);
+
+    if (validSpeed && !gpsIsVeryPoor) {
+      state.lastValidTimestamp = now;
+    }
+
+    // ── Speed smoothing (median filter over ~30s window) ────────────────
+    // GPS speed can jump wildly: 0 → 32 → 4 → 28 → 0
+    // Median filtering removes most of these spikes.
+    state.samples.push({ speed, timestamp: now });
+    state.samples = state.samples.filter(s => now - s.timestamp <= 30000);
+
+    const sortedSpeeds = state.samples.map(s => s.speed).sort((a, b) => a - b);
+    let filteredSpeed = speed;
+    if (sortedSpeeds.length > 0) {
+      const mid = Math.floor(sortedSpeeds.length / 2);
+      filteredSpeed = sortedSpeeds.length % 2 === 0
+        ? (sortedSpeeds[mid - 1] + sortedSpeeds[mid]) / 2
+        : sortedSpeeds[mid];
+    }
+
+    // ── Calculate expected road speed ───────────────────────────────────
+    // Ideally from: road/segment data, historical bus speed, or traffic routing.
+    // If unavailable, use speed limit with conservative factor.
+    let expectedSpeed = expectedSpeedKmh;
+    if (expectedSpeed == null && speedLimitKmh != null && speedLimitKmh > 0) {
+      expectedSpeed = speedLimitKmh * 0.70;
+    }
+    if (expectedSpeed != null) {
+      expectedSpeed = Math.max(12, expectedSpeed);
+    }
+
+    // ── Stationary detection ────────────────────────────────────────────
+    const effectivelyStopped = filteredSpeed < 2.5;
+
+    if (effectivelyStopped) {
+      if (state.stoppedSince == null) state.stoppedSince = now;
+    } else {
+      state.stoppedSince = null;
+    }
+
+    const stoppedDuration = state.stoppedSince != null ? (now - state.stoppedSince) / 1000 : 0;
+
+    // ── Bus stop detection ──────────────────────────────────────────────
+    const atBusStop = isNearBusStop && distanceToNextStopM != null
+      && distanceToNextStopM <= 40 && stoppedDuration >= 6;
+
+    // ── Route deviation ─────────────────────────────────────────────────
+    // GPS can temporarily jump 50-100m, so require sustained deviation.
+    const offRoute = distanceFromRouteM != null && distanceFromRouteM > 60;
+    if (offRoute) {
+      if (state.offRouteSince == null) state.offRouteSince = now;
+    } else {
+      state.offRouteSince = null;
+    }
+    const offRouteDuration = state.offRouteSince != null ? (now - state.offRouteSince) / 1000 : 0;
+
+    // ── Traffic detection via speed ratio ────────────────────────────────
+    // Compare current vs expected speed instead of raw thresholds.
+    // Ratio 0.50 = 50% of normal = significantly slow.
+    let speedRatio = null;
+    if (expectedSpeed != null && expectedSpeed > 0) {
+      speedRatio = filteredSpeed / expectedSpeed;
+    }
+
+    const significantlySlow = expectedSpeed != null && expectedSpeed >= 20
+      && speedRatio < 0.60 && !atBusStop;
+    const heavyTraffic = expectedSpeed != null && expectedSpeed >= 20
+      && speedRatio < 0.35 && !atBusStop;
+
+    // Require congestion to persist (prevents flicker from brief slowdowns)
+    if (significantlySlow) {
+      if (state.slowSince == null) state.slowSince = now;
+    } else {
+      state.slowSince = null;
+    }
+    if (heavyTraffic) {
+      if (state.heavySince == null) state.heavySince = now;
+    } else {
+      state.heavySince = null;
+    }
+
+    const slowDuration  = state.slowSince  != null ? (now - state.slowSince)  / 1000 : 0;
+    const heavyDuration = state.heavySince != null ? (now - state.heavySince) / 1000 : 0;
+
+    // ── Stopped in traffic (stationary, NOT at a bus stop) ──────────────
+    const stoppedInTraffic = !atBusStop && effectivelyStopped && stoppedDuration >= 30;
+
+    // ── Speeding detection ──────────────────────────────────────────────
+    const speeding = speedLimitKmh != null && speedLimitKmh > 0
+      && filteredSpeed > speedLimitKmh + 10;
+    if (speeding) {
+      if (state.overspeedSince == null) state.overspeedSince = now;
+    } else {
+      state.overspeedSince = null;
+    }
+    const overspeedDuration = state.overspeedSince != null ? (now - state.overspeedSince) / 1000 : 0;
+    const confirmedSpeeding = speeding && overspeedDuration >= 10;
+
+    // ── Heading check ───────────────────────────────────────────────────
+    const wrongDirection = headingDifferenceDeg != null
+      && headingDifferenceDeg > 120 && filteredSpeed > 8;
+
+    // ── FINAL STATUS DECISION (priority order) ──────────────────────────
+    let result;
+
+    // 1. GPS unreliable
+    if (gpsIsVeryPoor || gpsStale) {
+      result = {
+        label: 'GPS Unreliable', color: '#64748b', code: 'GPS_UNRELIABLE', confidence: 0.25,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><circle cx="32" cy="32" r="23" fill="none" stroke="#64748b" stroke-width="5"/><path d="M22 32h20" stroke="#64748b" stroke-width="5" stroke-linecap="round"/></svg>`
+      };
+    }
+    // 2. Off route (sustained)
+    else if (offRouteDuration >= 15) {
+      result = {
+        label: 'Off Route', color: '#dc2626', code: 'OFF_ROUTE', confidence: 0.90,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><path d="M18 10 C18 10 43 18 46 28 C49 38 25 41 25 54" fill="none" stroke="#dc2626" stroke-width="6" stroke-linecap="round"/><circle cx="18" cy="10" r="5" fill="#dc2626"/><circle cx="25" cy="54" r="5" fill="#dc2626"/></svg>`
+      };
+    }
+    // 3. Wrong direction
+    else if (wrongDirection) {
+      result = {
+        label: 'Wrong Direction', color: '#dc2626', code: 'WRONG_DIRECTION', confidence: 0.80,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><path d="M32 8v48M20 20l12-12 12 12" fill="none" stroke="#dc2626" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+      };
+    }
+    // 4. At a bus stop
+    else if (atBusStop) {
+      result = {
+        label: 'At Bus Stop', color: '#f59e0b', code: 'AT_STOP', confidence: 0.95,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><rect x="18" y="10" width="28" height="44" rx="5" fill="none" stroke="#f59e0b" stroke-width="5"/><path d="M24 20h16M24 30h16M24 40h16" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/></svg>`
+      };
+    }
+    // 5. Stopped in traffic (30s+ stop, not at bus stop)
+    else if (stoppedInTraffic) {
+      result = {
+        label: 'Stopped in Traffic', color: '#ef4444', code: 'STOPPED_TRAFFIC', confidence: 0.90,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><circle cx="32" cy="32" r="25" fill="none" stroke="#ef4444" stroke-width="5"/><rect x="20" y="20" width="9" height="24" rx="2" fill="#ef4444"/><rect x="35" y="20" width="9" height="24" rx="2" fill="#ef4444"/></svg>`
+      };
+    }
+    // 6. Heavy traffic (sustained, ratio-based)
+    else if (heavyDuration >= 30) {
+      result = {
+        label: 'Heavy Traffic', color: '#f97316', code: 'HEAVY_TRAFFIC',
+        confidence: expectedSpeed != null ? 0.88 : 0.55,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><path d="M13 45h38" stroke="#f97316" stroke-width="6" stroke-linecap="round"/><path d="M18 32h28" stroke="#f97316" stroke-width="6" stroke-linecap="round"/><path d="M25 19h14" stroke="#f97316" stroke-width="6" stroke-linecap="round"/></svg>`
+      };
+    }
+    // 7. Slow traffic (sustained, ratio-based)
+    else if (slowDuration >= 45) {
+      result = {
+        label: 'Slow Traffic', color: '#f59e0b', code: 'SLOW_TRAFFIC',
+        confidence: expectedSpeed != null ? 0.84 : 0.50,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><circle cx="20" cy="46" r="5" fill="#f59e0b"/><circle cx="32" cy="46" r="5" fill="#f59e0b"/><circle cx="44" cy="46" r="5" fill="#f59e0b"/><path d="M16 25h32" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"/></svg>`
+      };
+    }
+    // 8. Confirmed speeding
+    else if (confirmedSpeeding) {
+      result = {
+        label: 'Above Speed Limit', color: '#dc2626', code: 'SPEEDING', confidence: 0.90,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><circle cx="32" cy="32" r="25" fill="none" stroke="#dc2626" stroke-width="5"/><path d="M32 18v18" stroke="#dc2626" stroke-width="6" stroke-linecap="round"/><circle cx="32" cy="46" r="3" fill="#dc2626"/></svg>`
+      };
+    }
+    // 9. Normal movement
+    else if (filteredSpeed >= 2.5) {
+      result = {
+        label: 'Moving', color: '#10b981', code: 'MOVING',
+        confidence: gpsIsPoor ? 0.65 : 0.92,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><path d="M14 32h36" stroke="#10b981" stroke-width="6" stroke-linecap="round"/><path d="M38 20l12 12-12 12" fill="none" stroke="#10b981" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+      };
+    }
+    // 10. Temporarily stopped (< 30s, uncertain)
+    else {
+      result = {
+        label: 'Temporarily Stopped', color: '#f59e0b', code: 'TEMP_STOP', confidence: 0.70,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><circle cx="32" cy="32" r="25" fill="none" stroke="#f59e0b" stroke-width="5"/><rect x="23" y="21" width="7" height="22" rx="2" fill="#f59e0b"/><rect x="34" y="21" width="7" height="22" rx="2" fill="#f59e0b"/></svg>`
+      };
+    }
+
+    // ── Diagnostics ─────────────────────────────────────────────────────
+    result.filteredSpeedKmh = Number(filteredSpeed.toFixed(1));
+    result.rawSpeedKmh      = Number(speed.toFixed(1));
+    result.expectedSpeedKmh = expectedSpeed != null ? Number(expectedSpeed.toFixed(1)) : null;
+    result.speedRatio       = speedRatio != null ? Number(speedRatio.toFixed(2)) : null;
+    result.gpsAccuracyM     = gpsAccuracyM != null ? Number(gpsAccuracyM.toFixed(1)) : null;
+    result.distanceFromRouteM = distanceFromRouteM != null ? Number(distanceFromRouteM.toFixed(1)) : null;
+    result.timestamp        = now;
+    result.stoppedDurationS = Number(stoppedDuration.toFixed(1));
+
+    state.lastStatus = result;
+    return result;
+  }
+
+  // Legacy wrapper — keeps the old call signature working where needed
+  function determineBusStatus(speedKmh, lastGPSTime, hasDestination, busId) {
     const now = Date.now();
     const gpsAge = lastGPSTime ? (now - lastGPSTime) : Infinity;
 
-    if (gpsAge > 90000) return { label: 'Offline', color: '#ef4444', icon: 'fa-wifi-slash' };
-    if (!hasDestination) return { label: 'Active', color: '#10b981', icon: 'fa-bus' };
-
-    if (lastSharedETA && lastSharedETA.distance_meters < 100) {
-      return { label: 'Reached Destination', color: '#6366f1', icon: 'fa-flag-checkered' };
+    // Handle cases the advanced engine doesn't cover
+    if (gpsAge > 90000) {
+      return {
+        label: 'Offline', color: '#ef4444', code: 'OFFLINE', confidence: 1.0,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><circle cx="32" cy="32" r="23" fill="none" stroke="#ef4444" stroke-width="5"/><path d="M20 20l24 24M44 20l-24 24" stroke="#ef4444" stroke-width="5" stroke-linecap="round"/></svg>`
+      };
     }
 
-    const speed = speedKmh || 0;
-    if (speed < 2)  return { label: 'Stopped', color: '#f59e0b', uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><polygon points="19,4 45,4 60,19 60,45 45,60 19,60 4,45 4,19" fill="none" stroke="#f59e0b" stroke-width="6"/><text x="32" y="44" font-size="26" text-anchor="middle">✋</text></svg>` };
-    if (speed < 8)  return { label: 'Traffic Delay', color: '#f97316', uiIcon: `<div style="font-size:26px;">⚠️</div>` };
-    if (speed < 60) return { label: 'Moving', color: '#10b981', uiIcon: `` }; // No emoji for moving as requested
-    return { label: 'Moving Fast', color: '#22c55e', uiIcon: `` };
+    if (lastSharedETA && lastSharedETA.distance_meters < 100) {
+      return {
+        label: 'Reached Destination', color: '#6366f1', code: 'ARRIVED', confidence: 0.95,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><path d="M20 32l8 8 16-16" fill="none" stroke="#6366f1" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+      };
+    }
+
+    // Delegate to the advanced engine
+    return getBusStatusResult(busId || 'default', {
+      speedKmh: speedKmh || 0,
+      timestamp: now
+    });
   }
 
   // =========================================================================
@@ -267,25 +519,25 @@ window.RoadETA = (function () {
     }
 
     // ── Bus Status ───────────────────────────────────────────────────────
-    const busStatus = determineBusStatus(speedKmh, lastGPSTime, !!destination);
+    const busStatus = determineBusStatus(speedKmh, lastGPSTime, !!destination, busId);
     lastBusStatus = busStatus.label;
     
-    // Update old hidden elements (if still needed for legacy support)
+    // Update old hidden elements (legacy support)
     const statusEl    = document.getElementById('road-bus-status');
     const statusDotEl = document.getElementById('road-bus-status-dot');
     if (statusEl)    { statusEl.textContent = busStatus.label; statusEl.style.color = busStatus.color; }
     if (statusDotEl)   statusDotEl.style.background = busStatus.color;
 
-    // Update NEW Student UI Elements
+    // Update Student Console UI elements
     const newStatusText = document.getElementById('bus-status-display');
     const newStatusIcon = document.getElementById('status-icon');
     if (newStatusText) {
         newStatusText.textContent = busStatus.label.toUpperCase();
+        newStatusText.style.color = busStatus.color;
     }
-    if (newStatusIcon) {
+    if (newStatusIcon && busStatus.uiIcon) {
         newStatusIcon.innerHTML = busStatus.uiIcon;
-        // Hide the icon container if there is no emoji/SVG (like for 'Moving')
-        newStatusIcon.style.display = busStatus.uiIcon ? 'flex' : 'none';
+        newStatusIcon.style.display = 'flex';
     }
 
     // ── ETA: use shared ETA if fresh, otherwise fallback ────────────────
@@ -348,12 +600,13 @@ window.RoadETA = (function () {
   // =========================================================================
   return {
     init: loadDestination,
-    update: updateDisplay,         // still called on every GPS update for speed/status/proximity
+    update: updateDisplay,         // called on every GPS update for speed/status/proximity
     applySharedETA,                // called by Realtime ETA listener
     applyFallback,                 // called when Realtime ETA is stale
     loadDestination,
     haversineDist,
     getNearBusStatus,
+    getBusStatusResult,            // advanced status engine for direct use
     getBusStatus: () => lastBusStatus,
     getLastSharedETA: () => lastSharedETA,
   };
