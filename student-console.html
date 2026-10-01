@@ -436,7 +436,11 @@
     <!-- Status: STOPPED / MOVING -->
     <div class="sc-status-row">
       <div class="sc-status-icon stopped" id="status-icon">
-        <svg viewBox="0 0 64 64" width="40" height="40"><polygon points="19,4 45,4 60,19 60,45 45,60 19,60 4,45 4,19" fill="none" stroke="#f59e0b" stroke-width="6"/><text x="32" y="44" font-size="26" text-anchor="middle">✋</text></svg>
+        <svg viewBox="0 0 64 64" width="40" height="40">
+          <polygon points="20,4 44,4 60,20 60,44 44,60 20,60 4,44 4,20" fill="none" stroke="#f97316" stroke-width="3" stroke-linejoin="round"/>
+          <polygon points="22,7 42,7 57,22 57,42 42,57 22,57 7,42 7,22" fill="#f97316" />
+          <path d="M27 38 V22 A2.5 2.5 0 0 1 32 22 V38 M32 37 V18 A2.5 2.5 0 0 1 37 18 V37 M37 38 V20 A2.5 2.5 0 0 1 42 20 V38 M42 40 V25 A2.5 2.5 0 0 1 47 25 V40 C47 46 42 50 37 50 H27 C21 50 17 46 17 40 V28 A2.5 2.5 0 0 1 22 28 V38" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
       </div>
       <div class="sc-status-text" id="bus-status-display">STOPPED</div>
     </div>
@@ -445,7 +449,11 @@
 
     <!-- Location -->
     <div class="sc-info-row">
-      <div class="sc-info-row-icon"><i class="fas fa-location-dot"></i></div>
+      <div class="sc-info-row-icon">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="#334155">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/>
+        </svg>
+      </div>
       <div class="sc-info-row-text searching" id="location-display">Searching...</div>
     </div>
 
@@ -454,11 +462,26 @@
     <!-- Speed + Duration side by side -->
     <div class="sc-split-row">
       <div class="sc-split-item">
-        <div class="sc-info-row-icon"><i class="fas fa-gauge-high"></i></div>
+        <div class="sc-info-row-icon">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#334155" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 18A8 8 0 0 1 20 18 Z" />
+            <circle cx="12" cy="15" r="1.5" fill="#334155" stroke="none"/>
+            <path d="M12 15l3.5-3.5" />
+            <path d="M7 13l-1.5-1.5" />
+            <path d="M10 10l-.5-1.5" />
+            <path d="M14 10l.5-1.5" />
+            <path d="M17 13l1.5-1.5" />
+          </svg>
+        </div>
         <div class="sc-info-row-text" id="speed-display">0 km/h</div>
       </div>
       <div class="sc-split-item">
-        <div class="sc-info-row-icon"><i class="fas fa-clock"></i></div>
+        <div class="sc-info-row-icon">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#334155" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 3" />
+          </svg>
+        </div>
         <div class="sc-info-row-text" id="trip-duration-display">00:00:00</div>
       </div>
     </div>

@@ -280,8 +280,8 @@ window.RoadETA = (function () {
     // 5. Stopped in traffic (30s+ stop, not at bus stop)
     else if (stoppedInTraffic) {
       result = {
-        label: 'Stopped in Traffic', color: '#ef4444', code: 'STOPPED_TRAFFIC', confidence: 0.90,
-        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><circle cx="32" cy="32" r="25" fill="none" stroke="#ef4444" stroke-width="5"/><rect x="20" y="20" width="9" height="24" rx="2" fill="#ef4444"/><rect x="35" y="20" width="9" height="24" rx="2" fill="#ef4444"/></svg>`
+        label: 'STOPPED', color: '#f97316', code: 'STOPPED_TRAFFIC', confidence: 0.90,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><polygon points="20,4 44,4 60,20 60,44 44,60 20,60 4,44 4,20" fill="none" stroke="#f97316" stroke-width="3" stroke-linejoin="round"/><polygon points="22,7 42,7 57,22 57,42 42,57 22,57 7,42 7,22" fill="#f97316" /><path d="M27 38 V22 A2.5 2.5 0 0 1 32 22 V38 M32 37 V18 A2.5 2.5 0 0 1 37 18 V37 M37 38 V20 A2.5 2.5 0 0 1 42 20 V38 M42 40 V25 A2.5 2.5 0 0 1 47 25 V40 C47 46 42 50 37 50 H27 C21 50 17 46 17 40 V28 A2.5 2.5 0 0 1 22 28 V38" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`
       };
     }
     // 6. Heavy traffic (sustained, ratio-based)
@@ -318,8 +318,8 @@ window.RoadETA = (function () {
     // 10. Temporarily stopped (< 30s, uncertain)
     else {
       result = {
-        label: 'Temporarily Stopped', color: '#f59e0b', code: 'TEMP_STOP', confidence: 0.70,
-        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><circle cx="32" cy="32" r="25" fill="none" stroke="#f59e0b" stroke-width="5"/><rect x="23" y="21" width="7" height="22" rx="2" fill="#f59e0b"/><rect x="34" y="21" width="7" height="22" rx="2" fill="#f59e0b"/></svg>`
+        label: 'TEMPORARY STOPPED', color: '#334155', code: 'TEMP_STOP', confidence: 0.70,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><circle cx="28" cy="32" r="18" fill="none" stroke="#334155" stroke-width="4"/><path d="M28 20v12l6 6" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 10h8" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round"/><rect x="36" y="36" width="16" height="20" fill="#fff" rx="2" /><path d="M38 38h12v4l-4 4 4 4v4H38v-4l4-4-4-4z" fill="none" stroke="#334155" stroke-width="3" stroke-linejoin="round"/></svg>`
       };
     }
 
@@ -362,8 +362,8 @@ window.RoadETA = (function () {
 
     if (state.hasReached) {
       return {
-        label: 'Reached Destination', color: '#6366f1', code: 'ARRIVED', confidence: 0.95,
-        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><path d="M20 32l8 8 16-16" fill="none" stroke="#6366f1" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+        label: 'DESTINATION REACHED', color: '#15803d', code: 'ARRIVED', confidence: 0.95,
+        uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><path d="M32 10C22 10 16 18 16 26C16 38 32 50 32 50C32 50 48 38 48 26C48 18 42 10 32 10Z" fill="#15803d"/><circle cx="32" cy="26" r="7" fill="#fff"/><path d="M29 26l2 2 4-4" fill="none" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M48 14v-6h12v8H48" fill="#15803d"/><rect x="18" y="52" width="28" height="12" rx="6" fill="#15803d"/><text x="32" y="60.5" font-size="7" fill="#fff" font-family="sans-serif" font-weight="bold" text-anchor="middle">SUCCESS</text></svg>`
       };
     }
 
