@@ -253,23 +253,38 @@
     /* --- BUS TO YOU section --- */
     .sc-proximity-section {
       background: #f8fafc;
-      border-top: 1px solid #f1f5f9;
-      padding: 12px 20px calc(24px + env(safe-area-inset-bottom));
+      border-radius: 12px;
+      padding: 16px;
+      margin: 0 16px 16px 16px;
       position: relative;
+      border: 1px solid #e2e8f0;
     }
+    #dest-eta-section {
+      background: #f0fdfa; /* very light teal */
+      border-color: #ccfbf1;
+    }
+    #you-eta-section {
+      background: #eff6ff; /* very light blue */
+      border-color: #dbeafe;
+    }
+
     .sc-proximity-title {
       font-size: 11px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: #64748b;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
     .sc-proximity-status {
-      font-size: 16px;
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 14px;
       font-weight: 800;
       color: #1e293b;
-      margin-bottom: 2px;
+      margin-bottom: 8px;
     }
     .sc-proximity-distance {
       font-size: 14px;
@@ -476,10 +491,8 @@
       </div>
     </div>
 
-    <div class="sc-divider"></div>
-
     <!-- Bus to Destination -->
-    <div class="sc-proximity-section" id="dest-eta-section" style="padding-bottom: 4px;">
+    <div class="sc-proximity-section" id="dest-eta-section">
       <div class="sc-proximity-title">BUS TO DESTINATION (<span id="dest-name-display" style="text-transform: uppercase;">—</span>)</div>
       
       <div class="sc-split-row" style="margin-top: 10px;">
@@ -506,9 +519,9 @@
     </div>
 
     <!-- Bus to You (Your Location) -->
-    <div class="sc-proximity-section">
+    <div class="sc-proximity-section" id="you-eta-section">
       <div class="sc-proximity-title">BUS TO YOU (YOUR LOCATION)</div>
-      <div class="sc-proximity-status" id="road-student-status">Away</div>
+      <div class="sc-proximity-status" id="road-student-status" style="background: rgba(100,116,139,0.08); color: #64748b;">Away</div>
       <div class="sc-proximity-distance">
         <span id="road-dist-student">Share location for distance</span>
       </div>
