@@ -1,660 +1,225 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Student Console | Where Is My Bus</title>
-  <link rel="stylesheet" href="css/leaflet.css?v=12">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <script src="js/icons.js?v=12"></script>
-  <link rel="stylesheet" href="css/driver.css">
-  <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#ffffff">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Where Is My Bus">
-  <style>
-    /* ================================================================
-       STUDENT CONSOLE — REFERENCE IMAGE REDESIGN
-    ================================================================ */
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Where Is My Bus</title>
+<!-- Tailwind CSS CDN with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts for modern typography -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/leaflet.css?v=12">
+<link rel="manifest" href="/manifest.json">
+<!-- BEGIN: Custom Map Styles -->
+<style data-purpose="custom-map-layer">
     body {
-      font-family: 'Inter', sans-serif;
-      background: #f8fafc;
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      height: 100svh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       -webkit-font-smoothing: antialiased;
+      background-color: #cbd5e1;
     }
-
-    /* --- NAVBAR --- */
-    .sc-navbar {
-      background: #fff;
-      border-bottom: 1px solid #e5e7eb;
-      padding: 0 16px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: relative;
-      z-index: 200;
-      flex-shrink: 0;
+    
+    /* Floating card shadow replication */
+    .sheet-shadow {
+      box-shadow: 0 -8px 25px -4px rgba(0, 0, 0, 0.08), 0 -4px 10px -2px rgba(0, 0, 0, 0.04);
     }
-
-    .sc-brand {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 16px;
-      font-weight: 800;
-      color: #0f172a;
-      letter-spacing: -0.3px;
-      cursor: pointer;
-      flex-shrink: 0;
-      min-width: 0;
-    }
-    .sc-brand svg {
-      width: 30px;
-      height: 30px;
-      flex-shrink: 0;
-    }
-    .sc-brand-text {
-      white-space: nowrap;
-    }
-
-    .sc-header-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-shrink: 0;
-      position: relative;
-    }
-
-    .sc-bus-badge {
-      font-size: 13px;
-      font-weight: 700;
-      color: #059669;
-      padding: 4px 14px;
-      background: rgba(5, 150, 105, 0.08);
-      border: 1.5px solid rgba(5, 150, 105, 0.25);
-      border-radius: 20px;
-      white-space: nowrap;
-      flex-shrink: 0;
-      cursor: pointer;
-    }
-
-    /* Dropdown for logout — appears under bus badge */
-    .sc-dropdown {
-      display: none;
-      position: absolute;
-      top: 36px;
-      right: 0;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-      min-width: 120px;
-      z-index: 500;
-      overflow: hidden;
-    }
-    .sc-dropdown.open { display: block; }
-    .sc-dropdown-item {
-      padding: 12px 18px;
-      font-size: 14px;
-      font-weight: 600;
-      color: #1e293b;
-      cursor: pointer;
-      transition: background 0.15s ease;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      border: none;
-      background: none;
-      width: 100%;
-      font-family: 'Inter', sans-serif;
-    }
-    .sc-dropdown-item:hover {
-      background: #f8fafc;
-    }
-
-    /* --- MAP (primary area) --- */
-    .sc-map-area {
-      flex: 1;
-      position: relative;
-      min-height: 0;
-    }
-    .sc-map-area #map {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* Live GPS tracking badge (now part of the panel) */
-    .sc-badge-container {
-      position: absolute;
-      top: -32px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fff;
-      padding: 10px 16px 14px;
-      border-radius: 24px 24px 0 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      z-index: 1001;
-    }
-    .sc-pull-tab {
-      width: 32px;
-      height: 4px;
-      background: #cbd5e1;
-      border-radius: 2px;
-      margin-bottom: 8px;
-    }
-    .sc-live-badge {
-      background: #15803d;
-      color: white;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      padding: 6px 16px;
-      border-radius: 16px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      text-transform: uppercase;
-      box-shadow: 0 4px 10px rgba(21, 128, 61, 0.2);
-    }
-    .sc-live-badge::before {
-      content: '';
-      width: 6px;
-      height: 6px;
-      background: #fff;
-      border-radius: 50%;
-    }
-
-    /* --- INFO PANEL (below map) --- */
-    .sc-info-panel {
-      position: relative;
-      flex-shrink: 0;
-      background: #fff;
-      border-radius: 24px 24px 0 0;
-      padding: 20px 0 0;
-      box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
-      z-index: 1000;
-      margin-top: 20px;
-    }
-
-    /* Status row (STOPPED / MOVING) */
-    .sc-status-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 4px 20px 6px;
-    }
-    .sc-status-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      flex-shrink: 0;
-    }
-    .sc-status-icon.stopped {
-      background: #fff7ed;
-    }
-    .sc-status-icon.moving {
-      background: #ecfdf5;
-    }
-    .sc-status-text {
-      font-size: 22px;
-      font-weight: 800;
-      color: #0f172a;
-      letter-spacing: -0.5px;
-    }
-
-    /* Divider */
-    .sc-divider {
-      height: 1px;
-      background: #f1f5f9;
-      margin: 0 20px;
-    }
-
-    /* Info rows (location, speed, duration) */
-    .sc-info-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 8px 20px;
-    }
-    .sc-info-row-icon {
-      width: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      color: #64748b;
-      font-size: 16px;
-    }
-    .sc-info-row-text {
-      font-size: 15px;
-      font-weight: 600;
-      color: #1e293b;
-      flex: 1;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .sc-info-row-text.searching {
-      color: #94a3b8;
-      font-weight: 500;
-      font-size: 14px;
-    }
-
-    /* Speed + Duration split row */
-    .sc-split-row {
-      display: flex;
-      align-items: center;
-      padding: 8px 20px;
-      gap: 0;
-    }
-    .sc-split-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex: 1;
-    }
-    .sc-split-item + .sc-split-item {
-      border-left: 1px solid #f1f5f9;
-      padding-left: 20px;
-    }
-
-    /* --- BUS TO YOU section --- */
-    .sc-proximity-section {
-      background: #fafbfc;
-      border-top: 1px solid #f1f5f9;
-      padding: 10px 20px 14px;
-    }
-    .sc-proximity-title {
-      font-size: 11px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #64748b;
-      margin-bottom: 6px;
-    }
-    .sc-proximity-status {
-      font-size: 16px;
-      font-weight: 800;
-      color: #1e293b;
-      margin-bottom: 2px;
-    }
-    .sc-proximity-distance {
-      font-size: 14px;
-      font-weight: 600;
-      color: #64748b;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 6px;
-    }
-    .sc-progress-bar {
-      flex: 1;
-      height: 6px;
-      background: #e2e8f0;
-      border-radius: 3px;
-      overflow: hidden;
-      max-width: 160px;
-    }
-    .sc-progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #4f46e5, #6366f1);
-      border-radius: 3px;
-      transition: width 0.5s ease;
-      width: 20%;
-    }
-
-    /* --- Location Prompt Modal --- */
-    .location-prompt-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.4);
-      z-index: 10000;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-    .location-prompt-modal.active { display: flex; }
-    .location-prompt-card {
-      background: rgba(255, 255, 255, 0.8);
-      padding: 32px;
-      border-radius: 24px;
-      width: 90%;
-      max-width: 420px;
-      text-align: center;
-      border: 1px solid rgba(255, 255, 255, 0.9);
-      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-    }
-    .location-prompt-card h3 {
-      color: #0f172a;
-      margin-bottom: 12px;
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
-    .location-prompt-card p {
-      color: #64748b;
-      margin-bottom: 28px;
-      line-height: 1.6;
-      font-size: 15px;
-      font-weight: 500;
-    }
-    .prompt-btn-group {
-      display: flex;
-      gap: 12px;
-    }
-    .prompt-btn-group button {
-      flex: 1;
-      padding: 14px;
-      border-radius: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      border: none;
-      font-family: 'Inter', sans-serif;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      font-size: 14px;
-    }
-    .btn-allow {
-      background: #4f46e5;
-      color: white;
-      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
-    }
-    .btn-allow:hover {
-      background: #4338ca;
-      transform: translateY(-2px);
-      box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
-    }
-    .btn-deny {
-      background: #f1f5f9;
-      color: #64748b;
-    }
-    .btn-deny:hover {
-      background: #e2e8f0;
-      color: #0f172a;
-    }
-
-    /* ---- Hidden elements for JS compatibility ---- */
-    .sc-hidden { display: none !important; }
-
-    /* ---- Responsive ---- */
-    @media (max-width: 420px) {
-      .sc-status-row { padding: 4px 16px 6px; }
-      .sc-info-row, .sc-split-row { padding: 8px 16px; }
-      .sc-proximity-section { padding: 10px 16px 14px; }
-      .sc-divider { margin: 0 16px; }
-    }
-    @media (max-width: 380px) {
-      .sc-brand-text { font-size: 14px; }
-      .sc-status-text { font-size: 18px; }
-      .sc-info-row-text { font-size: 14px; }
-      .sc-bus-badge { font-size: 12px; padding: 3px 10px; }
-    }
-  </style>
+    
+    .hidden { display: none !important; }
+</style>
+<!-- END: Custom Map Styles -->
 </head>
-<body>
+<body class="flex justify-center items-center h-[100dvh] bg-slate-200 m-0 p-0 sm:py-6 select-none overflow-hidden">
+<!-- BEGIN: MobileDeviceFrame -->
+<div class="relative w-full max-w-[420px] h-full sm:h-[844px] bg-[#a8d3e6] overflow-hidden flex flex-col sm:rounded-[36px] sm:shadow-2xl border-0 sm:border-[8px] sm:border-slate-800">
 
-<div id="offline-indicator" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1A1A1A; color:white; padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; font-family:Inter,sans-serif; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.3); align-items:center; gap:8px;">
+<!-- Hidden offline indicator -->
+<div id="offline-indicator" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1A1A1A; color:white; padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.3); align-items:center; gap:8px;">
   You are offline - showing cached data
 </div>
 
-  <!-- NAVBAR -->
-  <nav class="sc-navbar">
-    <div class="sc-brand" onclick="window.location.href='student-dashboard.html'">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 462 244" role="img" aria-label="Where Is My Bus" width="30" height="30"><path fill-rule="evenodd" fill="currentColor" d="M406.66 132.0 L428.16 111.0 L445.38 91.0 L453.18 76.0 L455.31 68.0 L456.2 57.0 L455.31 48.0 L451.19 35.0 L441.0 20.37 L433.0 13.89 L425.0 9.72 L415.0 6.68 L405.0 5.83 L396.0 6.7 L386.0 9.66 L377.0 14.62 L369.0 21.38 L363.67 28.0 L358.74 37.0 L355.69 47.0 L354.6 60.0 L357.58 76.0 L365.85 92.0 L396.63 126.0 L404.0 132.24 L406.66 132.0 Z M320.22 238.0 L331.0 236.31 L342.0 232.2 L353.0 225.19 L361.33 217.0 L369.37 205.0 L400.82 145.0 L381.0 127.84 L357.0 171.82 L352.58 175.0 L340.17 199.0 L335.94 204.0 L327.0 209.23 L314.0 211.33 L303.0 209.34 L292.31 203.0 L284.6 193.0 L252.69 131.0 L278.0 82.24 L332.0 185.4 L347.66 160.0 L289.3 45.0 L281.21 34.0 L272.0 25.69 L257.0 17.88 L239.0 14.76 L223.0 16.62 L208.0 22.76 L197.33 31.0 L188.89 41.0 L159.0 97.67 L155.62 93.0 L129.37 41.0 L120.0 29.62 L109.0 21.59 L98.0 16.84 L86.0 14.65 L5.43 15.0 L103.76 206.0 L112.0 217.56 L123.0 227.27 L139.0 235.2 L158.0 238.15 L175.0 236.27 L191.0 229.34 L202.0 220.51 L210.27 210.0 L237.0 159.79 L260.65 205.0 L267.8 216.0 L273.38 222.0 L283.0 229.37 L296.0 235.36 L304.0 237.35 L320.22 238.0 Z M409.0 77.03 L403.0 77.3 L395.0 74.38 L388.82 68.0 L386.55 63.0 L385.72 55.0 L387.79 48.0 L394.0 40.71 L400.0 37.67 L407.0 36.95 L414.0 38.78 L421.35 45.0 L424.41 51.0 L425.21 59.0 L422.29 68.0 L416.0 74.38 L409.0 77.03 Z M118.0 175.46 L49.0 41.52 L83.0 41.34 L91.0 42.69 L100.53 48.0 L107.45 57.0 L142.95 127.0 L118.0 175.46 Z M163.0 211.01 L156.0 211.11 L147.0 209.17 L139.0 205.13 L135.46 201.0 L208.8 60.0 L217.32 49.0 L230.0 42.65 L241.0 41.89 L249.0 43.71 L255.0 46.67 L262.34 54.0 L188.33 195.0 L183.29 202.0 L178.0 206.28 L171.0 209.45 L163.0 211.01 Z"/></svg>
-      <span class="sc-brand-text">Where Is My Bus</span>
+<!-- BEGIN: MainHeader -->
+<header class="relative z-30 bg-white/95 backdrop-blur-md px-4 pt-3.5 pb-3 flex items-center justify-between shadow-sm border-b border-gray-100 flex-shrink-0">
+  <!-- App Brand Logo & Title -->
+  <div class="flex items-center space-x-2.5 cursor-pointer" onclick="window.location.href='student-dashboard.html'">
+    <!-- Stylized "W" logo -->
+    <div class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-800">
+      <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6" viewbox="0 0 32 32">
+        <path d="M4 10 L8.5 22 L13 13 L17.5 22 L22 13 L26.5 22 L30 10"></path>
+      </svg>
     </div>
-    <div class="sc-header-right">
-      <span class="sc-bus-badge" id="assigned-bus-label" onclick="toggleBusDropdown(event)">Loading...</span>
-      <div class="sc-dropdown" id="profile-dropdown">
-        <button class="sc-dropdown-item" onclick="studentLogout()">Logout</button>
-      </div>
-    </div>
-  </nav>
-
-  <script>
-    // Dropdown toggle via bus badge tap
-    function toggleBusDropdown(e) {
-      e.stopPropagation();
-      document.getElementById('profile-dropdown').classList.toggle('open');
-    }
-    document.addEventListener('click', () => {
-      document.getElementById('profile-dropdown').classList.remove('open');
-    });
-
-    function studentLogout() {
-      localStorage.removeItem('userSession');
-      window.location.href = 'index.html';
-    }
-  </script>
-
-  <!-- MAP (primary area — fills remaining space) -->
-  <div class="sc-map-area">
-    <div id="map"></div>
+    <h1 class="text-xl font-bold tracking-tight text-gray-900 leading-none">Where Is My Bus</h1>
   </div>
+  <!-- Action items: Bus tag -->
+  <div class="flex items-center space-x-2">
+    <span id="assigned-bus-label" class="px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-full cursor-pointer" onclick="studentLogout()">
+      Bus 1
+    </span>
+  </div>
+</header>
+<!-- END: MainHeader -->
 
-  <!-- INFO PANEL (below map) -->
-  <div class="sc-info-panel">
-    <div class="sc-badge-container">
-      <div class="sc-pull-tab"></div>
-      <div class="sc-live-badge" id="live-badge">Live GPS Tracking Active</div>
+<!-- BEGIN: MapView -->
+<main class="relative flex-1 w-full overflow-hidden bg-[#a6cfe2]" data-purpose="interactive-map">
+  <!-- Leaflet Map Container (replaces static SVG map to wire up real tracking logic) -->
+  <div id="map" class="absolute inset-0 w-full h-full z-0"></div>
+</main>
+<!-- END: MapView -->
+
+<!-- BEGIN: BottomSheetStatusCard -->
+<section class="relative z-30 bg-white rounded-t-[32px] px-5 pt-3 pb-7 sheet-shadow -mt-6 flex-shrink-0" data-purpose="bus-status-sheet">
+  <!-- Top Center Drag Handle -->
+  <div class="flex justify-center w-full mb-2">
+    <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+  </div>
+  
+  <!-- Live GPS Tracking Active Pill Badge -->
+  <div class="flex justify-center -mt-1 mb-4">
+    <span class="inline-flex items-center px-4 py-1.5 rounded-full text-[11px] font-extrabold tracking-wider text-white bg-[#1e6f43] uppercase shadow-sm">
+      LIVE GPS TRACKING ACTIVE
+    </span>
+  </div>
+  
+  <!-- Status Header: STOPPED -->
+  <div class="flex items-center space-x-3 mb-4">
+    <div id="status-icon" class="w-10 h-10 rounded-xl bg-amber-500/10 border-2 border-amber-600 flex items-center justify-center text-amber-600 stopped">
+      <svg class="w-6 h-6" fill="currentColor" viewbox="0 0 24 24">
+        <!-- Raised palm icon -->
+        <path d="M12 2a1 1 0 0 1 1 1v7a1 1 0 0 1-2 0V3a1 1 0 0 1 1-1zm3 3a1 1 0 0 1 1 1v5a1 1 0 0 1-2 0V6a1 1 0 0 1 1-1zm3 3a1 1 0 0 1 1 1v4a1 1 0 0 1-2 0V9a1 1 0 0 1 1-1zM9 5a1 1 0 0 1 1 1v5a1 1 0 0 1-2 0V6a1 1 0 0 1 1-1zm-3 4a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm1 7a5 5 0 0 0 10 0v-3h-2v3a3 3 0 0 1-6 0v-3H7v3z"></path>
+      </svg>
     </div>
-
-    <!-- Status: STOPPED / MOVING -->
-    <div class="sc-status-row">
-      <div class="sc-status-icon stopped" id="status-icon">✋</div>
-      <div class="sc-status-text" id="bus-status-display">STOPPED</div>
+    <h2 id="bus-status-display" class="text-2xl font-black text-gray-950 tracking-tight">STOPPED</h2>
+  </div>
+  
+  <!-- Location Info -->
+  <div class="flex items-center space-x-2.5 mb-4 text-gray-800">
+    <svg class="w-5 h-5 text-slate-500 shrink-0" fill="currentColor" viewbox="0 0 20 20">
+      <path clip-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" fill-rule="evenodd"></path>
+    </svg>
+    <span id="location-display" class="font-bold text-gray-900 text-sm tracking-tight truncate searching">
+      Searching...
+    </span>
+  </div>
+  
+  <!-- Metrics Row (Speed & Timer) -->
+  <div class="grid grid-cols-2 gap-4 pb-2 border-gray-100">
+    <!-- Speed Metric -->
+    <div class="flex items-center space-x-2.5">
+      <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+        <path d="M12 8v4l2.5 2.5M12 2a10 10 0 100 20 10 10 0 000-20z" stroke-linecap="round" stroke-linejoin="round"></path>
+        <path d="M12 6a6 6 0 016 6" stroke-linecap="round"></path>
+      </svg>
+      <span id="speed-display" class="font-bold text-gray-900 text-base">0 km/h</span>
     </div>
-
-    <div class="sc-divider"></div>
-
-    <!-- Location -->
-    <div class="sc-info-row">
-      <div class="sc-info-row-icon"><i class="fas fa-location-dot"></i></div>
-      <div class="sc-info-row-text searching" id="location-display">Searching...</div>
-    </div>
-
-    <div class="sc-divider"></div>
-
-    <!-- Speed + Duration side by side -->
-    <div class="sc-split-row">
-      <div class="sc-split-item">
-        <div class="sc-info-row-icon"><i class="fas fa-gauge-high"></i></div>
-        <div class="sc-info-row-text" id="speed-display">0 km/h</div>
-      </div>
-      <div class="sc-split-item">
-        <div class="sc-info-row-icon"><i class="fas fa-clock"></i></div>
-        <div class="sc-info-row-text" id="trip-duration-display">00:00:00</div>
-      </div>
-    </div>
-
-    <div class="sc-divider"></div>
-
-    <!-- Bus to You (Your Location) -->
-    <div class="sc-proximity-section">
-      <div class="sc-proximity-title">BUS TO YOU (YOUR LOCATION)</div>
-      <div class="sc-proximity-status" id="road-student-status">Away</div>
-      <div class="sc-proximity-distance">
-        <span id="road-dist-student">Share location for distance</span>
-        <div class="sc-progress-bar">
-          <div class="sc-progress-fill" id="proximity-progress"></div>
-        </div>
-      </div>
+    <!-- Stopwatch Metric -->
+    <div class="flex items-center space-x-2.5">
+      <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+        <circle cx="12" cy="13" r="8"></circle>
+        <path d="M12 9v4l2 2m-2-11V2m-4 1h8" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+      <span id="trip-duration-display" class="font-bold text-gray-900 text-base">00:00:00</span>
     </div>
   </div>
+</section>
+<!-- END: BottomSheetStatusCard -->
 
-  <!-- Hidden elements for JS compatibility (road-eta.js, student-console.js) -->
-  <div class="sc-hidden">
-    <span id="next-stop-display"></span>
-    <div id="road-eta-dest">Loading...</div>
-    <div id="road-dist-dest"><span id="dest-name-display">—</span></div>
-    <div id="road-source-badge">ROAD</div>
-    <div id="road-bus-status-dot"></div>
-    <div id="road-bus-status">Connecting...</div>
-    <div id="road-speed-display"></div>
-    <div id="road-avg-speed"></div>
-    <div id="road-last-gps"></div>
-    <div id="dest-eta-card"></div>
-    <div id="driver-name-display"></div>
-  </div>
+</div>
+<!-- END: MobileDeviceFrame -->
 
-  <!-- Trip status bar removed — only the sc-live-badge on the map is used -->
-  <div class="sc-hidden" id="trip-status-bar">
-    <span id="trip-status-text"></span>
-  </div>
+<!-- Hidden elements for JS compatibility -->
+<div class="hidden">
+  <span id="next-stop-display"></span>
+  <div id="road-eta-dest">Loading...</div>
+  <div id="road-dist-dest"><span id="dest-name-display">—</span></div>
+  <div id="road-source-badge">ROAD</div>
+  <div id="road-bus-status-dot"></div>
+  <div id="road-bus-status">Connecting...</div>
+  <div id="road-speed-display"></div>
+  <div id="road-avg-speed"></div>
+  <div id="road-last-gps"></div>
+  <div id="dest-eta-card"></div>
+  <div id="driver-name-display"></div>
+  <div id="trip-status-bar"><span id="trip-status-text"></span></div>
+</div>
 
-  <!-- Optional Location Prompt -->
-  <div class="location-prompt-modal" id="locationPrompt">
-    <div class="location-prompt-card">
-      <h3>Enhance Live Tracking</h3>
-      <p>Allow location access for better route accuracy? This will show your position relative to the bus and improve timing estimates.</p>
-      <div class="prompt-btn-group">
-        <button class="btn-deny" id="btn-deny">Not Now</button>
-        <button class="btn-allow" id="btn-allow">Allow Access</button>
-      </div>
-    </div>
-  </div>
+<!-- Base Tracking Logic Scripts -->
+<script src="js/leaflet.js?v=12"></script>
+<script src="js/supabase.min.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/haversine.js"></script>
+<script src="js/routes.js"></script>
+<script src="js/map.js?v=12"></script>
+<script src="js/location.js"></script>
+<script src="js/gps.js"></script>
+<script src="js/timer.js"></script>
+<script src="js/auth.js?v=3"></script>
+<script src="js/session-protection.js"></script>
+<script src="js/road-eta.js"></script>
+<script src="js/student-console.js"></script>
 
-  <script src="js/leaflet.js?v=12"></script>
-  <!-- supabase and session-protection are loaded in the body to ensure correct initialization order -->
-  <script src="js/supabase.min.js"></script>
-  <script src="js/supabase-client.js"></script>
-  <script src="js/haversine.js"></script>
-  <script src="js/routes.js"></script>
-  <script src="js/map.js?v=12"></script>
-  <script src="js/location.js"></script>
-  <script src="js/gps.js"></script>
-  <script src="js/timer.js"></script>
-  <script src="js/auth.js?v=3"></script>
-  <script src="js/session-protection.js"></script>
-  <script src="js/road-eta.js"></script>
+<script>
+  // Simple logout connected to the Bus 1 badge
+  function studentLogout() {
+    localStorage.removeItem('userSession');
+    window.location.href = 'index.html';
+  }
 
-  <script src="js/student-console.js"></script>
+  protectRoute('student');
+  const session = JSON.parse(localStorage.getItem('userSession'));
+  if (!session) window.location.href = 'index.html';
+</script>
 
-  <script>
-    protectRoute('student');
-    const session = JSON.parse(localStorage.getItem('userSession'));
-    if (!session) window.location.href = 'index.html';
-  </script>
+<script>
+  // Update Bus Status UI to seamlessly switch between STOPPED (amber) and MOVING (emerald) Tailwind classes
+  function updateBusStatusUI(speedKmh) {
+    const statusIcon = document.getElementById('status-icon');
+    const statusText = document.getElementById('bus-status-display');
 
-  <!-- Bus status icon logic: update STOPPED/MOVING based on speed -->
-  <script>
-    // Observe speed changes and update status display
-    const _origProcessNewLocation = typeof processNewLocation === 'function' ? processNewLocation : null;
-
-    function updateBusStatusUI(speedKmh) {
-      const statusIcon = document.getElementById('status-icon');
-      const statusText = document.getElementById('bus-status-display');
-      const liveBadge = document.getElementById('live-badge');
-
-      if (speedKmh > 2) {
-        // MOVING
-        if (statusIcon) {
-          statusIcon.textContent = '🚌';
-          statusIcon.classList.remove('stopped');
-          statusIcon.classList.add('moving');
-        }
-        if (statusText) statusText.textContent = 'MOVING';
-      } else {
-        // STOPPED
-        if (statusIcon) {
-          statusIcon.textContent = '✋';
-          statusIcon.classList.remove('moving');
-          statusIcon.classList.add('stopped');
-        }
-        if (statusText) statusText.textContent = 'STOPPED';
+    if (speedKmh > 2) {
+      if (statusIcon) {
+        statusIcon.innerHTML = '🚌';
+        statusIcon.className = 'w-10 h-10 rounded-xl bg-emerald-500/10 border-2 border-emerald-600 flex items-center justify-center text-emerald-600 text-xl moving';
       }
-    }
-
-    // Hook into speed display updates
-    const speedObs = new MutationObserver(() => {
-      const speedEl = document.getElementById('speed-display');
-      if (speedEl) {
-        const val = parseFloat(speedEl.textContent) || 0;
-        updateBusStatusUI(val);
+      if (statusText) statusText.textContent = 'MOVING';
+    } else {
+      if (statusIcon) {
+        statusIcon.innerHTML = '<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a1 1 0 0 1 1 1v7a1 1 0 0 1-2 0V3a1 1 0 0 1 1-1zm3 3a1 1 0 0 1 1 1v5a1 1 0 0 1-2 0V6a1 1 0 0 1 1-1zm3 3a1 1 0 0 1 1 1v4a1 1 0 0 1-2 0V9a1 1 0 0 1 1-1zM9 5a1 1 0 0 1 1 1v5a1 1 0 0 1-2 0V6a1 1 0 0 1 1-1zm-3 4a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm1 7a5 5 0 0 0 10 0v-3h-2v3a3 3 0 0 1-6 0v-3H7v3z"></path></svg>';
+        statusIcon.className = 'w-10 h-10 rounded-xl bg-amber-500/10 border-2 border-amber-600 flex items-center justify-center text-amber-600 stopped';
       }
-    });
-    const speedTarget = document.getElementById('speed-display');
-    if (speedTarget) {
-      speedObs.observe(speedTarget, { childList: true, characterData: true, subtree: true });
+      if (statusText) statusText.textContent = 'STOPPED';
     }
+  }
 
-    // Update proximity progress bar based on road-dist-student content
-    const distObs = new MutationObserver(() => {
-      const distEl = document.getElementById('road-dist-student');
-      const progressEl = document.getElementById('proximity-progress');
-      if (distEl && progressEl) {
-        const text = distEl.textContent;
-        const match = text.match(/([\d.]+)\s*km/i);
-        if (match) {
-          const distKm = parseFloat(match[1]);
-          // Scale: 0 km = 100%, 50+ km = 5%
-          const pct = Math.max(5, Math.min(100, 100 - (distKm / 50 * 95)));
-          progressEl.style.width = pct + '%';
-        }
-      }
-    });
-    const distTarget = document.getElementById('road-dist-student');
-    if (distTarget) {
-      distObs.observe(distTarget, { childList: true, characterData: true, subtree: true });
+  // Hook into speed display text updates
+  const speedObs = new MutationObserver(() => {
+    const speedEl = document.getElementById('speed-display');
+    if (speedEl) {
+      const val = parseFloat(speedEl.textContent) || 0;
+      updateBusStatusUI(val);
     }
-  </script>
+  });
+  const speedTarget = document.getElementById('speed-display');
+  if (speedTarget) {
+    speedObs.observe(speedTarget, { childList: true, characterData: true, subtree: true });
+  }
+</script>
 
 <script>
 window.addEventListener('online', () => {
   document.getElementById('offline-indicator').style.display = 'none';
 });
-
 window.addEventListener('offline', () => {
   document.getElementById('offline-indicator').style.display = 'flex';
 });
-
 if (!navigator.onLine) {
   document.getElementById('offline-indicator').style.display = 'flex';
 }
-</script>
-<script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js');
   });
 }
 </script>
-<script>
-  // Hide destination card for evening trips (after 12 PM)
-  document.addEventListener('DOMContentLoaded', () => {
-    const currentHour = new Date().getHours();
-    if (currentHour >= 12) {
-      const destCard = document.getElementById('dest-eta-card');
-      if (destCard) {
-        destCard.style.display = 'none';
-      }
-    }
-  });
-</script>
+
 </body>
 </html>
