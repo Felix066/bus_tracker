@@ -350,7 +350,17 @@ window.RoadETA = (function () {
       };
     }
 
-    if (lastSharedETA && lastSharedETA.distance_meters < 100) {
+    const state = busStatusEngines.get(busId || 'default') || {};
+
+    if (lastSharedETA) {
+      if (lastSharedETA.distance_meters < 100) {
+        state.hasReached = true;
+      } else if (lastSharedETA.distance_meters > 300) {
+        state.hasReached = false;
+      }
+    }
+
+    if (state.hasReached) {
       return {
         label: 'Reached Destination', color: '#6366f1', code: 'ARRIVED', confidence: 0.95,
         uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><path d="M20 32l8 8 16-16" fill="none" stroke="#6366f1" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`

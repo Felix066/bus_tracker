@@ -33,7 +33,8 @@
       height: 100dvh; /* Dynamic viewport height to prevent cutoff on mobile */
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto; /* Allow scrolling if screen is too small */
       -webkit-font-smoothing: antialiased;
     }
 
@@ -93,59 +94,28 @@
       cursor: pointer;
     }
 
-    /* Dropdown for logout — appears under profile icon */
-    .sc-profile-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
+    /* Logout Button */
+    .sc-logout-btn {
       background: #f1f5f9;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #475569;
-      font-size: 18px;
-      cursor: pointer;
+      color: #334155;
       border: 1px solid #e2e8f0;
-    }
-
-    .sc-dropdown {
-      display: none;
-      position: absolute;
-      top: 36px;
-      right: 0;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-      min-width: 120px;
-      z-index: 500;
-      overflow: hidden;
-    }
-    .sc-dropdown.open { display: block; }
-    .sc-dropdown-item {
-      padding: 12px 18px;
-      font-size: 14px;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 13px;
       font-weight: 600;
-      color: #1e293b;
       cursor: pointer;
-      transition: background 0.15s ease;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      border: none;
-      background: none;
-      width: 100%;
       font-family: 'Inter', sans-serif;
+      transition: background 0.15s ease;
     }
-    .sc-dropdown-item:hover {
-      background: #f8fafc;
+    .sc-logout-btn:hover {
+      background: #e2e8f0;
     }
 
     /* --- MAP (primary area) --- */
     .sc-map-area {
       flex: 1;
       position: relative;
-      min-height: 0;
+      min-height: 250px; /* Ensure map doesn't collapse entirely on tiny screens */
     }
     .sc-map-area #map {
       width: 100%;
@@ -448,25 +418,11 @@
     </div>
     <div class="sc-header-right">
       <span class="sc-bus-badge" id="assigned-bus-label">Loading...</span>
-      <div class="sc-profile-btn" onclick="toggleProfileDropdown(event)">
-        <i class="fas fa-user-circle"></i>
-      </div>
-      <div class="sc-dropdown" id="profile-dropdown">
-        <button class="sc-dropdown-item" onclick="studentLogout()">Logout</button>
-      </div>
+      <button class="sc-logout-btn" onclick="studentLogout()">Logout</button>
     </div>
   </nav>
 
   <script>
-    // Dropdown toggle via profile button
-    function toggleProfileDropdown(e) {
-      e.stopPropagation();
-      document.getElementById('profile-dropdown').classList.toggle('open');
-    }
-    document.addEventListener('click', () => {
-      document.getElementById('profile-dropdown').classList.remove('open');
-    });
-
     function studentLogout() {
       localStorage.removeItem('userSession');
       window.location.href = 'index.html';

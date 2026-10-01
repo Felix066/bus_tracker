@@ -595,7 +595,10 @@ function processNewLocation(lat, lon, speedKmh) {
 
 async function geocodeIfNeeded(lat, lon) {
     try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second max
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`, { signal: controller.signal });
+        clearTimeout(timeoutId);
         const data = await response.json();
         if (data && data.display_name) {
             return data.display_name.split(',').slice(0, 2).join(', ');
