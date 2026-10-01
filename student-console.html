@@ -120,6 +120,35 @@
       <span id="trip-duration-display" class="font-bold text-gray-900 text-base">00:00:00</span>
     </div>
   </div>
+
+  <!-- Bus to You (Your Location) Card -->
+  <div class="bg-[#f5f5f9] rounded-2xl p-3.5 mt-2 relative overflow-hidden" data-purpose="distance-card">
+    <!-- Card Header -->
+    <div class="flex justify-between items-center mb-1">
+      <span class="text-[11px] font-bold tracking-wider text-gray-600 uppercase">
+        BUS TO YOU (YOUR LOCATION)
+      </span>
+      <!-- Sparkles Icon -->
+      <svg class="w-4 h-4 text-indigo-400 opacity-60" fill="currentColor" viewbox="0 0 24 24">
+        <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"></path>
+      </svg>
+    </div>
+    <!-- Away text -->
+    <div id="road-student-status" class="text-lg font-bold text-gray-900 leading-tight mb-2.5">
+      Away
+    </div>
+    <!-- Progress bar and distance indicator -->
+    <div class="flex items-center space-x-3">
+      <span id="road-dist-student" class="text-sm font-semibold text-gray-900 whitespace-nowrap">
+        Share location for distance
+      </span>
+      <!-- Track bar -->
+      <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden flex">
+        <div id="proximity-progress" class="w-[0%] h-full bg-[#4f56c7] rounded-full transition-all duration-500"></div>
+        <div class="flex-1 h-full"></div>
+      </div>
+    </div>
+  </div>
 </section>
 <!-- END: BottomSheetStatusCard -->
 
@@ -201,6 +230,26 @@
   const speedTarget = document.getElementById('speed-display');
   if (speedTarget) {
     speedObs.observe(speedTarget, { childList: true, characterData: true, subtree: true });
+  }
+
+  // Update proximity progress bar based on road-dist-student content
+  const distObs = new MutationObserver(() => {
+    const distEl = document.getElementById('road-dist-student');
+    const progressEl = document.getElementById('proximity-progress');
+    if (distEl && progressEl) {
+      const text = distEl.textContent;
+      const match = text.match(/([\d.]+)\s*km/i);
+      if (match) {
+        const distKm = parseFloat(match[1]);
+        // Scale: 0 km = 100%, 50+ km = 5%
+        const pct = Math.max(5, Math.min(100, 100 - (distKm / 50 * 95)));
+        progressEl.style.width = pct + '%';
+      }
+    }
+  });
+  const distTarget = document.getElementById('road-dist-student');
+  if (distTarget) {
+    distObs.observe(distTarget, { childList: true, characterData: true, subtree: true });
   }
 </script>
 
