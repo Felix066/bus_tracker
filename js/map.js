@@ -214,10 +214,12 @@ function updateBusMarker(lat, lon, label = 'Bus') {
             
             animateMarker(busMarker, oldPos.lat, oldPos.lng, lat, lon, duration);
             busMarker.setIcon(createBusIcon(label));
-            if (window.isFollowBusEnabled !== false && map) {
-                map.panTo([lat, lon], { animate: true, duration: duration / 1000 });
-            }
             if (typeof checkNearbyAlert === 'function') checkNearbyAlert(lat, lon);
+        }
+
+        // Always ensure map is following the bus, even if it is stationary
+        if (window.isFollowBusEnabled !== false && map) {
+            map.panTo([lat, lon], { animate: true, duration: 1.0 });
         }
     }
 }

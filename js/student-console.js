@@ -217,15 +217,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const destSection = document.getElementById('dest-eta-section');
     if (destSection) {
-        // Temporarily forced to always show so user can test the layout
-        destSection.style.display = 'block';
-        /*
         if (currentTripType === 'evening' || currentTripType === 'afternoon') {
             destSection.style.display = 'none';
         } else {
             destSection.style.display = 'block';
         }
-        */
     }
 
     try {
