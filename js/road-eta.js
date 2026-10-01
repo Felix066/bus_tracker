@@ -106,10 +106,10 @@ window.RoadETA = (function () {
     }
 
     const speed = speedKmh || 0;
-    if (speed < 2)  return { label: 'Stopped', color: '#f59e0b', icon: 'fa-circle-pause' };
-    if (speed < 8)  return { label: 'Traffic Delay', color: '#f97316', icon: 'fa-traffic-light' };
-    if (speed < 60) return { label: 'Moving', color: '#10b981', icon: 'fa-bus-simple' };
-    return { label: 'Moving Fast', color: '#22c55e', icon: 'fa-gauge-high' };
+    if (speed < 2)  return { label: 'Stopped', color: '#f59e0b', uiIcon: `<svg viewBox="0 0 64 64" width="40" height="40"><polygon points="19,4 45,4 60,19 60,45 45,60 19,60 4,45 4,19" fill="none" stroke="#f59e0b" stroke-width="6"/><text x="32" y="44" font-size="26" text-anchor="middle">✋</text></svg>` };
+    if (speed < 8)  return { label: 'Traffic Delay', color: '#f97316', uiIcon: `<div style="font-size:26px;">⚠️</div>` };
+    if (speed < 60) return { label: 'Moving', color: '#10b981', uiIcon: `` }; // No emoji for moving as requested
+    return { label: 'Moving Fast', color: '#22c55e', uiIcon: `` };
   }
 
   // =========================================================================
@@ -269,10 +269,24 @@ window.RoadETA = (function () {
     // ── Bus Status ───────────────────────────────────────────────────────
     const busStatus = determineBusStatus(speedKmh, lastGPSTime, !!destination);
     lastBusStatus = busStatus.label;
+    
+    // Update old hidden elements (if still needed for legacy support)
     const statusEl    = document.getElementById('road-bus-status');
     const statusDotEl = document.getElementById('road-bus-status-dot');
     if (statusEl)    { statusEl.textContent = busStatus.label; statusEl.style.color = busStatus.color; }
     if (statusDotEl)   statusDotEl.style.background = busStatus.color;
+
+    // Update NEW Student UI Elements
+    const newStatusText = document.getElementById('bus-status-display');
+    const newStatusIcon = document.getElementById('status-icon');
+    if (newStatusText) {
+        newStatusText.textContent = busStatus.label.toUpperCase();
+    }
+    if (newStatusIcon) {
+        newStatusIcon.innerHTML = busStatus.uiIcon;
+        // Hide the icon container if there is no emoji/SVG (like for 'Moving')
+        newStatusIcon.style.display = busStatus.uiIcon ? 'flex' : 'none';
+    }
 
     // ── ETA: use shared ETA if fresh, otherwise fallback ────────────────
     const etaAge = Date.now() - lastSharedETATime;
