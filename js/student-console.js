@@ -215,6 +215,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentTripType = trip.trip_type;
     const isTripActive = trip.status === 'active';
 
+    const destSection = document.getElementById('dest-eta-section');
+    if (destSection) {
+        if (currentTripType === 'evening' || currentTripType === 'afternoon') {
+            destSection.style.display = 'none';
+        } else {
+            destSection.style.display = 'block';
+        }
+    }
+
     try {
         const res = await fetch(`${BACKEND_URL}/api/public/bus-status/${busId}`);
         if (res.ok) {
