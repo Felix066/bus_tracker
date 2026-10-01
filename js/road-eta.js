@@ -440,19 +440,19 @@ window.RoadETA = (function () {
 
     if (payload.status === 'UNAVAILABLE' || payload.status === 'GPS_STALE') {
       if (destEtaEl)  { destEtaEl.textContent = 'ETA Unavailable'; destEtaEl.style.color = '#94a3b8'; }
-      if (destDistEl) destDistEl.textContent = payload.status === 'GPS_STALE' ? 'Bus location outdated' : 'ETA service unavailable';
+      if (destDistEl) destDistEl.textContent = payload.status === 'GPS_STALE' ? 'Outdated Location' : 'Service offline';
       return;
     }
 
     if (distM != null && distM < 500) {
       if (destEtaEl)  { destEtaEl.textContent = 'Arrived! ✅'; destEtaEl.style.color = '#10b981'; }
-      if (destDistEl) destDistEl.textContent = `< 500m to ${destName}`;
+      if (destDistEl) destDistEl.textContent = '< 500m';
       return;
     }
 
     if (smoothedSpeed < 1) {
       if (destEtaEl)  { destEtaEl.textContent = 'Bus Stopped'; destEtaEl.style.color = '#f59e0b'; }
-      if (destDistEl) destDistEl.textContent = `${distKm} km from bus to ${destName}`;
+      if (destDistEl) destDistEl.textContent = `${distKm} km`;
       return;
     }
 
@@ -469,7 +469,7 @@ window.RoadETA = (function () {
       destEtaEl.textContent = `~${etaMins} min${staleWarning}`;
       destEtaEl.style.color = isStale ? '#f59e0b' : '#059669';
     }
-    if (destDistEl) destDistEl.textContent = `${distKm} km from bus to ${destName} · ${sourceLabel}`;
+    if (destDistEl) destDistEl.textContent = `${distKm} km`;
   }
 
   // =========================================================================
@@ -488,19 +488,19 @@ window.RoadETA = (function () {
 
     if (distM < 500) {
       if (destEtaEl)  { destEtaEl.textContent = 'Arrived! ✅'; destEtaEl.style.color = '#10b981'; }
-      if (destDistEl) destDistEl.textContent = `< 500m to ${destName} · 📐 Estimated`;
+      if (destDistEl) destDistEl.textContent = '< 500m';
       return;
     }
 
     if (smoothedSpeed < 1) {
       if (destEtaEl)  { destEtaEl.textContent = 'Bus Stopped'; destEtaEl.style.color = '#f59e0b'; }
-      if (destDistEl) destDistEl.textContent = `${distKm} km from bus to ${destName} · 📐 Estimated`;
+      if (destDistEl) destDistEl.textContent = `${distKm} km`;
       return;
     }
 
     const etaMins = computeETA(distM, smoothedSpeed, avgSpeed, null);
     if (destEtaEl)  { destEtaEl.textContent = `~${etaMins} min`; destEtaEl.style.color = '#94a3b8'; }
-    if (destDistEl) destDistEl.textContent = `${distKm} km from bus to ${destName} · 📐 Estimated`;
+    if (destDistEl) destDistEl.textContent = `${distKm} km`;
   }
 
   // =========================================================================
