@@ -101,6 +101,33 @@
   <script src="js/supabase-client.js?v=5"></script>
   <script src="js/driver-auth.js?v=5"></script>
   <script>
+    // Helper to check token expiry
+    function isTokenExpired(token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        return !payload || !payload.exp || (Date.now() / 1000) > payload.exp;
+      } catch(e) {
+        return true;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      // Check Admin session first
+      const adminSession = JSON.parse(sessionStorage.getItem('adminSession'));
+      if (adminSession && adminSession.token && !isTokenExpired(adminSession.token)) {
+        window.location.href = 'admin-dashboard.html';
+        return;
+      }
+
+      // Check Driver session
+      const driverSession = JSON.parse(localStorage.getItem('driverSession'));
+      if (driverSession && driverSession.token && !isTokenExpired(driverSession.token)) {
+        window.location.href = 'driver-dashboard.html';
+        return;
+      }
+    });
+  </script>
+  <script>
 
 
     // Login Form Submission

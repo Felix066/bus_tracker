@@ -20,7 +20,7 @@ let adminUsername = 'Admin';
 let editingDriverForBusId = null; // Tracks which bus row is currently in inline-edit mode
 
 document.addEventListener('DOMContentLoaded', () => {
-  const session = JSON.parse(localStorage.getItem('adminSession'));
+  const session = JSON.parse(sessionStorage.getItem('adminSession'));
   if (session) adminUsername = session.username;
 
   loadDashboardData();
@@ -53,7 +53,7 @@ function switchTab(tabId) {
 
 // --- USER MANAGEMENT DATA ---
 async function loadUserManagementData() {
-  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
   if (!token) return;
 
   try {
@@ -93,7 +93,7 @@ async function loadUserManagementData() {
 }
 
 async function toggleAccessMode() {
-  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
   const toggle = document.getElementById('toggleGlobalAccess');
   const newMode = toggle.checked;
 
@@ -209,7 +209,7 @@ async function addAuthorizedUser() {
     return alert("This email is already authorized.");
   }
 
-  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
   try {
     const res = await fetch(`${BACKEND_URL}/api/admin/authorized-users`, {
       method: 'POST',
@@ -233,7 +233,7 @@ async function addAuthorizedUser() {
 
 async function deleteAuthorizedUser(id, email) {
   if (!confirm(`Are you sure you want to remove access for ${email}?`)) return;
-  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
   try {
     const res = await fetch(`${BACKEND_URL}/api/admin/authorized-users/${id}`, {
       method: 'DELETE',
@@ -280,7 +280,7 @@ function handleFileInputChange(input, previewId, removeBtnId) {
 
 // --- LOAD DATA ---
 async function loadDashboardData() {
-  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
   if (!token) return;
 
   try {
@@ -610,7 +610,7 @@ async function saveInlineDriver(busId) {
   const newName = input.value.trim();
 
   // Update via backend API
-  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
   const res = await fetch(`${BACKEND_URL}/api/admin/buses`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -732,7 +732,7 @@ function removePhoto(type) {
 
   if (confirm(`Are you sure you want to delete this ${type} photo permanently?`)) {
     localStorage.removeItem(`${type}_photo_${busId}`);
-    const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+    const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
     if (type === 'bus') {
       fetch(`${BACKEND_URL}/api/admin/buses`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ id: busId, isNew: false, busPayload: { bus_photo_url: null } }) });
       document.getElementById('inpBusPhoto').value = '';
@@ -802,7 +802,7 @@ async function saveMasterBus() {
     if (busDataUrl) busPayload.bus_photo_url = busDataUrl;
     if (driverDataUrl) busPayload.driver_photo_url = driverDataUrl;
 
-    const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+    const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
     const busRes = await fetch(`${BACKEND_URL}/api/admin/buses`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -840,7 +840,7 @@ async function saveMasterBus() {
       
       if (password) {
         // Register driver via secure backend API
-        const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+        const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
         const driverRes = await fetch(`${BACKEND_URL}/api/auth/register-driver`, {
           method: 'POST',
           headers: {
@@ -869,7 +869,7 @@ async function saveMasterBus() {
 
 async function deleteBus(busId) {
   if (!confirm(`Are you absolutely sure you want to remove ${busId}? This will remove driver assignments as well.`)) return;
-  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
   const res = await fetch(`${BACKEND_URL}/api/admin/buses/${busId}`, {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${token}` }
@@ -888,7 +888,7 @@ async function deleteBus(busId) {
 // --- ADMIN LOGS ---
 async function clearAdminLogs() {
   if (!confirm("Are you sure you want to clear all admin logs?")) return;
-  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
   const res = await fetch(`${BACKEND_URL}/api/admin/logs`, {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${token}` }
@@ -903,7 +903,7 @@ async function clearAdminLogs() {
 }
 
 async function logAdminAction(actionText) {
-  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
   await fetch(`${BACKEND_URL}/api/admin/logs`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -995,7 +995,7 @@ async function loadAnalyticsData() {
   tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 32px; color: var(--text-muted);">Loading analytics data...</td></tr>';
   
   try {
-    const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+    const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
     const res = await fetch(`${BACKEND_URL}/api/analytics`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -1049,7 +1049,7 @@ async function clearAnalyticsData() {
   if (!confirm("Are you sure you want to clear all trip history? This cannot be undone.")) return;
   
   try {
-    const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+    const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
     const res = await fetch(`${BACKEND_URL}/api/analytics/clear`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
@@ -1072,7 +1072,7 @@ async function clearAnalyticsData() {
  * Auto-fills the form inputs for easy editing.
  */
 async function loadDestination() {
-  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
   if (!token) return;
 
   const nameEl   = document.getElementById('dest-preview-name');
@@ -1119,7 +1119,7 @@ async function loadDestination() {
  * Validates inputs, calls backend, refreshes preview.
  */
 async function saveDestination() {
-  const token    = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const token    = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
   const name     = (document.getElementById('dest-inp-name')?.value || '').trim();
   const latRaw   = document.getElementById('dest-inp-lat')?.value;
   const lonRaw   = document.getElementById('dest-inp-lon')?.value;

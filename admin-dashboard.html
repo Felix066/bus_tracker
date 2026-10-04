@@ -1511,14 +1511,14 @@
 
   <script>
     protectRoute('admin');
-    const session = JSON.parse(localStorage.getItem('adminSession'));
+    const session = JSON.parse(sessionStorage.getItem('adminSession'));
     if (session) {
       document.getElementById('admin-name-display').textContent = session.username;
       document.getElementById('admin-avatar').textContent = session.username.charAt(0).toUpperCase();
     }
 
     function logoutAdmin() {
-      localStorage.removeItem('adminSession');
+      sessionStorage.removeItem('adminSession');
       localStorage.removeItem('userSession');
       sessionStorage.clear();
       window.location.href = 'driver-login.html';

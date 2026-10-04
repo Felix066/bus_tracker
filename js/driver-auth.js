@@ -10,7 +10,7 @@ async function handleDriverLogin(username, password) {
       if (adminRes.ok) {
         const adminData = await adminRes.json();
         const session = { role: 'admin', username: username, token: adminData.token };
-        localStorage.setItem('adminSession', JSON.stringify(session));
+        sessionStorage.setItem('adminSession', JSON.stringify(session));
         window.location.href = 'admin-dashboard.html';
         return;
       }

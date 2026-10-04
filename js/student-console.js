@@ -4,6 +4,9 @@ let activeTripId = null;
 let currentTripType = null;
 let busId = null;
 
+let lastLocationUpdatedAt = 0;
+let lastEndedTripId = null;
+
 let lastReverseGeocodeTime = 0;
 let lastReverseGeocodeLat = null;
 let lastReverseGeocodeLon = null;
@@ -306,11 +309,15 @@ function subscribeToLiveUpdates() {
                 const payloadBusId = (payload.new.bus_id || '').replace(/\s+/g, '').toLowerCase();
                 const expectedBusId = busId.replace(/\s+/g, '').toLowerCase();
                 if (payloadBusId === expectedBusId) {
-                    processNewLocation(payload.new.latitude, payload.new.longitude, payload.new.speed_kmh);
-                    if (payload.new.trip_id && !activeTripId) {
-                        activeTripId = payload.new.trip_id;
-                        // Reload to fully initialize active trip UI
-                        location.reload();
+                    const locTime = new Date(payload.new.updated_at || Date.now()).getTime();
+                    if (locTime > lastLocationUpdatedAt) {
+                        lastLocationUpdatedAt = locTime;
+                        processNewLocation(payload.new.latitude, payload.new.longitude, payload.new.speed_kmh);
+                        if (payload.new.trip_id && !activeTripId && payload.new.trip_id !== lastEndedTripId) {
+                            activeTripId = payload.new.trip_id;
+                            // Reload to fully initialize active trip UI
+                            location.reload();
+                        }
                     }
                 }
             }
@@ -370,8 +377,11 @@ function subscribeToLiveUpdates() {
                 if (locData.success && locData.location) {
                     const loc = locData.location;
                     if (loc.latitude && loc.longitude) {
-                        // Process location update always, to update lastGPSTime
-                        processNewLocation(loc.latitude, loc.longitude, loc.speed_kmh);
+                        const locTime = new Date(loc.updated_at || Date.now()).getTime();
+                        if (locTime > lastLocationUpdatedAt) {
+                            lastLocationUpdatedAt = locTime;
+                            processNewLocation(loc.latitude, loc.longitude, loc.speed_kmh);
+                        }
                     }
                 }
             }
@@ -415,6 +425,9 @@ function handleDriverOffline() {
 
 function handleTripEnded() {
     if (deadReckonTimer) clearInterval(deadReckonTimer);
+
+    lastEndedTripId = activeTripId;
+    activeTripId = null;
 
     const statusBar = document.getElementById('trip-status-bar');
     const statusText = document.getElementById('trip-status-text');

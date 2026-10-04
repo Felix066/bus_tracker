@@ -26,7 +26,7 @@ async function loadSOSAlerts() {
   const container = document.getElementById('alerts-container');
 
   try {
-    const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+    const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
     const res = await fetch(`${BACKEND_URL}/api/admin/sos-alerts`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -193,7 +193,7 @@ async function loadSOSAlerts() {
 async function resolveAlert(busId) {
   if (!confirm(`Resolve the SOS alert for ${String(busId)}?`)) return;
 
-  const token = JSON.parse(localStorage.getItem('adminSession'))?.token;
+  const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
   try {
     const res = await fetch(`${BACKEND_URL}/api/admin/sos-alerts/${busId}/resolve`, {
       method: 'PUT',

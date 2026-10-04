@@ -17,14 +17,14 @@ function _isTokenExpired(token) {
 
 async function protectRoute(requiredRole) {
   if (requiredRole === 'admin') {
-    const session = JSON.parse(localStorage.getItem('adminSession'));
+    const session = JSON.parse(sessionStorage.getItem('adminSession'));
     if (!session || session.role !== 'admin' ||  !session.token) {
       window.location.href = 'driver-login.html';
       return;
     }
     // Reject clearly expired tokens immediately (no backend needed)
     if (_isTokenExpired(session.token)) {
-      localStorage.removeItem('adminSession');
+      sessionStorage.removeItem('adminSession');
       window.location.href = 'driver-login.html';
       return;
     }
@@ -35,7 +35,7 @@ async function protectRoute(requiredRole) {
       });
       const data = await res.json();
       if (!data.valid || data.user.role !== 'admin') {
-        localStorage.removeItem('adminSession');
+        sessionStorage.removeItem('adminSession');
         window.location.href = 'driver-login.html';
       }
     } catch(e) {
@@ -74,7 +74,18 @@ async function protectRoute(requiredRole) {
 
   } else {
     const localSession = JSON.parse(localStorage.getItem('userSession'));
-    if (localSession && (localSession.token || (localSession.id && localSession.id.startsWith('demo-student-')))) return;
+    
+    if (localSession && localSession.token) {
+      if (_isTokenExpired(localSession.token)) {
+        console.warn('[Auth] Student token expired. Redirecting to login.');
+        localStorage.removeItem('userSession');
+        window.location.href = 'student-login.html';
+        return;
+      }
+      return; // Token is valid
+    } else if (localSession && localSession.id && localSession.id.startsWith('demo-student-')) {
+      return; // Demo session is valid
+    }
 
     // Guard: supabase may be null if the CDN failed to load
     if (!window.supabase) {

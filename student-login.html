@@ -141,6 +141,25 @@
     // Google Sign-In is handled via the callback function handleGoogleSignIn 
     // which is defined in js/auth.js.
     
+    // Auto-redirect if already logged in with a valid session
+    window.addEventListener('DOMContentLoaded', () => {
+      const session = JSON.parse(localStorage.getItem('userSession'));
+      if (session && session.token) {
+        // Simple JWT decode to check expiry
+        try {
+          const payload = JSON.parse(atob(session.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+          if (payload && payload.exp && (Date.now() / 1000) < payload.exp) {
+            window.location.href = 'student-dashboard.html';
+            return;
+          } else {
+            localStorage.removeItem('userSession'); // expired
+          }
+        } catch(e) {
+          localStorage.removeItem('userSession');
+        }
+      }
+    });
+
     // Force account selection if the user just logged out
     window.addEventListener('load', () => {
       if (localStorage.getItem('force_account_select') === 'true') {

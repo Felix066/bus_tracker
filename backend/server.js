@@ -320,6 +320,16 @@ async function verifyRole(req, res, next) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
+
+    // ACTIVE DATABASE CHECK FOR HIGH SECURITY
+    if (decoded.role === 'admin') {
+      const { data } = await supabase.from('admins').select('id').eq('username', decoded.username).single();
+      if (!data) return res.status(401).json({ error: 'Admin account revoked or deleted' });
+    } else if (decoded.role === 'driver') {
+      const { data } = await supabase.from('drivers').select('id').eq('id', decoded.user_id).single();
+      if (!data) return res.status(401).json({ error: 'Driver account revoked or deleted' });
+    }
+
     next();
   } catch (error) {
     res.status(401).json({ error: 'Invalid token' });
@@ -516,7 +526,7 @@ app.post('/api/auth/login-driver', async (req, res) => {
     const token = jwt.sign(
       { user_id: driverData.id, username, role: 'driver', assignedBus: driverData.assigned_bus }, 
       JWT_SECRET, 
-      { expiresIn: '7d' }
+      { expiresIn: '5d' }
     );
 
     // Register driver session in realtime SECURELY on the backend
@@ -567,6 +577,16 @@ app.get('/api/auth/verify', async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+
+    // ACTIVE DATABASE CHECK FOR HIGH SECURITY
+    if (decoded.role === 'admin') {
+      const { data } = await supabase.from('admins').select('id').eq('username', decoded.username).single();
+      if (!data) return res.status(401).json({ valid: false });
+    } else if (decoded.role === 'driver') {
+      const { data } = await supabase.from('drivers').select('id').eq('id', decoded.user_id).single();
+      if (!data) return res.status(401).json({ valid: false });
+    }
+
     res.json({ valid: true, user: decoded });
   } catch (error) {
     res.status(401).json({ valid: false });
