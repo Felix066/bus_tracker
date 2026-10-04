@@ -68,10 +68,10 @@ body {
 .bus-badge {
   font-size: 14px;
   font-weight: 700;
-  color: #4f46e5;
+  color: #ffffff;
   padding: 6px 16px;
-  background: rgba(79, 70, 229, 0.1);
-  border: 1px solid rgba(79, 70, 229, 0.2);
+  background: #0f172a;
+  border: 1px solid #1e293b;
   border-radius: 12px;
 }
 
