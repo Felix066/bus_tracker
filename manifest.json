@@ -4,8 +4,8 @@
   "description": "Real-time fleet tracking and management system",
   "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#F7F5F2",
-  "theme_color": "#1A1A1A",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "orientation": "portrait-primary",
   "icons": [
     {
