@@ -405,11 +405,34 @@
     <i class="fas fa-download"></i> Install App
   </button>
 
+  <!-- APP UPDATE NOTIFICATION -->
+  <div id="update-notification" style="display:none; position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#0f172a; color:#ffffff; padding:12px 24px; border-radius:30px; font-family:'Inter', sans-serif; font-size:14px; font-weight:600; box-shadow:0 10px 25px rgba(15,23,42,0.3); z-index:10000; align-items:center; gap:16px;">
+    <span>App Update Available</span>
+    <button onclick="window.location.reload(true)" style="background:#ffffff; color:#0f172a; border:none; padding:6px 14px; border-radius:16px; font-weight:700; cursor:pointer; font-size:13px; transition: transform 0.2s;">Refresh</button>
+  </div>
+
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .catch((err) => console.warn('[Where Is My Bus] Service Worker failed:', err));
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+          // Listen for new service worker installation
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                document.getElementById('update-notification').style.display = 'flex';
+              }
+            });
+          });
+        }).catch((err) => console.warn('[Where Is My Bus] Service Worker failed:', err));
+      });
+
+      // If the service worker forces a skipWaiting and takes over
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          document.getElementById('update-notification').style.display = 'flex';
+        }
       });
     }
 
