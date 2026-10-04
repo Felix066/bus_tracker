@@ -296,6 +296,34 @@
   </div>
 
   <script>
+    // Helper to check token expiry
+    function isTokenExpired(token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        return !payload || !payload.exp || (Date.now() / 1000) > payload.exp;
+      } catch(e) {
+        return true;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      // Check Student/Faculty/Parent session
+      const userSession = JSON.parse(localStorage.getItem('userSession'));
+      if (userSession && userSession.token && !isTokenExpired(userSession.token)) {
+        document.querySelectorAll('.role-card.student, .role-card.faculty, .role-card.parent').forEach(el => {
+          el.href = 'student-dashboard.html';
+        });
+      }
+
+      // Check Driver session
+      const driverSession = JSON.parse(localStorage.getItem('driverSession'));
+      if (driverSession && driverSession.token && !isTokenExpired(driverSession.token)) {
+        const driverCard = document.querySelector('.role-card.driver');
+        if (driverCard) driverCard.href = 'driver-dashboard.html';
+      }
+    });
+  </script>
+  <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
