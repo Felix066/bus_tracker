@@ -153,18 +153,29 @@ window.AIEta = (function () {
 
     // College ETA
     if (etaCollegeEl) {
-      const distToCollege = haversineDist(busLat, busLon, COLLEGE_LAT, COLLEGE_LON);
-      if (distToCollege <= ARRIVED_COLLEGE_THRESHOLD_M) {
-        etaCollegeEl.textContent = 'Arrived';
-        etaCollegeEl.style.color = '#10b981';
-        if (etaCollegeSubEl) etaCollegeSubEl.innerHTML = '<i class="fas fa-graduation-cap" style="color:#10b981;"></i> Bus has arrived at Campus';
+      const currentHour = new Date().getHours();
+      
+      // After 12 PM, the bus is on a return trip away from college
+      if (currentHour >= 12) {
+        etaCollegeEl.textContent = 'Return Trip';
+        etaCollegeEl.style.color = '#94a3b8';
+        if (etaCollegeSubEl) {
+          etaCollegeSubEl.innerHTML = '<i class="fas fa-route" style="color:#94a3b8;"></i> Bus is heading away from Campus';
+        }
       } else {
-        const result = predict(busLat, busLon, COLLEGE_LAT, COLLEGE_LON, rawSpeedKmph, busId);
-        if (result) {
-          etaCollegeEl.textContent = result.etaMinutes < 1 ? '< 1 min' : `~${result.etaMinutes} mins`;
-          etaCollegeEl.style.color = '#059669';
-          const distKm = (distToCollege / 1000).toFixed(1);
-          if (etaCollegeSubEl) etaCollegeSubEl.innerHTML = `<i class="fas fa-school" style="color:#10b981;"></i> ${distKm} km to College · Traffic Factored`;
+        const distToCollege = haversineDist(busLat, busLon, COLLEGE_LAT, COLLEGE_LON);
+        if (distToCollege <= ARRIVED_COLLEGE_THRESHOLD_M) {
+          etaCollegeEl.textContent = 'Arrived';
+          etaCollegeEl.style.color = '#10b981';
+          if (etaCollegeSubEl) etaCollegeSubEl.innerHTML = '<i class="fas fa-graduation-cap" style="color:#10b981;"></i> Bus has arrived at Campus';
+        } else {
+          const result = predict(busLat, busLon, COLLEGE_LAT, COLLEGE_LON, rawSpeedKmph, busId);
+          if (result) {
+            etaCollegeEl.textContent = result.etaMinutes < 1 ? '< 1 min' : `~${result.etaMinutes} mins`;
+            etaCollegeEl.style.color = '#059669';
+            const distKm = (distToCollege / 1000).toFixed(1);
+            if (etaCollegeSubEl) etaCollegeSubEl.innerHTML = `<i class="fas fa-school" style="color:#10b981;"></i> ${distKm} km to College · Traffic Factored`;
+          }
         }
       }
     }

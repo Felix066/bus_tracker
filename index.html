@@ -239,6 +239,40 @@
         margin-bottom: 4px;
       }
     }
+
+    /* PWA Install Button */
+    .install-pwa-btn {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0f172a;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+      border: none;
+      cursor: pointer;
+      z-index: 100;
+      transition: all 0.3s ease;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .install-pwa-btn.visible {
+      opacity: 1;
+      pointer-events: auto;
+      animation: bounce 2s infinite;
+    }
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+      40% { transform: translateX(-50%) translateY(-10px); }
+      60% { transform: translateX(-50%) translateY(-5px); }
+    }
   </style>
 </head>
 <body>
@@ -325,6 +359,10 @@
       }
     });
   </script>
+  <button id="install-btn" class="install-pwa-btn">
+    <i class="fas fa-download"></i> Install App
+  </button>
+
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -332,6 +370,43 @@
           .catch((err) => console.warn('[Where Is My Bus] Service Worker failed:', err));
       });
     }
+
+    // PWA Install Logic
+    let deferredPrompt;
+    const installBtn = document.getElementById('install-btn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      deferredPrompt = e;
+      // Update UI notify the user they can install the PWA
+      installBtn.classList.add('visible');
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        // Show the install prompt
+        deferredPrompt.prompt();
+        // Wait for the user to respond to the prompt
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+        } else {
+          console.log('User dismissed the install prompt');
+        }
+        // We've used the prompt, and can't use it again, throw it away
+        deferredPrompt = null;
+        installBtn.classList.remove('visible');
+      }
+    });
+
+    window.addEventListener('appinstalled', () => {
+      // Clear the deferredPrompt so it can be garbage collected
+      deferredPrompt = null;
+      installBtn.classList.remove('visible');
+      console.log('PWA was installed');
+    });
   </script>
 </body>
 </html>
