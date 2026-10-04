@@ -1,6 +1,6 @@
 {
   "name": "Where Is My Bus",
-  "short_name": "WIMB",
+  "short_name": "Where Is My Bus",
   "description": "Real-time fleet tracking and management system",
   "start_url": "/index.html",
   "display": "standalone",
