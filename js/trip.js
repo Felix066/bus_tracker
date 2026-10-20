@@ -210,7 +210,7 @@ async function processNewDriverLocation(tripId, busId, smoothedLat, smoothedLon)
     saveComputedLocationIfChanged(tripId, busId, roundedLat, roundedLon, lastSpeedKmh);
 }
 
-// NEW — Reverse Geocoding with Caching and Formatting
+// Reverse Geocoding via Secure Server Proxy
 async function getPlaceName(lat, lon) {
     const key = roundCoord(lat) + "," + roundCoord(lon);
     if (geocodeCache.has(key)) {
@@ -218,16 +218,15 @@ async function getPlaceName(lat, lon) {
     }
 
     try {
-        const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
-        );
+        const backendBase = typeof BACKEND_URL !== 'undefined' ? BACKEND_URL : '';
+        const response = await fetch(`${backendBase}/api/geocode/reverse?lat=${lat}&lon=${lon}`);
         const data = await response.json();
-        const name = data.display_name || 'Unknown location';
+        const name = data.shortName || data.displayName || 'Unknown location';
         geocodeCache.set(key, name);
         return name;
     } catch (error) {
-        console.error("Reverse geocoding failed:", error);
-        return 'Unknown location';
+        console.warn("Server reverse geocoding fallback:", error);
+        return `${Number(lat).toFixed(4)}° N, ${Number(lon).toFixed(4)}° E`;
     }
 }
 

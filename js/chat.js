@@ -643,36 +643,49 @@ async function _uploadAndSendVoice(blob, mimeType) {
   const token = _getToken();
   if (!token) return;
 
-  const ext = (mimeType || '').includes('ogg') ? 'ogg' : (mimeType || '').includes('mp4') ? 'mp4' : 'webm';
-  const fileName = `voice_${currentChatBusId.replace(/\s+/g, '_')}_${Date.now()}.${ext}`;
-
   try {
-    // Upload to Supabase Storage
-    const { error: uploadErr } = await supabase.storage
-      .from('chat-audio')
-      .upload(fileName, blob, { contentType: blob.type || 'audio/webm', upsert: false });
+    // Convert audio Blob to base64
+    const reader = new FileReader();
+    const base64Promise = new Promise((resolve, reject) => {
+      reader.onloadend = () => {
+        const result = reader.result;
+        if (typeof result === 'string') {
+          resolve(result.split(',')[1] || result);
+        } else {
+          reject(new Error('Failed to read audio blob'));
+        }
+      };
+      reader.onerror = reject;
+    });
+    reader.readAsDataURL(blob);
+    const audioBase64 = await base64Promise;
 
-    if (uploadErr) throw uploadErr;
-
-    const { data: { publicUrl } } = supabase.storage.from('chat-audio').getPublicUrl(fileName);
-
-    // Send as a message
-    const res = await fetch(`${BACKEND_URL}/api/chat/send`, {
+    // Upload via secure backend API
+    const res = await fetch(`${BACKEND_URL}/api/chat/upload-voice`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ bus_id: currentChatBusId, message: `[VOICE]:${publicUrl}` })
+      body: JSON.stringify({
+        bus_id: currentChatBusId,
+        audio_base64: audioBase64,
+        mime_type: blob.type || mimeType || 'audio/webm'
+      })
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data.data) appendMessage(data.data);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `HTTP error ${res.status}`);
+    }
+
+    const json = await res.json();
+    if (json.data) {
+      appendMessage(json.data);
     }
   } catch (err) {
     console.error('[Chat] Voice upload error:', err);
-    alert('Failed to send voice message. Make sure the chat-audio storage bucket exists in Supabase.');
+    alert('Failed to send voice message: ' + err.message);
   }
 }
 

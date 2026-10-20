@@ -30,6 +30,59 @@ const supabase = createClient(
 ETAPollerManager.init(supabase);
 ViewerService.startCleanupInterval();
 
+// ============================================================================
+// AUTOMATED SERVER-SIDE SESSION & TRIP HEALTH MONITOR
+// Runs every 60s to detect disconnected drivers & auto-close abandoned trips
+// ============================================================================
+const DRIVER_OFFLINE_THRESHOLD_MS = 2.5 * 60 * 1000;  // 2.5 minutes without heartbeat/location
+const TRIP_AUTO_CLOSE_THRESHOLD_MS = 45 * 60 * 1000; // 45 minutes without location update
+
+function startTripHealthMonitor() {
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const offlineCutoff = new Date(now.getTime() - DRIVER_OFFLINE_THRESHOLD_MS).toISOString();
+
+      // 1. Mark stale driver sessions as offline
+      await supabase
+        .from('driver_sessions')
+        .update({ is_online: false })
+        .eq('is_online', true)
+        .lt('last_seen', offlineCutoff);
+
+      // 2. Find active trips that have had no location update for > 45 minutes
+      const tripCutoff = new Date(now.getTime() - TRIP_AUTO_CLOSE_THRESHOLD_MS).toISOString();
+      const { data: staleTrips } = await supabase
+        .from('trips')
+        .select('id, bus_id, started_at')
+        .eq('status', 'active');
+
+      if (staleTrips && staleTrips.length > 0) {
+        for (const trip of staleTrips) {
+          const { data: loc } = await supabase
+            .from('current_bus_locations')
+            .select('updated_at')
+            .eq('bus_id', trip.bus_id)
+            .single();
+
+          const lastActivity = loc?.updated_at || trip.started_at;
+          if (new Date(lastActivity) < new Date(tripCutoff)) {
+            console.log(`[HealthMonitor] Auto-closing abandoned trip ${trip.id} for ${trip.bus_id}`);
+            await supabase
+              .from('trips')
+              .update({ status: 'completed', completed_at: now.toISOString() })
+              .eq('id', trip.id);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[TripHealthMonitor] Error during background check:', err.message);
+    }
+  }, 60000);
+}
+
+startTripHealthMonitor();
+
 // Load current destination into ETAPollerManager memory on startup (non-blocking)
 (async () => {
   try {
@@ -923,10 +976,13 @@ app.get('/api/admin/users', requireRole(['admin']), async (req, res) => {
 app.get('/api/trip/:bus_id', async (req, res) => {
   try {
     const { bus_id } = req.params;
+    const busNum = String(bus_id).replace(/\D/g, '');
+    const searchId = busNum ? `Bus ${busNum}` : bus_id;
+
     const { data, error } = await supabase
       .from('trips')
       .select('*')
-      .eq('bus_id', bus_id)
+      .or(`bus_id.eq."${searchId}",bus_id.eq."Bus${busNum}",bus_id.eq."${bus_id}"`)
       .eq('status', 'active')
       .order('started_at', { ascending: false })
       .limit(1);
@@ -986,9 +1042,10 @@ app.get('/api/public/bus-status/:bus_id', async (req, res) => {
     const busNum = String(bus_id).replace(/\D/g, '');
     const searchId = busNum ? `Bus ${busNum}` : bus_id;
 
-    const [busRes, sessionRes] = await Promise.all([
+    const [busRes, sessionRes, locRes] = await Promise.all([
       supabase.from('buses').select('driver_name').or(`id.eq."${searchId}",id.eq."Bus${busNum}",id.eq."${bus_id}"`).limit(1),
-      supabase.from('driver_sessions').select('driver_name, is_online').or(`bus_id.eq."${searchId}",bus_id.eq."Bus${busNum}",bus_id.eq."${bus_id}"`).order('last_seen', { ascending: false }).limit(1)
+      supabase.from('driver_sessions').select('driver_name, is_online, last_seen').or(`bus_id.eq."${searchId}",bus_id.eq."Bus${busNum}",bus_id.eq."${bus_id}"`).order('last_seen', { ascending: false }).limit(1),
+      supabase.from('current_bus_locations').select('*').or(`bus_id.eq."${searchId}",bus_id.eq."Bus${busNum}",bus_id.eq."${bus_id}"`).order('updated_at', { ascending: false }).limit(1)
     ]);
 
     let tripStatus = null;
@@ -999,13 +1056,33 @@ app.get('/api/public/bus-status/:bus_id', async (req, res) => {
 
     const busData = busRes.data && busRes.data.length > 0 ? busRes.data[0] : null;
     const sessionData = sessionRes.data && sessionRes.data.length > 0 ? sessionRes.data[0] : null;
+    const locData = locRes.data && locRes.data.length > 0 ? locRes.data[0] : null;
+
+    // Server-computed online status & movement status
+    const now = Date.now();
+    const lastSeenTime = sessionData?.last_seen ? new Date(sessionData.last_seen).getTime() : 0;
+    const isOnlineFresh = (now - lastSeenTime) < DRIVER_OFFLINE_THRESHOLD_MS;
+    const isOnline = Boolean(sessionData?.is_online && isOnlineFresh);
+
+    const locTime = locData?.updated_at ? new Date(locData.updated_at).getTime() : 0;
+    const locAgeSec = locTime ? Math.round((now - locTime) / 1000) : null;
+    const speed = locData?.speed_kmh || 0;
+
+    let movementStatus = 'OFFLINE';
+    if (isOnline || (locAgeSec !== null && locAgeSec < 120)) {
+      movementStatus = (speed < 4) ? 'STOPPED' : 'MOVING';
+    }
 
     res.json({
       success: true,
       bus_driver: busData ? busData.driver_name : null,
       session_driver: sessionData ? sessionData.driver_name : null,
-      is_online: sessionData ? sessionData.is_online : false,
-      trip_status: tripStatus
+      is_online: isOnline,
+      trip_status: tripStatus,
+      movement_status: movementStatus,
+      speed_kmh: speed,
+      last_location_age_seconds: locAgeSec,
+      location: locData
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1013,19 +1090,79 @@ app.get('/api/public/bus-status/:bus_id', async (req, res) => {
 });
 
 // ============================================================================
-// DRIVER-TO-BUS VALIDATION & LOCATION ENDPOINTS
+// SERVER-SIDE REVERSE GEOCODING PROXY WITH IN-MEMORY CACHE
+// Eliminates browser-to-Nominatim direct calls, prevents CORS & campus IP bans
+// ============================================================================
+const geocodeProxyCache = new Map();
+const GEOCODE_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+app.get('/api/geocode/reverse', async (req, res) => {
+  try {
+    const { lat, lon } = req.query;
+    const nLat = parseFloat(lat);
+    const nLon = parseFloat(lon);
+    if (isNaN(nLat) || isNaN(nLon) || nLat < -90 || nLat > 90 || nLon < -180 || nLon > 180) {
+      return res.status(400).json({ error: 'Valid lat and lon coordinates are required.' });
+    }
+
+    // Cache key rounded to ~110m (3 decimal places)
+    const key = `${nLat.toFixed(3)},${nLon.toFixed(3)}`;
+    const cached = geocodeProxyCache.get(key);
+    if (cached && (Date.now() - cached.timestamp < GEOCODE_CACHE_TTL_MS)) {
+      return res.json({ success: true, displayName: cached.displayName, shortName: cached.shortName, cached: true });
+    }
+
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${nLat}&lon=${nLon}&format=json`;
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'WhereIsMyBus-Server/1.0 (campus-transit-tracking)'
+      },
+      signal: AbortSignal.timeout(4000)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Nominatim returned status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const displayName = data?.display_name || `${nLat.toFixed(4)}° N, ${nLon.toFixed(4)}° E`;
+    const shortName = data?.display_name ? data.display_name.split(',').slice(0, 2).join(', ') : displayName;
+
+    geocodeProxyCache.set(key, { displayName, shortName, timestamp: Date.now() });
+
+    // Limit cache size to prevent memory leaks (max 3000 entries)
+    if (geocodeProxyCache.size > 3000) {
+      const oldestKey = geocodeProxyCache.keys().next().value;
+      geocodeProxyCache.delete(oldestKey);
+    }
+
+    res.json({ success: true, displayName, shortName, cached: false });
+  } catch (err) {
+    console.warn('[Geocode Proxy] Fallback used:', err.message);
+    const nLat = parseFloat(req.query.lat) || 0;
+    const nLon = parseFloat(req.query.lon) || 0;
+    const fallback = `${nLat.toFixed(4)}° N, ${nLon.toFixed(4)}° E`;
+    res.json({ success: true, displayName: fallback, shortName: fallback, cached: false });
+  }
+});
+
+// ============================================================================
+// DRIVER-TO-BUS VALIDATION & LOCATION ENDPOINTS (WITH GPS SANITY & DELTA SPEED)
 // ============================================================================
 
-// NOTE: /api/auth/get-token has been removed — it allowed unauthenticated JWT issuance (CRITICAL vulnerability).
-// Drivers use the token issued at /api/auth/login-driver directly for all protected calls.
-
-// 2. Driver-to-Bus Ownership Validation
 app.post('/api/location/submit', requireRole(['driver']), async (req, res) => {
   const { latitude, longitude, speed_kmh, trip_id, bus_id, source_role, source_user_id } = req.body;
   const driver_id = req.user.user_id;
 
   try {
-    // SECURITY CHECK: Verify this driver actually started this active trip
+    // 1. Coordinates validation
+    const lat = parseFloat(latitude);
+    const lon = parseFloat(longitude);
+    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      return res.status(400).json({ error: 'Invalid GPS coordinates.' });
+    }
+
+    // 2. SECURITY CHECK: Verify this driver actually started this active trip
     const { data: tripData, error: tripError } = await supabase
       .from('trips')
       .select('id, status')
@@ -1042,44 +1179,68 @@ app.post('/api/location/submit', requireRole(['driver']), async (req, res) => {
       return res.status(400).json({ error: 'Trip is no longer active.' });
     }
 
-    // ---------------------------------------------------------
-    // THE "HOT TABLE" ARCHITECTURE IMPLEMENTATION
-    // We explicitly overwrite the current bus location rather 
-    // than inserting a new row every 3 seconds to prevent DB bloat.
-    // ---------------------------------------------------------
-
-    // First check if a location row already exists for this bus
+    // 3. Existing location row check for delta computation & hot-table overwrite
     const { data: existingLoc } = await supabase
       .from('current_bus_locations')
-      .select('bus_id')
+      .select('bus_id, latitude, longitude, updated_at')
       .eq('bus_id', bus_id)
       .single();
 
-    let data, error;
+    let verifiedSpeed = (typeof speed_kmh === 'number' && !isNaN(speed_kmh) && speed_kmh >= 0) ? speed_kmh : 0;
+    
+    // Server-side velocity validation & anti-teleportation check
+    if (existingLoc && existingLoc.latitude && existingLoc.longitude && existingLoc.updated_at) {
+      const prevLat = parseFloat(existingLoc.latitude);
+      const prevLon = parseFloat(existingLoc.longitude);
+      const prevTime = new Date(existingLoc.updated_at).getTime();
+      const timeDeltaSec = (Date.now() - prevTime) / 1000;
 
+      if (timeDeltaSec > 0 && timeDeltaSec < 120) {
+        const distMeters = haversineMeters(prevLat, prevLon, lat, lon);
+        const calculatedSpeedKmh = (distMeters / timeDeltaSec) * 3.6;
+
+        // If distance jumped > 3km in < 10 seconds (teleportation/glitch), reject jump
+        if (distMeters > 3000 && calculatedSpeedKmh > 180) {
+          console.warn(`[GPS Sanity] Anomalous GPS teleport rejected for ${bus_id}: jumped ${distMeters.toFixed(0)}m in ${timeDeltaSec.toFixed(1)}s`);
+          return res.status(400).json({ error: 'GPS anomaly detected: impossible position jump rejected.' });
+        }
+
+        // If client reported 0 or missing speed, use server-computed speed
+        if (!speed_kmh || speed_kmh <= 0) {
+          verifiedSpeed = Math.round(calculatedSpeedKmh);
+        }
+      }
+    }
+
+    // 4. Update driver session heartbeat automatically with location ping
+    await supabase.from('driver_sessions').update({
+      is_online: true,
+      last_seen: new Date().toISOString()
+    }).eq('bus_id', bus_id);
+
+    // 5. Hot table overwrite
+    let data, error;
     if (existingLoc) {
-      // UPDATE (Overwrite) the existing row for this bus
       ({ data, error } = await supabase.from('current_bus_locations').update({
         trip_id,
         source_role: 'driver',
         source_user_id: driver_id,
-        latitude,
-        longitude,
-        speed_kmh,
+        latitude: lat,
+        longitude: lon,
+        speed_kmh: verifiedSpeed,
         updated_at: new Date().toISOString()
       })
       .eq('bus_id', bus_id)
       .select());
     } else {
-      // INSERT the very first row for this bus if it doesn't exist yet
       ({ data, error } = await supabase.from('current_bus_locations').insert({
         trip_id,
         bus_id,
         source_role: 'driver',
         source_user_id: driver_id,
-        latitude,
-        longitude,
-        speed_kmh,
+        latitude: lat,
+        longitude: lon,
+        speed_kmh: verifiedSpeed,
         updated_at: new Date().toISOString()
       }).select());
     }
@@ -1351,6 +1512,56 @@ app.post('/api/chat/send', requireRole(['driver']), async (req, res) => {
     if (error) throw error;
     res.json({ success: true, data });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST upload voice message — DRIVER & ADMIN
+app.post('/api/chat/upload-voice', requireRole(['driver', 'admin']), async (req, res) => {
+  try {
+    const { bus_id, audio_base64, mime_type } = req.body;
+    if (!bus_id || !audio_base64) {
+      return res.status(400).json({ error: 'bus_id and audio_base64 are required' });
+    }
+
+    const mime = mime_type || 'audio/webm';
+    const ext = mime.includes('ogg') ? 'ogg' : mime.includes('mp4') ? 'mp4' : 'webm';
+    const buffer = Buffer.from(audio_base64, 'base64');
+
+    if (buffer.length > 10 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Voice message exceeds 10MB limit' });
+    }
+
+    const fileName = `voice_${bus_id.replace(/\s+/g, '_')}_${Date.now()}.${ext}`;
+
+    // Upload with service role key (bypasses RLS issues on chat-audio bucket)
+    const { error: uploadErr } = await supabase.storage
+      .from('chat-audio')
+      .upload(fileName, buffer, {
+        contentType: mime,
+        upsert: false
+      });
+
+    if (uploadErr) {
+      console.error('[Chat Voice] Supabase storage upload failed:', uploadErr);
+      return res.status(500).json({ error: uploadErr.message });
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('chat-audio')
+      .getPublicUrl(fileName);
+
+    const sender_role = req.user.role;
+    const { data, error } = await supabase
+      .from('driver_messages')
+      .insert([{ bus_id, message: `[VOICE]:${publicUrl}`, sender_role }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, publicUrl, data });
+  } catch (err) {
+    console.error('[Chat Voice] Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1649,6 +1860,17 @@ app.get('/api/route/eta', async (req, res) => {
 // This is the NEW architecture — replaces per-student /api/route/eta calls.
 // ============================================================================
 
+function formatETADuration(minutes) {
+  if (minutes == null || isNaN(minutes) || minutes < 0) return '--';
+  const totalMins = Math.round(minutes);
+  if (totalMins <= 1) return '1 min';
+  if (totalMins < 60) return `${totalMins} min`;
+  const hours = Math.floor(totalMins / 60);
+  const remainingMins = totalMins % 60;
+  if (remainingMins === 0) return `${hours} hr`;
+  return `${hours} hr ${remainingMins} min`;
+}
+
 // POST /api/buses/:busId/view — Register as an active viewer of a bus
 // Returns sessionId the client must use for heartbeat and unregister calls.
 app.post('/api/buses/:busId/view', verifyRole, (req, res) => {
@@ -1658,6 +1880,13 @@ app.post('/api/buses/:busId/view', verifyRole, (req, res) => {
 
     if (!busId || busId.length > 50) {
       return res.status(400).json({ error: 'Invalid busId' });
+    }
+
+    // After 12:00 PM in Indian Standard Time (IST), buses travel away from college.
+    // Destination (college) ETA polling is completely disabled in afternoon/evening.
+    const istHour = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })).getHours();
+    if (istHour >= 12) {
+      return res.json({ success: true, sessionId: 'afternoon_disabled', busId, disabled: true, message: 'Destination ETA disabled after 12:00 PM IST' });
     }
 
     const sessionId = ViewerService.registerViewer(busId, studentId);
@@ -1707,6 +1936,11 @@ app.post('/api/buses/:busId/heartbeat', verifyRole, (req, res) => {
       return res.status(400).json({ error: 'sessionId required' });
     }
 
+    // Ignore heartbeats for disabled afternoon sessions
+    if (sessionId === 'afternoon_disabled') {
+      return res.json({ success: true, disabled: true });
+    }
+
     const valid = ViewerService.heartbeat(busId, sessionId);
     if (!valid) {
       // Session expired — client should re-register
@@ -1725,6 +1959,19 @@ app.get('/api/buses/:busId/eta', verifyRole, async (req, res) => {
   try {
     const busId = decodeURIComponent(req.params.busId);
 
+    // After 12 PM in IST, destination ETA is disabled
+    const istHour = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })).getHours();
+    if (istHour >= 12) {
+      return res.json({
+        success: true,
+        status: 'AFTERNOON_DISABLED',
+        eta_minutes: null,
+        eta_formatted: null,
+        message: 'Destination ETA disabled after 12:00 PM IST',
+        viewer_count: 0
+      });
+    }
+
     // Try fresh cache first
     let cached = await ETACache.get(busId);
     let status = 'FRESH';
@@ -1740,6 +1987,7 @@ app.get('/api/buses/:busId/eta', verifyRole, async (req, res) => {
         success: true,
         status: 'UNAVAILABLE',
         eta_minutes: null,
+        eta_formatted: '--',
         viewer_count: ViewerService.getViewerCount(busId)
       });
     }
@@ -1750,6 +1998,7 @@ app.get('/api/buses/:busId/eta', verifyRole, async (req, res) => {
       bus_id: busId,
       eta_seconds: cached.eta_seconds,
       eta_minutes: cached.eta_minutes,
+      eta_formatted: formatETADuration(cached.eta_minutes),
       distance_meters: cached.distance_meters,
       provider: cached.provider,
       calculated_at: cached.calculated_at,

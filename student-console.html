@@ -402,7 +402,17 @@
       .sc-info-row-text { font-size: 14px; }
       .sc-bus-badge { font-size: 12px; padding: 3px 10px; }
     }
+
+    /* Destination card is strictly hidden in afternoon/evening (>= 12 PM) */
+    html.is-afternoon #dest-eta-section {
+      display: none !important;
+    }
   </style>
+  <script>
+    if (new Date().getHours() >= 12) {
+      document.documentElement.classList.add('is-afternoon');
+    }
+  </script>
 </head>
 <body>
 
@@ -666,14 +676,11 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <script>
-  // Hide destination card for evening trips (after 12 PM)
   document.addEventListener('DOMContentLoaded', () => {
-    const currentHour = new Date().getHours();
-    if (currentHour >= 12) {
+    if (new Date().getHours() >= 12) {
+      document.documentElement.classList.add('is-afternoon');
       const destSection = document.getElementById('dest-eta-section');
-      if (destSection) {
-        destSection.style.display = 'none';
-      }
+      if (destSection) destSection.style.display = 'none';
     }
   });
 </script>

@@ -33,6 +33,12 @@ const HEARTBEAT_INTERVAL_MS = 20000; // 20s — must be < VIEWER_TTL_MS (60s) on
  * Triggers backend ETA polling if not already running for this bus.
  */
 async function registerAsViewer() {
+    // In afternoon/evening (>= 12 PM), bus travels away from college — destination ETA is disabled
+    if (new Date().getHours() >= 12) {
+        console.log('[SharedETA] Afternoon/evening (>=12 PM) — destination ETA polling disabled');
+        return;
+    }
+
     const session = JSON.parse(localStorage.getItem('userSession') || '{}');
     const token = session.token;
     if (!token || !busId) return;
@@ -44,6 +50,7 @@ async function registerAsViewer() {
         });
         if (res.ok) {
             const data = await res.json();
+            if (data.disabled) return;
             viewerSessionId = data.sessionId;
             console.log('[SharedETA] Registered as viewer, sessionId:', viewerSessionId?.slice(0, 8));
 
@@ -110,12 +117,14 @@ function startETAHeartbeat(token) {
  * ALL students watching the same bus share ONE ETA calculation.
  */
 function subscribeToETAChannel() {
+    if (new Date().getHours() >= 12) return;
     if (!busId || !window.supabase) return;
     if (etaRealtimeChannel) supabase.removeChannel(etaRealtimeChannel);
 
     etaRealtimeChannel = supabase
         .channel(`bus-eta-${busId}`)
         .on('broadcast', { event: 'eta_update' }, ({ payload }) => {
+            if (new Date().getHours() >= 12) return;
             if (typeof RoadETA !== 'undefined') {
                 // Get current smoothed speed for local ETA computation if needed
                 const lastSpeed = typeof lastGPSSpeedKmh !== 'undefined' ? lastGPSSpeedKmh : 0;
@@ -218,9 +227,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentTripType = trip.trip_type;
     const isTripActive = trip.status === 'active';
 
+    const isAfternoon = new Date().getHours() >= 12 || currentTripType === 'evening' || currentTripType === 'afternoon';
     const destSection = document.getElementById('dest-eta-section');
     if (destSection) {
-        if (currentTripType === 'evening' || currentTripType === 'afternoon') {
+        if (isAfternoon) {
             destSection.style.display = 'none';
         } else {
             destSection.style.display = 'block';
@@ -632,15 +642,16 @@ function processNewLocation(lat, lon, speedKmh) {
 async function geocodeIfNeeded(lat, lon) {
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second max
-        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`, { signal: controller.signal });
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const backendBase = typeof BACKEND_URL !== 'undefined' ? BACKEND_URL : '';
+        const response = await fetch(`${backendBase}/api/geocode/reverse?lat=${lat}&lon=${lon}`, { signal: controller.signal });
         clearTimeout(timeoutId);
         const data = await response.json();
-        if (data && data.display_name) {
-            return data.display_name.split(',').slice(0, 2).join(', ');
+        if (data && data.shortName) {
+            return data.shortName;
         }
     } catch (err) {}
-    return `${lat.toFixed(4)}° N, ${lon.toFixed(4)}° E`;
+    return `${Number(lat).toFixed(4)}° N, ${Number(lon).toFixed(4)}° E`;
 }
 
 // ---------------------------------------------

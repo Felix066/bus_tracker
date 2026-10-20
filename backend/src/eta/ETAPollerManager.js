@@ -66,6 +66,11 @@ function getBusState(busId) {
   return busState.get(busId);
 }
 
+function getISTHour() {
+  const istDateStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+  return new Date(istDateStr).getHours();
+}
+
 /**
  * Called by ViewerService when a student starts viewing a bus.
  * @param {string} busId
@@ -81,6 +86,12 @@ function onViewerJoin(busId) {
     console.log(`[ETA_VIEWER_JOIN] bus=${busId} count=${state.viewerCount} (grace cancelled)`);
   } else {
     console.log(`[ETA_VIEWER_JOIN] bus=${busId} count=${state.viewerCount}`);
+  }
+
+  // If afternoon or evening in IST (>= 12 PM), college destination ETA is disabled
+  if (getISTHour() >= 12) {
+    console.log(`[ETAPollerManager] Afternoon/evening in IST (${getISTHour()}:00) — poller not started for ${busId}`);
+    return;
   }
 
   // Start the poller if it's not already running
@@ -184,11 +195,11 @@ async function pollBus(busId) {
     return;
   }
 
-  // 3. Get destination & Time Check
+  // 3. Get destination & Time Check (in Indian Standard Time)
   const dest = cachedDestination;
-  const currentHour = new Date().getHours();
-  if (!dest || !dest.latitude || !dest.longitude || currentHour >= 12) {
-    // No destination set or evening trip (after 12 PM, ETA to college is not needed)
+  const istHour = getISTHour();
+  if (!dest || !dest.latitude || !dest.longitude || istHour >= 12) {
+    // No destination set or evening trip (after 12 PM IST, ETA to college is not needed)
     return;
   }
 

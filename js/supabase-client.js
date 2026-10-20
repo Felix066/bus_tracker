@@ -63,6 +63,15 @@ async function submitLocationSecure(latitude, longitude, speed_kmh, trip_id, bus
 // ============================================================================
 
 async function getBusLocation(bus_id) {
+  // 1. Primary: Secure backend endpoint with server-verified status
+  try {
+    const backendData = await getBusLocationBackend(bus_id);
+    if (backendData) return backendData;
+  } catch (err) {
+    console.warn('[SupabaseClient] Backend location fetch failed, falling back:', err);
+  }
+
+  // 2. Fallback: Direct read via Supabase client if backend is temporarily unreachable
   try {
     const busNum = String(bus_id).replace(/\D/g, '');
     const searchId = busNum ? `Bus ${busNum}` : bus_id;
@@ -75,11 +84,10 @@ async function getBusLocation(bus_id) {
         .limit(1);
       if (!error && data && data.length > 0) return data[0];
     }
-    return await getBusLocationBackend(bus_id);
   } catch (error) {
-    console.error('Failed to fetch bus location:', error);
-    return await getBusLocationBackend(bus_id);
+    console.error('Failed to fetch bus location via fallback:', error);
   }
+  return null;
 }
 
 async function getBusLocationBackend(bus_id) {
@@ -94,6 +102,18 @@ async function getBusLocationBackend(bus_id) {
 }
 
 async function getTripInfo(bus_id) {
+  // 1. Primary: Secure backend endpoint
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/trip/${encodeURIComponent(bus_id)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && json.trip) return json.trip;
+    }
+  } catch (err) {
+    console.warn('[SupabaseClient] Backend trip fetch failed, trying fallback:', err);
+  }
+
+  // 2. Fallback: Direct Supabase client query
   try {
     if (!window.supabase) return null;
     const busNum = String(bus_id).replace(/\D/g, '');
@@ -105,12 +125,11 @@ async function getTripInfo(bus_id) {
       .eq('status', 'active')
       .order('started_at', { ascending: false })
       .limit(1);
-    if (error || !data || data.length === 0) return null;
-    return data[0];
+    if (!error && data && data.length > 0) return data[0];
   } catch (error) {
-    console.error('Failed to fetch trip info:', error);
-    return null;
+    console.error('Failed to fetch trip info via fallback:', error);
   }
+  return null;
 }
 
 // ============================================================================

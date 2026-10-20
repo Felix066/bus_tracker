@@ -408,23 +408,61 @@ window.RoadETA = (function () {
   }
 
   // =========================================================================
-  // ETA COMPUTATION — converts road distance + speed to minutes
-  // Used by both applySharedETA (for display) and applyFallback
+  // DURATION FORMATTER — Converts minutes to "X hr Y min" if >= 60 minutes
+  // =========================================================================
+  function formatETADuration(minutes) {
+    if (minutes == null || isNaN(minutes) || minutes < 0) return '--';
+    const totalMins = Math.round(minutes);
+    if (totalMins <= 1) return '1 min';
+    if (totalMins < 60) return `${totalMins} min`;
+    const hours = Math.floor(totalMins / 60);
+    const remainingMins = totalMins % 60;
+    if (remainingMins === 0) return `${hours} hr`;
+    return `${hours} hr ${remainingMins} min`;
+  }
+
+  // =========================================================================
+  // ETA COMPUTATION — Stable road transit estimation
   // =========================================================================
   function computeETA(road_distance_m, smoothedSpeedKmh, avgSpeedKmh, duration_s) {
-    const effectiveSpeed = Math.max(smoothedSpeedKmh || avgSpeedKmh || 20, 5);
-    const hour = new Date().getHours();
-    const trafficFactor = ((hour >= 7 && hour <= 9) || (hour >= 16 && hour <= 19)) ? 1.3
-      : ((hour >= 10 && hour <= 15) || (hour >= 20 && hour <= 22)) ? 1.1 : 0.9;
-
+    // If routing engine duration is provided, use it directly (no wild speed scaling)
     if (duration_s && duration_s > 0) {
-      const scaledDuration = duration_s * (30 / effectiveSpeed);
-      return Math.max(1, Math.round((scaledDuration * trafficFactor) / 60));
+      return Math.max(1, Math.round(duration_s / 60));
     }
 
-    const effectiveSpeedMs = effectiveSpeed / 3.6;
-    const etaSec = (road_distance_m / effectiveSpeedMs) * trafficFactor;
+    if (!road_distance_m || road_distance_m <= 0) return 1;
+
+    // Nominal operating speed for Indian college transit buses: 28 km/h (~7.8 m/s)
+    const nominalSpeedKmh = 28;
+    // Blend active cruising speed moderately if bus is moving fast (> 20 km/h)
+    const effectiveSpeed = (smoothedSpeedKmh && smoothedSpeedKmh > 20)
+      ? (nominalSpeedKmh * 0.70 + Math.min(50, smoothedSpeedKmh) * 0.30)
+      : nominalSpeedKmh;
+
+    const etaSec = road_distance_m / (effectiveSpeed / 3.6);
     return Math.max(1, Math.round(etaSec / 60));
+  }
+
+  // Smooth filter for student proximity ETA to eliminate wild swings
+  let smoothedProximityETA = null;
+
+  function computeStableProximityETA(distM, currentSpeedKmh) {
+    if (!distM || distM < 100) return 1;
+
+    const nominalSpeedKmh = 28;
+    const speed = (currentSpeedKmh && currentSpeedKmh > 20)
+      ? (nominalSpeedKmh * 0.70 + Math.min(50, currentSpeedKmh) * 0.30)
+      : nominalSpeedKmh;
+
+    const rawMins = Math.max(1, Math.round((distM / (speed / 3.6)) / 60));
+
+    if (smoothedProximityETA === null) {
+      smoothedProximityETA = rawMins;
+    } else {
+      // Exponential Moving Average filter (alpha = 0.25) to prevent abrupt jumping
+      smoothedProximityETA = Math.round(smoothedProximityETA * 0.75 + rawMins * 0.25);
+    }
+    return Math.max(1, smoothedProximityETA);
   }
 
   // =========================================================================
@@ -432,6 +470,13 @@ window.RoadETA = (function () {
   // NO API call is made here — this just renders what the backend computed.
   // =========================================================================
   function applySharedETA(payload, smoothedSpeed, avgSpeed) {
+    const isAfternoon = new Date().getHours() >= 12;
+    const destSection = document.getElementById('dest-eta-section');
+    if (isAfternoon) {
+      if (destSection) destSection.style.display = 'none';
+      return;
+    }
+
     lastSharedETA = payload;
     lastSharedETATime = Date.now();
 
@@ -443,7 +488,6 @@ window.RoadETA = (function () {
 
     const distM  = payload.distance_meters;
     const distKm = distM != null ? (distM / 1000).toFixed(1) : '?';
-    const destName = destination?.name || 'Destination';
 
     if (payload.status === 'UNAVAILABLE' || payload.status === 'GPS_STALE') {
       if (destEtaEl)  { destEtaEl.textContent = 'ETA Unavailable'; destEtaEl.style.color = '#94a3b8'; }
@@ -457,23 +501,17 @@ window.RoadETA = (function () {
       return;
     }
 
-    if (smoothedSpeed < 1) {
-      if (destEtaEl)  { destEtaEl.textContent = 'Bus Stopped'; destEtaEl.style.color = '#f59e0b'; }
-      if (destDistEl) destDistEl.textContent = `${distKm} km`;
-      return;
-    }
+    // Direct use of stable backend/ORS minutes — prevents wild multiplier jumps
+    let etaMins = (payload.eta_minutes != null && payload.eta_minutes > 0)
+      ? payload.eta_minutes
+      : computeETA(distM, smoothedSpeed, avgSpeed, payload.base_duration_s);
 
-    // Compute locally based on the broadcasted road distance and current live speed,
-    // combined with the backend's highly accurate ORS duration (if available).
-    // This perfectly combines the "fine ETA" from ORS with instant local updates.
-    let etaMins = computeETA(distM, smoothedSpeed, avgSpeed, payload.base_duration_s);
-
-    const sourceLabel = payload.provider === 'ors' ? '🛣️ Road' : '📐 Estimated';
+    const formattedETA = formatETADuration(etaMins);
     const isStale = payload.status === 'STALE';
-    const staleWarning = isStale ? ' ⚠️ (updating...)' : '';
+    const staleWarning = isStale ? ' ⚠️' : '';
 
     if (destEtaEl)  {
-      destEtaEl.textContent = `~${etaMins} min${staleWarning}`;
+      destEtaEl.textContent = `~${formattedETA}${staleWarning}`;
       destEtaEl.style.color = isStale ? '#f59e0b' : '#059669';
     }
     if (destDistEl) destDistEl.textContent = `${distKm} km`;
@@ -484,11 +522,17 @@ window.RoadETA = (function () {
   // Uses local haversine to give a rough estimate without any API call.
   // =========================================================================
   function applyFallback(busLat, busLon, smoothedSpeed, avgSpeed) {
+    const isAfternoon = new Date().getHours() >= 12;
+    const destSection = document.getElementById('dest-eta-section');
+    if (isAfternoon) {
+      if (destSection) destSection.style.display = 'none';
+      return;
+    }
+
     if (!destination || !busLat || !busLon) return;
 
     const distM = haversineDist(busLat, busLon, destination.latitude, destination.longitude) * 1.25;
     const distKm = (distM / 1000).toFixed(1);
-    const destName = destination?.name || 'Destination';
 
     const destEtaEl  = document.getElementById('road-eta-dest');
     const destDistEl = document.getElementById('road-dist-dest');
@@ -499,14 +543,9 @@ window.RoadETA = (function () {
       return;
     }
 
-    if (smoothedSpeed < 1) {
-      if (destEtaEl)  { destEtaEl.textContent = 'Bus Stopped'; destEtaEl.style.color = '#f59e0b'; }
-      if (destDistEl) destDistEl.textContent = `${distKm} km`;
-      return;
-    }
-
     const etaMins = computeETA(distM, smoothedSpeed, avgSpeed, null);
-    if (destEtaEl)  { destEtaEl.textContent = `~${etaMins} min`; destEtaEl.style.color = '#94a3b8'; }
+    const formattedETA = formatETADuration(etaMins);
+    if (destEtaEl)  { destEtaEl.textContent = `~${formattedETA}`; destEtaEl.style.color = '#94a3b8'; }
     if (destDistEl) destDistEl.textContent = `${distKm} km`;
   }
 
@@ -570,18 +609,25 @@ window.RoadETA = (function () {
         }
     }
 
-    // ── ETA: use shared ETA if fresh, otherwise fallback ────────────────
-    const etaAge = Date.now() - lastSharedETATime;
-    if (lastSharedETA && etaAge < STALE_FALLBACK_MS) {
-      applySharedETA(lastSharedETA, smoothedSpeed, avgSpeed);
-    } else if (destination) {
-      applyFallback(busLat, busLon, smoothedSpeed, avgSpeed);
+    // ── Destination ETA: ONLY in the morning (before 12:00 PM) ───────────
+    const isAfternoon = new Date().getHours() >= 12;
+    const destSection = document.getElementById('dest-eta-section');
+    if (isAfternoon) {
+      if (destSection) destSection.style.display = 'none';
     } else {
-      // No destination set yet — try loading
-      if (!destination) loadDestination().catch(() => {});
-      const destEtaEl = document.getElementById('road-eta-dest');
-      if (destEtaEl && destEtaEl.textContent === 'Loading...') {
-        destEtaEl.textContent = 'No destination set';
+      if (destSection) destSection.style.display = 'block';
+      const etaAge = Date.now() - lastSharedETATime;
+      if (lastSharedETA && etaAge < STALE_FALLBACK_MS) {
+        applySharedETA(lastSharedETA, smoothedSpeed, avgSpeed);
+      } else if (destination) {
+        applyFallback(busLat, busLon, smoothedSpeed, avgSpeed);
+      } else {
+        // No destination set yet — try loading
+        if (!destination) loadDestination().catch(() => {});
+        const destEtaEl = document.getElementById('road-eta-dest');
+        if (destEtaEl && destEtaEl.textContent === 'Loading...') {
+          destEtaEl.textContent = 'No destination set';
+        }
       }
     }
 
@@ -612,11 +658,11 @@ window.RoadETA = (function () {
 
         if (insideBusConfirmed) {
           studentDistEl.textContent = 'You are currently on the bus';
-        } else if (smoothedSpeed < 1) {
-          studentDistEl.textContent = `${distKm} km away${accWarning} · Bus is currently stopped`;
         } else {
-          const etaMins = Math.max(1, Math.round((distM / (Math.max(smoothedSpeed, 5) / 3.6)) / 60));
-          studentDistEl.textContent = `${distKm} km away${accWarning} · ETA ~${etaMins} min for bus to reach you`;
+          const etaMins = computeStableProximityETA(distM, smoothedSpeed);
+          const formattedEta = formatETADuration(etaMins);
+          const stoppedNotice = (smoothedSpeed < 1) ? ' · Bus briefly stopped' : '';
+          studentDistEl.textContent = `${distKm} km away${accWarning} · ETA ~${formattedEta}${stoppedNotice}`;
         }
       }
     } else {
