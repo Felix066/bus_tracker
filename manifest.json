@@ -20,5 +20,21 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Driver Portal",
+      "short_name": "Driver",
+      "description": "Driver Console & Live GPS",
+      "url": "/driver-login.html",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Admin Portal",
+      "short_name": "Admin",
+      "description": "Admin Fleet Management",
+      "url": "/admin-login.html",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }

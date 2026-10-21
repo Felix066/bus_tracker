@@ -379,8 +379,85 @@
           </div>
         </a>
       </div>
+
+      <div style="text-align: center; margin-top: 28px; padding-bottom: 16px;">
+        <a href="#" onclick="openStaffModal(event)" style="font-size: 13px; color: #94a3b8; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; transition: all 0.2s; border: 1px solid rgba(226, 232, 240, 0.8); background: rgba(255, 255, 255, 0.6);" onmouseover="this.style.color='#475569'; this.style.background='#ffffff'" onmouseout="this.style.color='#94a3b8'; this.style.background='rgba(255,255,255,0.6)'">
+          <i class="fas fa-lock" style="font-size: 11px;"></i> Staff Portal (Drivers &amp; Admins)
+        </a>
+      </div>
     </div>
   </div>
+
+  <!-- STAFF PORTAL MODAL -->
+  <div id="staff-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: #ffffff; border-radius: 24px; max-width: 420px; width: 100%; padding: 32px; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25); text-align: center;">
+      <div style="width: 54px; height: 54px; border-radius: 16px; background: #e0e7ff; color: #4338ca; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 16px;">
+        <i class="fas fa-shield-halved"></i>
+      </div>
+      <h3 style="font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Authorized Staff Access</h3>
+      <p style="font-size: 14px; color: #64748b; line-height: 1.5; margin-bottom: 24px;">Select your staff portal to log in:</p>
+      
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+        <a href="driver-login.html" style="display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; text-decoration: none; color: #0f172a; font-weight: 700; font-size: 15px; transition: all 0.2s;" onmouseover="this.style.background='#f1f5f9'; this.style.borderColor='#cbd5e1'" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0'">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: #1A1A1A; color: white; display: flex; align-items: center; justify-content: center; font-size: 16px;"><i class="fas fa-bus"></i></div>
+          <div style="text-align: left; flex: 1;">
+            <div>Bus Driver Portal</div>
+            <div style="font-size: 12px; color: #64748b; font-weight: 500;">GPS telematics &amp; shift dispatch</div>
+          </div>
+          <i class="fas fa-arrow-right" style="color: #94a3b8; font-size: 12px;"></i>
+        </a>
+
+        <a href="admin-login.html" style="display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; text-decoration: none; color: #0f172a; font-weight: 700; font-size: 15px; transition: all 0.2s;" onmouseover="this.style.background='#f1f5f9'; this.style.borderColor='#cbd5e1'" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0'">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #1e1b4b, #4338ca); color: white; display: flex; align-items: center; justify-content: center; font-size: 16px;"><i class="fas fa-user-shield"></i></div>
+          <div style="text-align: left; flex: 1;">
+            <div>Administrator Portal</div>
+            <div style="font-size: 12px; color: #64748b; font-weight: 500;">Fleet management &amp; operations</div>
+          </div>
+          <i class="fas fa-arrow-right" style="color: #94a3b8; font-size: 12px;"></i>
+        </a>
+      </div>
+
+      <button type="button" onclick="closeStaffModal()" style="width: 100%; padding: 12px; border-radius: 12px; background: transparent; border: 1px solid #e2e8f0; color: #64748b; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f8fafc'; this.style.color='#0f172a'" onmouseout="this.style.background='transparent'; this.style.color='#64748b'">Close</button>
+    </div>
+  </div>
+
+  <script>
+    function openStaffModal(e) {
+      if (e) e.preventDefault();
+      const modal = document.getElementById('staff-modal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeStaffModal() {
+      const modal = document.getElementById('staff-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    // Close when clicking outside the modal box
+    window.addEventListener('click', (e) => {
+      const modal = document.getElementById('staff-modal');
+      if (e.target === modal) closeStaffModal();
+    });
+
+    // Triple-tap logo shortcut for staff
+    let logoTapCount = 0;
+    let logoTapTimer = null;
+    window.addEventListener('DOMContentLoaded', () => {
+      const logoEl = document.querySelector('.landing-header .logo');
+      if (logoEl) {
+        logoEl.addEventListener('click', () => {
+          logoTapCount++;
+          clearTimeout(logoTapTimer);
+          if (logoTapCount >= 3) {
+            openStaffModal();
+            logoTapCount = 0;
+          } else {
+            logoTapTimer = setTimeout(() => { logoTapCount = 0; }, 800);
+          }
+        });
+      }
+    });
+  </script>
 
   <script>
     // Remove splash screen after 2.5 seconds
