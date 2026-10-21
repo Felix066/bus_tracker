@@ -1,24 +1,6 @@
 async function handleDriverLogin(username, password) {
   try {
-    // 1. Attempt Admin Login via secure backend API
-    try {
-      const adminRes = await fetch(`${BACKEND_URL}/api/auth/login-admin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      if (adminRes.ok) {
-        const adminData = await adminRes.json();
-        const session = { role: 'admin', username: username, token: adminData.token };
-        sessionStorage.setItem('adminSession', JSON.stringify(session));
-        window.location.href = 'admin-dashboard.html';
-        return;
-      }
-    } catch (adminErr) {
-      console.warn("Admin login failed, falling back to driver", adminErr);
-    }
-
-    // 2. Fallback to Driver Login via secure backend API
+    // Authenticate Driver via secure backend API
     const driverRes = await fetch(`${BACKEND_URL}/api/auth/login-driver`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -5,7 +5,7 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Driver Portal | Where Is My Bus</title>
+  <title>Staff Portal | Where Is My Bus</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
@@ -50,13 +50,10 @@
 
       <div class="login-panel-right">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;">
-          <span style="font-size: 12px; font-weight: 800; background: linear-gradient(135deg, var(--accent-blue-light), var(--accent-blue-dark)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; letter-spacing: 1.5px; display: inline-block; margin-top: 8px;">Driver / Admin Portal</span>
-          <a href="index.html" style="text-decoration: none; font-size: 13px; font-weight: 600; color: #4B5563; border: 1.5px solid #E5E7EB; padding: 6px 12px; border-radius: 20px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px;" onmouseover="this.style.borderColor='#4B5563'; this.style.color='#111827';" onmouseout="this.style.borderColor='#E5E7EB'; this.style.color='#4B5563';">
-            ← Student Portal
-          </a>
+          <span style="font-size: 12px; font-weight: 800; background: linear-gradient(135deg, var(--accent-blue-light), var(--accent-blue-dark)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; letter-spacing: 1.5px; display: inline-block; margin-top: 8px;">Driver Portal</span>
         </div>
-        <h2 style="font-size: 42px; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; margin-top: 0;">Welcome back</h2>
-        <p style="color: #6B7280; font-size: 16px; margin-bottom: 40px;">Sign in with your credentials to begin your shift or manage fleet.</p>
+        <h2 style="font-size: 42px; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; margin-top: 0;">Driver Sign In</h2>
+        <p style="color: #6B7280; font-size: 16px; margin-bottom: 40px;">Sign in with your driver credentials to begin your shift.</p>
 
         <div id="error-banner" class="error-banner hidden"></div>
 
@@ -87,9 +84,7 @@
           <button type="submit" class="btn-primary br-14">Sign In <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 4px;"></i></button>
         </form>
 
-        <div class="bottom-link">
-          Are you a student? <a href="index.html">Sign in here →</a>
-        </div>
+
         
         <div style="text-align: center; margin-top: 16px;">
           <a href="#" onclick="openPermissionsModal(event)" style="font-size: 13px; color: #9CA3AF; text-decoration: underline; transition: color 0.2s;" onmouseover="this.style.color='#4B5563'" onmouseout="this.style.color='#9CA3AF'">Permissions & Data Management</a>
@@ -114,15 +109,10 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      // Check Admin session first
-      const adminSession = JSON.parse(sessionStorage.getItem('adminSession'));
-      if (adminSession && adminSession.token && !isTokenExpired(adminSession.token)) {
-        window.location.href = 'admin-dashboard.html';
-        return;
-      }
-
       // Check Driver session
-      const driverSession = JSON.parse(localStorage.getItem('driverSession'));
+      const driverSession = (() => {
+        try { return JSON.parse(localStorage.getItem('driverSession')); } catch(e) { return null; }
+      })();
       if (driverSession && driverSession.token && !isTokenExpired(driverSession.token)) {
         window.location.href = 'driver-dashboard.html';
         return;

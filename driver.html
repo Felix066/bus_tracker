@@ -15,8 +15,15 @@
         for (let name of names) caches.delete(name);
       });
     }
-    window.location.replace("driver-login.html?nocache=" + new Date().getTime());
+    const driverSession = (() => {
+      try { return JSON.parse(localStorage.getItem('driverSession')); } catch(e) { return null; }
+    })();
+    if (driverSession && driverSession.token) {
+      window.location.replace("driver-dashboard.html?nocache=" + new Date().getTime());
+    } else {
+      window.location.replace("driver-login.html");
+    }
   </script>
 </head>
-<body>Redirecting to original driver login...</body>
+<body>Redirecting to Driver Portal...</body>
 </html>

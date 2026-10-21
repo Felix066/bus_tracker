@@ -52,6 +52,7 @@
 
 .theme-student .login-panel-left { background: linear-gradient(135deg, #0f172a 0%, #10b981 100%); }
 .theme-driver .login-panel-left { background: linear-gradient(135deg, #0f172a 0%, #4f46e5 100%); }
+.theme-admin .login-panel-left { background: linear-gradient(135deg, #090d16 0%, #1e1b4b 45%, #4338ca 100%); }
 
 .login-panel-right {
   flex: 1.1;

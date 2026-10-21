@@ -15,8 +15,15 @@
         for (let name of names) caches.delete(name);
       });
     }
-    window.location.replace("admin-dashboard.html?nocache=" + new Date().getTime());
+    const adminSession = (() => {
+      try { return JSON.parse(sessionStorage.getItem('adminSession')); } catch(e) { return null; }
+    })();
+    if (adminSession && adminSession.token) {
+      window.location.replace("admin-dashboard.html?nocache=" + new Date().getTime());
+    } else {
+      window.location.replace("admin-login.html");
+    }
   </script>
 </head>
-<body>Redirecting to original admin dashboard...</body>
+<body>Redirecting to Admin Portal...</body>
 </html>
