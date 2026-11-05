@@ -158,3 +158,4 @@ All reported vulnerabilities, structural flaws, and multi-tenant security requir
 3. Multi-tenant database isolation with strict foreign keys and RLS policies.
 4. Two-factor authentication (RFC 6238 TOTP) and strong password rotation for Super Admins.
 5. Zero UI disruption across all student, driver, and admin interfaces.
+
