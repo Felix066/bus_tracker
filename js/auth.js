@@ -105,7 +105,8 @@ async function logout() {
   const finishLogout = () => {
     localStorage.removeItem('userSession');
     localStorage.removeItem('driverSession');
-    window.location.href = 'student-login.html';
+    sessionStorage.clear();
+    window.location.replace('student-login.html');
   };
 
   // Always guarantee logout within 2 seconds, even if Google revoke never fires

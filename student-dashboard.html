@@ -69,7 +69,7 @@
   <script>
     protectRoute('student');
     const session = JSON.parse(localStorage.getItem('userSession'));
-    if (!session) window.location.href = 'index.html';
+    if (!session) window.location.replace('student-login.html');
     // Note: loadStudentDashboard() is called by dashboard.js DOMContentLoaded listener
   </script>
   <script>

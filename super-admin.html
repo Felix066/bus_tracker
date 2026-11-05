@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="js/storage-encrypt.js"></script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Platform Super Admin | Where Is My Bus</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <script src="js/icons.js?v=12"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <style>
+    :root {
+      --bg: #F8FAFC;
+      --surface: rgba(255, 255, 255, 0.7);
+      --surface-solid: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: rgba(226, 232, 240, 0.8);
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --btn-bg: #0f172a;
+      --font-body: 'Inter', sans-serif;
+      --card-radius: 24px;
+      --input-radius: 12px;
+      --shadow-soft: 0 20px 40px -15px rgba(15, 23, 42, 0.05);
+      --glass-border: 1px solid rgba(255, 255, 255, 0.8);
+      --glass-bg: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.4) 100%);
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,0.03) 0, transparent 50%), 
+                        radial-gradient(at 50% 0%, hsla(225,39%,30%,0.03) 0, transparent 50%), 
+                        radial-gradient(at 100% 0%, hsla(339,49%,30%,0.03) 0, transparent 50%);
+      background-attachment: fixed;
+      color: var(--text);
+      font-family: var(--font-body);
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .navbar {
+      height: 76px;
+      padding: 0 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+      color: #0f172a;
+    }
+
+    .platform-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #7c3aed;
+      background: rgba(124, 58, 237, 0.1);
+      padding: 4px 10px;
+      border-radius: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn-logout {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 18px;
+      border-radius: 12px;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-logout:hover {
+      background: #fee2e2;
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+
+    .main-wrapper {
+      max-width: 1340px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 24px;
+      box-sizing: border-box;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .page-title h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin: 0 0 6px 0;
+      color: #0f172a;
+    }
+    .page-title p {
+      margin: 0;
+      color: #64748b;
+      font-size: 15px;
+    }
+
+    /* Tabs */
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 8px;
+    }
+
+    .tab-item {
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 14px;
+      color: #64748b;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab-item.active {
+      background: #0f172a;
+      color: #ffffff;
+    }
+    .tab-item:not(.active):hover {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+
+    /* Stats Grid */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+    }
+    .stat-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .stat-val {
+      font-size: 28px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    /* Card Panels */
+    .card-panel {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+      margin-bottom: 28px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .btn-primary {
+      background: #0f172a;
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      padding: 10px 20px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover {
+      background: #1e293b;
+      transform: translateY(-1px);
+    }
+
+    /* Table */
+    .table-responsive {
+      overflow-x: auto;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 14px;
+    }
+    th {
+      background: #f8fafc;
+      color: #475569;
+      font-weight: 700;
+      padding: 14px 18px;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+    td {
+      padding: 16px 18px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #1e293b;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    tr:hover td {
+      background: #fafafa;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .badge-active { background: #dcfce7; color: #15803d; }
+    .badge-inactive { background: #fee2e2; color: #b91c1c; }
+    .badge-revoked { background: #fee2e2; color: #b91c1c; }
+    .badge-purple { background: #f3e8ff; color: #7e22ce; }
+
+    .action-btn-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-action-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      color: #475569;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-action-icon:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+      border-color: #cbd5e1;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-box {
+      background: #ffffff;
+      border-radius: 24px;
+      max-width: 540px;
+      width: 100%;
+      padding: 32px;
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+      border: 1px solid rgba(255,255,255,0.8);
+      position: relative;
+    }
+    .modal-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 8px 0;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1.5px solid #cbd5e1;
+      font-size: 14px;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus {
+      border-color: #4f46e5;
+    }
+
+    .code-reveal-box {
+      background: #0f172a;
+      color: #38bdf8;
+      border-radius: 14px;
+      padding: 18px 20px;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-align: center;
+      margin: 20px 0;
+      word-break: break-all;
+      border: 1px solid #1e293b;
+      position: relative;
+    }
+    .copy-pill {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .copy-pill:hover {
+      background: #334155;
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation Header -->
+  <nav class="navbar">
+    <div class="brand">
+      <div style="background: #0f172a; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
+        <i class="fas fa-bus-simple" style="font-size: 18px;"></i>
+      </div>
+      <div>
+        <div class="brand-title">Where Is My Bus</div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span class="platform-badge"><i class="fas fa-code"></i> Platform Developer Console</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <span id="superadmin-username" style="font-size: 14px; font-weight: 700; color: #475569;">superadmin</span>
+      <button onclick="handleLogout()" class="btn-logout">
+        <i class="fas fa-arrow-right-from-bracket"></i> Logout
+      </button>
+    </div>
+  </nav>
+
+  <main class="main-wrapper">
+    <div class="page-header">
+      <div class="page-title">
+        <h1>Multi-Tenant Platform Control</h1>
+        <p>Central management of educational institutions, cryptographically hashed access codes, and tenant status.</p>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Institutions</div>
+        <div class="stat-val" id="stat-total-inst">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Institutions</div>
+        <div class="stat-val" style="color: #10b981;" id="stat-active-inst">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Inactive Institutions</div>
+        <div class="stat-val" style="color: #ef4444;" id="stat-inactive-inst">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Fleet Buses</div>
+        <div class="stat-val" id="stat-total-buses">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Trips</div>
+        <div class="stat-val" style="color: #6366f1;" id="stat-active-trips">-</div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+      <button class="tab-item active" onclick="switchTab('institutions', this)">
+        <i class="fas fa-school"></i> Institutions &amp; Access Codes
+      </button>
+      <button class="tab-item" onclick="switchTab('audit', this)">
+        <i class="fas fa-list-check"></i> Platform Audit Logs
+      </button>
+    </div>
+
+    <!-- TAB 1: INSTITUTIONS -->
+    <div id="tab-institutions" class="card-panel">
+      <div class="panel-header">
+        <div style="display: flex; align-items: center; gap: 12px; flex: 1; max-width: 480px;">
+          <input type="text" id="institution-search" placeholder="Search institutions by name or code..." class="form-input" oninput="filterInstitutions()">
+          <select id="status-filter" class="form-input" style="width: 140px;" onchange="filterInstitutions()">
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <button class="btn-primary" onclick="openRegisterModal()">
+          <i class="fas fa-plus"></i> Register Institution
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Institution</th>
+              <th>Identifier</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Code Status</th>
+              <th>Last Rotated</th>
+              <th>Admin Rotation</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="institutions-tbody">
+            <tr>
+              <td colspan="8" style="text-align: center; color: #64748b; padding: 32px;">
+                <i class="fas fa-spinner fa-spin"></i> Loading institutions...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: AUDIT LOGS -->
+    <div id="tab-audit" class="card-panel" style="display: none;">
+      <div class="panel-header">
+        <div>
+          <h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 800;">Platform Security Audit Logs</h3>
+          <p style="margin: 0; color: #64748b; font-size: 14px;">Historical audit trail for all administrative and access-code events.</p>
+        </div>
+        <button class="btn-logout" onclick="loadAuditLogs()">
+          <i class="fas fa-rotate"></i> Refresh Logs
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Actor</th>
+              <th>Role</th>
+              <th>Action</th>
+              <th>IP Address</th>
+              <th>Metadata</th>
+            </tr>
+          </thead>
+          <tbody id="audit-tbody">
+            <tr>
+              <td colspan="6" style="text-align: center; color: #64748b; padding: 32px;">
+                <i class="fas fa-spinner fa-spin"></i> Loading audit logs...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- REGISTER INSTITUTION MODAL -->
+  <div id="register-modal" class="modal-overlay">
+    <div class="modal-box">
+      <h3 class="modal-title"><i class="fas fa-school" style="color: #4f46e5;"></i> Register Educational Institution</h3>
+      <p style="font-size: 14px; color: #64748b; margin-bottom: 20px;">Provide institution details. An unpredictable 128-bit access code will be generated automatically.</p>
+
+      <form id="register-form" onsubmit="handleRegisterInstitution(event)">
+        <div class="form-group">
+          <label for="reg-name">Institution Name *</label>
+          <input type="text" id="reg-name" class="form-input" placeholder="e.g. Providence College of Engineering" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label for="reg-code">Unique Code / Prefix *</label>
+            <input type="text" id="reg-code" class="form-input" placeholder="e.g. PCE-001" style="text-transform: uppercase;" required>
+          </div>
+          <div class="form-group">
+            <label for="reg-type">Institution Type</label>
+            <select id="reg-type" class="form-input">
+              <option value="college">College</option>
+              <option value="school">School</option>
+              <option value="university">University</option>
+              <option value="institute">Institute</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label for="reg-district">District</label>
+            <input type="text" id="reg-district" class="form-input" placeholder="e.g. Alappuzha">
+          </div>
+          <div class="form-group">
+            <label for="reg-state">State</label>
+            <input type="text" id="reg-state" class="form-input" placeholder="e.g. Kerala">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-contact-person">Contact Officer</label>
+          <input type="text" id="reg-contact-person" class="form-input" placeholder="e.g. Transport Coordinator">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label for="reg-email">Contact Email</label>
+            <input type="email" id="reg-email" class="form-input" placeholder="transport@college.edu">
+          </div>
+          <div class="form-group">
+            <label for="reg-phone">Contact Phone</label>
+            <input type="tel" id="reg-phone" class="form-input" placeholder="+91 98765 43210">
+          </div>
+        </div>
+
+        <div style="margin-bottom: 22px; display: flex; align-items: center; gap: 10px;">
+          <input type="checkbox" id="reg-allow-rotation" style="width: 18px; height: 18px; accent-color: #4f46e5;">
+          <label for="reg-allow-rotation" style="font-size: 13px; font-weight: 600; color: #334155; margin: 0; cursor: pointer;">
+            Allow Institution Administrator to rotate the access code
+          </label>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+          <button type="button" class="btn-logout" onclick="closeRegisterModal()">Cancel</button>
+          <button type="submit" id="btn-save-inst" class="btn-primary">
+            <i class="fas fa-check"></i> Register &amp; Generate Code
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ONE-TIME ACCESS CODE REVEAL MODAL -->
+  <div id="code-reveal-modal" class="modal-overlay">
+    <div class="modal-box" style="text-align: center; max-width: 520px;">
+      <div style="width: 56px; height: 56px; border-radius: 18px; background: #e0e7ff; color: #4338ca; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 16px;">
+        <i class="fas fa-key"></i>
+      </div>
+      <h3 class="modal-title" id="reveal-modal-title">Institution Access Code</h3>
+      <p style="font-size: 14px; color: #64748b; margin-bottom: 12px;">Share this access code securely with the institution administration.</p>
+
+      <div class="code-reveal-box" id="revealed-code-display">
+        WIMB-XXXX-XXXX-XXXX-XXXX
+      </div>
+
+      <button type="button" class="copy-pill" onclick="copyRevealedCode()">
+        <i class="fas fa-copy" id="copy-icon"></i> <span id="copy-text">Copy Access Code</span>
+      </button>
+
+      <div style="margin-top: 20px; padding: 12px 16px; border-radius: 12px; background: #fffbeb; border: 1px solid #fef3c7; color: #b45309; font-size: 13px; line-height: 1.5; text-align: left; display: flex; gap: 10px; align-items: flex-start;">
+        <i class="fas fa-triangle-exclamation" style="margin-top: 2px;"></i>
+        <div>
+          <strong>Important Security Notice:</strong>
+          Copy this access code now and store it in a secure password manager. For security, access codes are stored strictly as HMAC-SHA-256 hashes and can <strong>never</strong> be displayed again.
+        </div>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <button type="button" class="btn-primary" style="width: 100%; height: 46px; justify-content: center;" onclick="closeRevealModal()">
+          I Have Securely Copied This Code
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let platformInstitutions = [];
+
+    // Session validation
+    const token = sessionStorage.getItem('platform_token');
+    if (!token) {
+      window.location.replace('super-admin-login.html');
+    }
+
+    const userData = sessionStorage.getItem('platform_user');
+    if (userData) {
+      try {
+        const u = JSON.parse(userData);
+        document.getElementById('superadmin-username').textContent = u.username || 'Developer';
+      } catch (e) {}
+    }
+
+    function handleLogout() {
+      sessionStorage.removeItem('platform_token');
+      sessionStorage.removeItem('platform_user');
+      window.location.replace('super-admin-login.html');
+    }
+
+    function switchTab(tabName, btn) {
+      document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      document.getElementById('tab-institutions').style.display = tabName === 'institutions' ? 'block' : 'none';
+      document.getElementById('tab-audit').style.display = tabName === 'audit' ? 'block' : 'none';
+
+      if (tabName === 'audit') loadAuditLogs();
+    }
+
+    async function loadDashboardStats() {
+      try {
+        const res = await fetch('/api/platform/dashboard-stats', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.status === 401 || res.status === 403) return handleLogout();
+
+        const data = await res.json();
+        if (data.success && data.stats) {
+          document.getElementById('stat-total-inst').textContent = data.stats.totalInstitutions;
+          document.getElementById('stat-active-inst').textContent = data.stats.activeInstitutions;
+          document.getElementById('stat-inactive-inst').textContent = data.stats.inactiveInstitutions;
+          document.getElementById('stat-total-buses').textContent = data.stats.totalBuses;
+          document.getElementById('stat-active-trips').textContent = data.stats.activeTrips;
+        }
+      } catch (e) {
+        console.warn('Could not load dashboard stats:', e);
+      }
+    }
+
+    async function loadInstitutions() {
+      try {
+        const res = await fetch('/api/platform/institutions', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.status === 401 || res.status === 403) return handleLogout();
+
+        const data = await res.json();
+        if (data.success) {
+          platformInstitutions = data.institutions || [];
+          renderInstitutionsTable(platformInstitutions);
+        }
+      } catch (e) {
+        console.error('Error fetching institutions:', e);
+      }
+    }
+
+    function renderInstitutionsTable(list) {
+      const tbody = document.getElementById('institutions-tbody');
+      if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #64748b; padding: 32px;">No institutions found. Click "Register Institution" to add one.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = list.map(inst => {
+        const codeStatus = inst.access_code?.status || 'active';
+        const lastRotated = inst.access_code?.rotated_at 
+          ? new Date(inst.access_code.rotated_at).toLocaleDateString() 
+          : (inst.access_code?.created_at ? new Date(inst.access_code.created_at).toLocaleDateString() : 'Initial');
+
+        return `
+          <tr>
+            <td>
+              <div style="font-weight: 700; color: #0f172a;">\${escapeHtml(inst.institution_name)}</div>
+              <div style="font-size: 12px; color: #64748b;">\${escapeHtml(inst.contact_email || inst.district || '')}</div>
+            </td>
+            <td><span style="font-family: monospace; font-weight: 700;">\${escapeHtml(inst.institution_code)}</span></td>
+            <td><span class="badge badge-purple" style="text-transform: capitalize;">\${escapeHtml(inst.institution_type || 'college')}</span></td>
+            <td>
+              <span class="badge \${inst.status === 'active' ? 'badge-active' : 'badge-inactive'}">
+                \${inst.status === 'active' ? '<i class="fas fa-circle-check"></i> Active' : '<i class="fas fa-circle-xmark"></i> Inactive'}
+              </span>
+            </td>
+            <td>
+              <span class="badge \${codeStatus === 'active' ? 'badge-active' : 'badge-revoked'}">
+                \${codeStatus === 'active' ? '<i class="fas fa-key"></i> Active' : '<i class="fas fa-ban"></i> Revoked'}
+              </span>
+            </td>
+            <td style="color: #64748b; font-size: 13px;">\${lastRotated}</td>
+            <td>
+              <button onclick="toggleAdminRotation('\${inst.id}', \${!inst.allow_admin_code_rotation})" 
+                style="background: none; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer; color: \${inst.allow_admin_code_rotation ? '#15803d' : '#64748b'};">
+                <i class="fas \${inst.allow_admin_code_rotation ? 'fa-toggle-on' : 'fa-toggle-off'}"></i> \${inst.allow_admin_code_rotation ? 'Allowed' : 'Disabled'}
+              </button>
+            </td>
+            <td style="text-align: right;">
+              <div class="action-btn-group" style="justify-content: flex-end;">
+                <button class="btn-action-icon" title="Rotate Access Code" onclick="rotateCode('\${inst.id}', '\${escapeHtml(inst.institution_name)}')">
+                  <i class="fas fa-arrows-rotate"></i>
+                </button>
+                <button class="btn-action-icon" title="\${inst.status === 'active' ? 'Deactivate' : 'Activate'}" onclick="toggleStatus('\${inst.id}', '\${inst.status}')">
+                  <i class="fas \${inst.status === 'active' ? 'fa-pause' : 'fa-play'}"></i>
+                </button>
+                <button class="btn-action-icon" title="Revoke Code" style="color: #dc2626;" onclick="revokeCode('\${inst.id}', '\${escapeHtml(inst.institution_name)}')">
+                  <i class="fas fa-ban"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function filterInstitutions() {
+      const q = document.getElementById('institution-search').value.toLowerCase().trim();
+      const status = document.getElementById('status-filter').value;
+
+      const filtered = platformInstitutions.filter(inst => {
+        const matchesQuery = !q || 
+          inst.institution_name.toLowerCase().includes(q) || 
+          inst.institution_code.toLowerCase().includes(q);
+        const matchesStatus = status === 'all' || inst.status === status;
+        return matchesQuery && matchesStatus;
+      });
+      renderInstitutionsTable(filtered);
+    }
+
+    // Register Modal
+    function openRegisterModal() {
+      document.getElementById('register-form').reset();
+      document.getElementById('register-modal').style.display = 'flex';
+    }
+
+    function closeRegisterModal() {
+      document.getElementById('register-modal').style.display = 'none';
+    }
+
+    async function handleRegisterInstitution(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save-inst');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registering...';
+
+      const payload = {
+        institution_name: document.getElementById('reg-name').value.trim(),
+        institution_code: document.getElementById('reg-code').value.trim().toUpperCase(),
+        institution_type: document.getElementById('reg-type').value,
+        district: document.getElementById('reg-district').value.trim(),
+        state: document.getElementById('reg-state').value.trim(),
+        contact_person: document.getElementById('reg-contact-person').value.trim(),
+        contact_email: document.getElementById('reg-email').value.trim(),
+        contact_phone: document.getElementById('reg-phone').value.trim(),
+        allow_admin_code_rotation: document.getElementById('reg-allow-rotation').checked
+      };
+
+      try {
+        const res = await fetch('/api/platform/institutions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          alert(data.error || 'Failed to register institution.');
+        } else {
+          closeRegisterModal();
+          await loadInstitutions();
+          await loadDashboardStats();
+          // Reveal the access code once
+          showRevealModal(data.institution.institution_name, data.accessCode);
+        }
+      } catch (err) {
+        alert('Network error while registering institution.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Register &amp; Generate Code';
+      }
+    }
+
+    // Access Code Actions
+    async function rotateCode(id, name) {
+      if (!confirm(`Are you sure you want to rotate the access code for "\${name}"? The previous code will stop working immediately.`)) {
+        return;
+      }
+      try {
+        const res = await fetch(`/api/platform/institutions/\${id}/access-code/rotate`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.success) {
+          await loadInstitutions();
+          showRevealModal(name, data.accessCode);
+        } else {
+          alert(data.error || 'Failed to rotate access code.');
+        }
+      } catch (e) {
+        alert('Error communicating with server.');
+      }
+    }
+
+    async function revokeCode(id, name) {
+      if (!confirm(`Revoke the active access code for "\${name}"? Users from this institution will not be able to resolve portals until a new code is rotated.`)) {
+        return;
+      }
+      try {
+        const res = await fetch(`/api/platform/institutions/\${id}/access-code/revoke`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Access code revoked.');
+          await loadInstitutions();
+        } else {
+          alert(data.error || 'Failed to revoke access code.');
+        }
+      } catch (e) {
+        alert('Error communicating with server.');
+      }
+    }
+
+    async function toggleAdminRotation(id, allow) {
+      try {
+        const res = await fetch(`/api/platform/institutions/\${id}/code-settings`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ allow_admin_code_rotation: allow })
+        });
+        const data = await res.json();
+        if (data.success) {
+          await loadInstitutions();
+        }
+      } catch (e) {}
+    }
+
+    async function toggleStatus(id, currentStatus) {
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      try {
+        const res = await fetch(`/api/platform/institutions/\${id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+        const data = await res.json();
+        if (data.success) {
+          await loadInstitutions();
+          await loadDashboardStats();
+        }
+      } catch (e) {}
+    }
+
+    // Code Reveal Modal
+    function showRevealModal(instName, code) {
+      document.getElementById('reveal-modal-title').textContent = instName + ' — Access Code';
+      document.getElementById('revealed-code-display').textContent = code;
+      document.getElementById('copy-text').textContent = 'Copy Access Code';
+      document.getElementById('copy-icon').className = 'fas fa-copy';
+      document.getElementById('code-reveal-modal').style.display = 'flex';
+    }
+
+    function closeRevealModal() {
+      document.getElementById('code-reveal-modal').style.display = 'none';
+      document.getElementById('revealed-code-display').textContent = '';
+    }
+
+    function copyRevealedCode() {
+      const code = document.getElementById('revealed-code-display').textContent.trim();
+      navigator.clipboard.writeText(code).then(() => {
+        document.getElementById('copy-text').textContent = 'Copied to Clipboard!';
+        document.getElementById('copy-icon').className = 'fas fa-check';
+        setTimeout(() => {
+          document.getElementById('copy-text').textContent = 'Copy Access Code';
+          document.getElementById('copy-icon').className = 'fas fa-copy';
+        }, 3000);
+      });
+    }
+
+    // Audit Logs
+    async function loadAuditLogs() {
+      const tbody = document.getElementById('audit-tbody');
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #64748b; padding: 32px;"><i class="fas fa-spinner fa-spin"></i> Loading audit logs...</td></tr>';
+
+      try {
+        const res = await fetch('/api/platform/audit-logs', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+
+        if (data.success && data.logs && data.logs.length > 0) {
+          tbody.innerHTML = data.logs.map(l => `
+            <tr>
+              <td style="font-size: 13px; color: #64748b; white-space: nowrap;">\${new Date(l.created_at).toLocaleString()}</td>
+              <td style="font-weight: 700;">\${escapeHtml(l.actor_id)}</td>
+              <td><span class="badge badge-purple" style="font-size: 11px;">\${escapeHtml(l.actor_type)}</span></td>
+              <td><span style="font-family: monospace; font-weight: 700; color: #0f172a;">\${escapeHtml(l.action)}</span></td>
+              <td style="font-size: 13px; color: #64748b;">\${escapeHtml(l.ip_address || '-')}</td>
+              <td style="font-size: 12px; color: #64748b; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${escapeHtml(JSON.stringify(l.metadata || {}))}</td>
+            </tr>
+          `).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #64748b; padding: 32px;">No audit events recorded yet.</td></tr>';
+        }
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #ef4444; padding: 32px;">Failed to load audit logs.</td></tr>';
+      }
+    }
+
+    function escapeHtml(text) {
+      if (text === null || text === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = String(text);
+      return div.innerHTML;
+    }
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      loadDashboardStats();
+      loadInstitutions();
+    });
+  </script>
+</body>
+</html>

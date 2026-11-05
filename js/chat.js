@@ -343,7 +343,7 @@ function _showEmpty() {
 }
 
 // ============================================================================
-// APPEND MESSAGE
+// APPEND MESSAGE (Safe DOM Methods)
 // ============================================================================
 function appendMessage(msg) {
   const container = document.getElementById('chat-msg-list');
@@ -369,11 +369,35 @@ function appendMessage(msg) {
   bubble.className = `chat-bubble ${isMine ? 'mine' : 'theirs'}`;
 
   if (msg.message && msg.message.startsWith('[VOICE]:')) {
-    const url = msg.message.replace('[VOICE]:', '').trim();
-    bubble.innerHTML = `<div class="chat-voice-label">🎤 Voice Message</div><audio controls src="${url}" preload="none"></audio>`;
+    const rawUrl = msg.message.replace('[VOICE]:', '').trim();
+    let safeUrl = '';
+    try {
+      const parsed = new URL(rawUrl);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        safeUrl = parsed.href;
+      }
+    } catch (e) {}
+
+    const voiceLabel = document.createElement('div');
+    voiceLabel.className = 'chat-voice-label';
+    voiceLabel.textContent = '🎤 Voice Message';
+    bubble.appendChild(voiceLabel);
+
+    if (safeUrl) {
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      audio.preload = 'none';
+      audio.src = safeUrl;
+      bubble.appendChild(audio);
+    } else {
+      const errSpan = document.createElement('span');
+      errSpan.style.color = '#ef4444';
+      errSpan.textContent = '[Audio unavailable]';
+      bubble.appendChild(errSpan);
+    }
   } else {
     const safe = document.createElement('span');
-    safe.innerText = msg.message || '';
+    safe.textContent = msg.message || '';
     bubble.appendChild(safe);
   }
 
@@ -415,7 +439,7 @@ function appendMessage(msg) {
 }
 
 // ============================================================================
-// DELETE INDIVIDUAL MESSAGE (long-press popup)
+// DELETE INDIVIDUAL MESSAGE (Safe DOM Popup)
 // ============================================================================
 function showDeletePopup(msgId, wrapEl) {
   // Remove any existing popup
@@ -425,7 +449,11 @@ function showDeletePopup(msgId, wrapEl) {
   const popup = document.createElement('div');
   popup.id = 'chat-delete-popup';
   popup.className = 'chat-delete-popup';
-  popup.innerHTML = `<button onclick="deleteSingleMessage('${msgId}')"><i class="fas fa-trash-alt"></i> Delete message</button>`;
+
+  const btn = document.createElement('button');
+  btn.innerHTML = '<i class="fas fa-trash-alt"></i> Delete message';
+  btn.addEventListener('click', () => deleteSingleMessage(msgId));
+  popup.appendChild(btn);
 
   // Position near the bubble
   const rect = wrapEl.getBoundingClientRect();

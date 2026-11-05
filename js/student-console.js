@@ -6,6 +6,10 @@ let busId = null;
 
 let lastLocationUpdatedAt = 0;
 let lastEndedTripId = null;
+try {
+    const urlBus = new URLSearchParams(window.location.search).get('busId') || '';
+    lastEndedTripId = sessionStorage.getItem('lastEndedTripId_' + urlBus) || null;
+} catch (e) {}
 
 let lastReverseGeocodeTime = 0;
 let lastReverseGeocodeLat = null;
@@ -322,7 +326,9 @@ function subscribeToLiveUpdates() {
                     const locTime = new Date(payload.new.updated_at || Date.now()).getTime();
                     if (locTime > lastLocationUpdatedAt) {
                         lastLocationUpdatedAt = locTime;
-                        processNewLocation(payload.new.latitude, payload.new.longitude, payload.new.speed_kmh);
+                        if (activeTripId) {
+                            processNewLocation(payload.new.latitude, payload.new.longitude, payload.new.speed_kmh);
+                        }
                         if (payload.new.trip_id && !activeTripId && payload.new.trip_id !== lastEndedTripId) {
                             activeTripId = payload.new.trip_id;
                             // Reload to fully initialize active trip UI
@@ -354,7 +360,7 @@ function subscribeToLiveUpdates() {
             schema: 'public',
             table: 'trips'
         }, (payload) => {
-            if (payload.new && payload.new.id === activeTripId) {
+            if (payload.new && (payload.new.id === activeTripId || (payload.new.bus_id && busId && payload.new.bus_id.replace(/\s+/g, '').toLowerCase() === busId.replace(/\s+/g, '').toLowerCase()))) {
                 if (payload.new.status === 'completed' || payload.new.status === 'cancelled') {
                     handleTripEnded();
                 }
@@ -380,9 +386,9 @@ function subscribeToLiveUpdates() {
                 }
             }
             
-            // 2. Fetch live location as fallback for Realtime
-            const locRes = await fetch(`${BACKEND_URL}/api/location/bus/${encodeURIComponent(busId)}`);
-            if (locRes.ok) {
+            // 2. Fetch live location as fallback for Realtime (active trips only)
+            const locRes = activeTripId ? await fetch(`${BACKEND_URL}/api/location/bus/${encodeURIComponent(busId)}`) : null;
+            if (locRes && locRes.ok) {
                 const locData = await locRes.json();
                 if (locData.success && locData.location) {
                     const loc = locData.location;
@@ -437,6 +443,9 @@ function handleTripEnded() {
     if (deadReckonTimer) clearInterval(deadReckonTimer);
 
     lastEndedTripId = activeTripId;
+    if (busId && activeTripId) {
+        try { sessionStorage.setItem('lastEndedTripId_' + busId, activeTripId); } catch(e) {}
+    }
     activeTripId = null;
 
     const statusBar = document.getElementById('trip-status-bar');

@@ -589,7 +589,7 @@
   <script>
     protectRoute('student');
     const session = JSON.parse(localStorage.getItem('userSession'));
-    if (!session) window.location.href = 'index.html';
+    if (!session) window.location.replace('student-login.html');
   </script>
 
   <!-- Bus status icon logic: update STOPPED/MOVING based on speed -->

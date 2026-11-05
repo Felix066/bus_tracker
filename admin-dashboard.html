@@ -1266,6 +1266,7 @@
       <button class="tab-btn active" onclick="switchTab('fleet')">Fleet Overview</button>
       <button class="tab-btn" onclick="switchTab('analytics')">Trip Analytics</button>
       <button class="tab-btn" onclick="switchTab('destination')">🗺 Destination</button>
+      <button class="tab-btn" onclick="switchTab('institution')"><i class="fas fa-building-columns" style="margin-right: 6px;"></i> Institution</button>
     </div>
 
     <!-- TAB: FLEET OVERVIEW -->
@@ -1429,6 +1430,83 @@
     </div>
     <!-- END TAB: DESTINATION MANAGEMENT -->
 
+    <!-- TAB: INSTITUTION MANAGEMENT -->
+    <div id="tab-institution" class="tab-content" style="display:none;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px; width: 100%;">
+        <!-- Institution Information Card -->
+        <div class="glass" style="border-radius: var(--card-radius); padding: 30px; background: rgba(255,255,255,0.7);">
+          <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 24px;">
+            <div style="width: 48px; height: 48px; border-radius: 14px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+              <i class="fas fa-building-columns"></i>
+            </div>
+            <div>
+              <h3 style="margin: 0; font-size: 20px; font-weight: 800; color: var(--text);">Institution Profile</h3>
+              <p style="margin: 0; font-size: 13px; color: var(--text-muted);">Registered Educational Organization</p>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+              <span style="color: var(--text-muted); font-size: 14px; font-weight: 600;">Institution Name</span>
+              <span id="inst-info-name" style="font-weight: 700; color: var(--text);">Providence College of Engineering</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+              <span style="color: var(--text-muted); font-size: 14px; font-weight: 600;">Institution Identifier</span>
+              <span id="inst-info-code" style="font-family: monospace; font-weight: 700; background: #f1f5f9; padding: 2px 8px; border-radius: 6px;">PCE-001</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+              <span style="color: var(--text-muted); font-size: 14px; font-weight: 600;">Type</span>
+              <span id="inst-info-type" style="text-transform: capitalize; font-weight: 600; color: var(--text);">College</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+              <span style="color: var(--text-muted); font-size: 14px; font-weight: 600;">Status</span>
+              <span id="inst-info-status" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; background: #dcfce7; color: #15803d;"><i class="fas fa-circle-check"></i> Active</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted); font-size: 14px; font-weight: 600;">Registered Date</span>
+              <span id="inst-info-date" style="font-size: 13px; color: var(--text);">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Access Code Management Card -->
+        <div class="glass" style="border-radius: var(--card-radius); padding: 30px; background: rgba(255,255,255,0.7);">
+          <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 24px;">
+            <div style="width: 48px; height: 48px; border-radius: 14px; background: #fef3c7; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+              <i class="fas fa-key"></i>
+            </div>
+            <div>
+              <h3 style="margin: 0; font-size: 20px; font-weight: 800; color: var(--text);">Access Code Security</h3>
+              <p style="margin: 0; font-size: 13px; color: var(--text-muted);">Institution Access Code Status</p>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+              <span style="color: var(--text-muted); font-size: 14px; font-weight: 600;">Code Status</span>
+              <span id="inst-code-status" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; background: #dcfce7; color: #15803d;"><i class="fas fa-shield-halved"></i> Active</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+              <span style="color: var(--text-muted); font-size: 14px; font-weight: 600;">Last Rotation</span>
+              <span id="inst-code-rotated" style="font-size: 13px; color: var(--text);">-</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+              <span style="color: var(--text-muted); font-size: 14px; font-weight: 600;">Administrator Rotation</span>
+              <span id="inst-code-permission" style="font-size: 13px; font-weight: 700; color: #15803d;">Allowed</span>
+            </div>
+            <div style="margin-top: 10px;">
+              <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
+                When you rotate the access code, the previous code stops working immediately. A new 128-bit cryptographically secure code will be generated and shown once.
+              </p>
+              <button id="btn-admin-rotate-code" type="button" class="btn-primary" onclick="adminRotateAccessCode()" style="width: 100%; height: 46px; justify-content: center; gap: 8px;">
+                <i class="fas fa-arrows-rotate"></i> Rotate Access Code
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- MASTER EDIT MODAL -->
@@ -1525,7 +1603,7 @@
       sessionStorage.removeItem('adminSession');
       localStorage.removeItem('userSession');
       sessionStorage.clear();
-      window.location.href = 'admin-login.html';
+      window.location.replace('admin-login.html');
     }
 
     // A small snippet to update the stats manually if needed, 

@@ -569,6 +569,7 @@ async function endTrip() {
     }
 
     stopTripTimer();
+    const endedBusId = localStorage.getItem('activeBusId') || (JSON.parse(localStorage.getItem('driverSession') || '{}').assignedBus);
 
     localStorage.removeItem('activeTripId');
     localStorage.removeItem('activeBusId');
@@ -582,7 +583,7 @@ async function endTrip() {
     if (screenWarn) screenWarn.classList.remove('visible');
 
     // Auto-clear chat for this bus when the trip ends
-    const endedBusId = localStorage.getItem('activeBusId');
+    // Clear chat for ended bus if available
     if (endedBusId && typeof clearChatOnTripEnd === 'function') {
         await clearChatOnTripEnd(endedBusId).catch(() => {});
     }

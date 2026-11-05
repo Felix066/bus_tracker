@@ -6,6 +6,9 @@
 // UX defence — they do NOT replace server-side RLS or API authorization.
 // ============================================================================
 
+// Global variable to remember required role for bfcache restoration
+window._currentRequiredRole = null;
+
 // ---------------------------------------------------------------------------
 // JWT helpers (client-side only — NEVER used for actual authorization)
 // ---------------------------------------------------------------------------
@@ -85,6 +88,7 @@ async function _verifyTokenWithBackend(token, expectedRole) {
 //   protectRoute('admin')    → protects admin-dashboard, admin-sos
 // ===========================================================================
 async function protectRoute(requiredRole) {
+  window._currentRequiredRole = requiredRole;
 
   // ── ADMIN ROUTE ──────────────────────────────────────────────────────────
   if (requiredRole === 'admin') {
@@ -195,3 +199,20 @@ async function protectRoute(requiredRole) {
     window.location.replace('student-login.html');
   }
 }
+
+// ---------------------------------------------------------------------------
+// BFCACHE (Back-Forward Cache) Protection
+// When a user logs out and clicks the browser "Back" button, the browser
+// can restore the cached DOM page from memory without re-running scripts.
+// The 'pageshow' event with event.persisted === true signals bfcache restore.
+// We force immediate re-verification of the route and reload/redirect.
+// ---------------------------------------------------------------------------
+window.addEventListener('pageshow', function(event) {
+  if (event.persisted) {
+    if (window._currentRequiredRole) {
+      protectRoute(window._currentRequiredRole);
+    } else {
+      window.location.reload();
+    }
+  }
+});

@@ -49,6 +49,9 @@ function switchTab(tabId) {
   if (tabId === 'destination') {
     loadDestination();
   }
+  if (tabId === 'institution') {
+    loadInstitutionData();
+  }
 }
 
 // --- USER MANAGEMENT DATA ---
@@ -703,8 +706,6 @@ function removePhoto(type) {
       document.getElementById('inpBusPhoto').value = '';
       document.getElementById('busPhotoPreview').style.display = 'none';
       document.getElementById('btnRemoveBusPhoto').style.display = 'none';
-      // If there was an existing photo in localStorage, revert to showing it? 
-      // No, they clicked trash, we should remove it permanently.
     } else {
       document.getElementById('inpDriverPhoto').value = '';
       document.getElementById('driverPhotoPreview').style.display = 'none';
@@ -797,7 +798,7 @@ async function saveMasterBus() {
       driver_name: document.getElementById('inpDriverName').value.trim(),
       driver_phone: document.getElementById('inpDriverPhone').value.trim()
     };
-    
+
     // Add photos to payload if they exist so they save to the database
     if (busDataUrl) busPayload.bus_photo_url = busDataUrl;
     if (driverDataUrl) busPayload.driver_photo_url = driverDataUrl;
@@ -833,9 +834,7 @@ async function saveMasterBus() {
 
     if (username) {
       if (!isNew && !password) {
-        // If it's not a new bus and no password provided, just update driver assignment 
-        // using the backend or directly if allowed, but wait, the RLS will block direct edits of drivers.
-        // For security, all driver credential management goes through the backend API.
+        // If it's not a new bus and no password provided, credentials remain unchanged
       }
       
       if (password) {
@@ -1016,24 +1015,43 @@ async function loadAnalyticsData() {
         // Check for valid dates and not the epoch
         if (start && end && start.getTime() > 0 && end.getTime() > 0) {
           dateStr = end.toLocaleDateString();
-          timeStr = `<span style="color:var(--text-muted); font-size:12px;">${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
+          timeStr = end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
           const diffMs = end - start;
           const diffMins = Math.round(diffMs / 60000);
           diffStr = diffMins > 0 ? `${diffMins} mins` : '< 1 min';
         } else if (start && start.getTime() > 0) {
           dateStr = start.toLocaleDateString();
-          timeStr = `<span style="color:var(--text-muted); font-size:12px;">${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
+          timeStr = start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
           diffStr = 'Unknown';
         }
         
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td data-label="Date / Time">${dateStr} ${timeStr}</td>
-          <td data-label="Bus">${item.bus_id}</td>
-          <td data-label="Driver">${item.driver_name || 'Unknown'}</td>
-          <td data-label="Route">${item.route_name || 'Unknown'}</td>
-          <td data-label="Duration">${diffStr}</td>
-        `;
+        
+        const tdDateTime = document.createElement('td');
+        tdDateTime.setAttribute('data-label', 'Date / Time');
+        tdDateTime.textContent = dateStr + (timeStr ? ' ' + timeStr : '');
+        tr.appendChild(tdDateTime);
+
+        const tdBus = document.createElement('td');
+        tdBus.setAttribute('data-label', 'Bus');
+        tdBus.textContent = item.bus_id || '';
+        tr.appendChild(tdBus);
+
+        const tdDriver = document.createElement('td');
+        tdDriver.setAttribute('data-label', 'Driver');
+        tdDriver.textContent = item.driver_name || 'Unknown';
+        tr.appendChild(tdDriver);
+
+        const tdRoute = document.createElement('td');
+        tdRoute.setAttribute('data-label', 'Route');
+        tdRoute.textContent = item.route_name || 'Unknown';
+        tr.appendChild(tdRoute);
+
+        const tdDuration = document.createElement('td');
+        tdDuration.setAttribute('data-label', 'Duration');
+        tdDuration.textContent = diffStr;
+        tr.appendChild(tdDuration);
+
         tableBody.appendChild(tr);
       });
     } else {
@@ -1160,5 +1178,92 @@ async function saveDestination() {
     console.error('[saveDestination]', err);
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save Destination'; }
+  }
+}
+
+
+// ============================================================================
+// INSTITUTION PROFILE & ACCESS CODE MANAGEMENT
+// ============================================================================
+async function loadInstitutionData() {
+  const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
+  if (!token) return;
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/institution/access-code/status`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.success && data.institution) {
+      const nameEl = document.getElementById('inst-info-name');
+      const codeEl = document.getElementById('inst-info-code');
+      const typeEl = document.getElementById('inst-info-type');
+      const dateEl = document.getElementById('inst-info-date');
+      const rotEl = document.getElementById('inst-code-rotated');
+      const permEl = document.getElementById('inst-code-permission');
+      const rotBtn = document.getElementById('btn-admin-rotate-code');
+
+      if (nameEl) nameEl.textContent = data.institution.institution_name || 'Providence College of Engineering';
+      if (codeEl) codeEl.textContent = data.institution.institution_code || 'PCE-001';
+      if (typeEl) typeEl.textContent = data.institution.institution_type || 'college';
+      if (dateEl) dateEl.textContent = data.institution.created_at ? new Date(data.institution.created_at).toLocaleDateString() : 'N/A';
+      if (rotEl) rotEl.textContent = data.accessCode?.rotated_at ? new Date(data.accessCode.rotated_at).toLocaleDateString() : 'Initial Setup';
+      if (permEl) {
+        permEl.textContent = data.allow_admin_code_rotation ? 'Allowed' : 'Disabled by Platform Admin';
+        permEl.style.color = data.allow_admin_code_rotation ? '#15803d' : '#ef4444';
+      }
+      if (rotBtn) {
+        rotBtn.disabled = !data.allow_admin_code_rotation;
+        if (!data.allow_admin_code_rotation) {
+          rotBtn.style.opacity = '0.5';
+          rotBtn.style.cursor = 'not-allowed';
+          rotBtn.title = 'Rotation disabled by platform developer';
+        } else {
+          rotBtn.style.opacity = '1';
+          rotBtn.style.cursor = 'pointer';
+          rotBtn.title = '';
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Could not load institution data:', err);
+  }
+}
+
+async function adminRotateAccessCode() {
+  const token = JSON.parse(sessionStorage.getItem('adminSession'))?.token;
+  if (!token) return;
+
+  if (!confirm('Are you sure you want to rotate your institution access code? The current access code will stop working immediately.')) {
+    return;
+  }
+
+  const btn = document.getElementById('btn-admin-rotate-code');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+  }
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/institution/access-code/rotate`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      alert(data.error || 'Failed to rotate access code.');
+    } else {
+      await loadInstitutionData();
+      alert(`NEW ACCESS CODE GENERATED:\n\n${data.accessCode}\n\nPlease copy this code and store it securely now. It will never be displayed again.`);
+    }
+  } catch (err) {
+    alert('Error connecting to server.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-arrows-rotate"></i> Rotate Access Code';
+    }
   }
 }

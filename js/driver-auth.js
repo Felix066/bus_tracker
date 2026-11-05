@@ -34,17 +34,15 @@ async function handleDriverLogin(username, password) {
     // The backend now automatically handles registering the driver session in realtime
     // via the /api/auth/login-driver endpoint.
 
-    window.location.href = 'driver-dashboard.html';
+    window.location.replace('driver-dashboard.html');
     
   } catch (err) {
     throw new Error('Login failed: ' + err.message);
   }
 }
 
-
-
 async function driverLogout() {
-  const session = JSON.parse(localStorage.getItem('driverSession'));
+  const session = JSON.parse(localStorage.getItem('driverSession') || '{}');
   if (session && session.token) {
     try {
       await fetch(`${BACKEND_URL}/api/auth/logout-driver`, {
@@ -56,5 +54,9 @@ async function driverLogout() {
     }
   }
   localStorage.removeItem('driverSession');
-  window.location.href = 'driver-login.html';
+  localStorage.removeItem('activeTripId');
+  localStorage.removeItem('activeBusId');
+  localStorage.removeItem('activeTripType');
+  sessionStorage.clear();
+  window.location.replace('driver-login.html');
 }

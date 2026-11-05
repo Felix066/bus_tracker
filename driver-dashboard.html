@@ -254,9 +254,17 @@
           const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           const div = document.createElement('div');
           div.style.cssText = `display:flex; flex-direction:column; align-items:${isMine ? 'flex-end' : 'flex-start'}; max-width:85%; align-self:${isMine ? 'flex-end' : 'flex-start'};`;
-          div.innerHTML = `
-            <div style="font-size:10px;color:#94a3b8;margin-bottom:2px;">${isMine ? 'You' : '📡 Dispatcher'} · ${time}</div>
-            <div style="padding:8px 12px;border-radius:12px;font-size:12px;background:${isMine ? '#0f172a' : '#e2e8f0'};color:${isMine ? 'white' : '#0f172a'};">${msg.message}</div>`;
+
+          const metaLine = document.createElement('div');
+          metaLine.style.cssText = 'font-size:10px;color:#94a3b8;margin-bottom:2px;';
+          metaLine.textContent = (isMine ? 'You' : '📡 Dispatcher') + ' · ' + time;
+
+          const bubble = document.createElement('div');
+          bubble.style.cssText = `padding:8px 12px;border-radius:12px;font-size:12px;background:${isMine ? '#0f172a' : '#e2e8f0'};color:${isMine ? 'white' : '#0f172a'};word-break:break-word;`;
+          bubble.textContent = msg.message || ''; // Safe DOM textContent prevents XSS
+
+          div.appendChild(metaLine);
+          div.appendChild(bubble);
           container.appendChild(div);
         });
         container.scrollTop = container.scrollHeight;
@@ -325,8 +333,12 @@
 
       const select = document.getElementById('bus-select');
       if (select && assignedBus) {
-        // Clear and add only the assigned bus
-        select.innerHTML = `<option value="${assignedBus}">${assignedBus}</option>`;
+        // Clear and add only the assigned bus (safe DOM methods)
+        select.textContent = '';
+        const opt = document.createElement('option');
+        opt.value = assignedBus;
+        opt.textContent = assignedBus;
+        select.appendChild(opt);
         select.value     = assignedBus;
         select.disabled  = true;
       }
@@ -410,21 +422,13 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Ensure offline on unload and maintain heartbeat
+// Maintain heartbeat for online status
 (function() {
   const driverSession = JSON.parse(localStorage.getItem('driverSession'));
   const activeBus = driverSession ? (driverSession.assignedBus || driverSession.busId) : null;
   const token = driverSession ? driverSession.token : null;
   
   if (driverSession && activeBus && token) {
-    window.addEventListener('beforeunload', () => {
-      // Fire-and-forget offline status update
-      fetch(`${BACKEND_URL}/api/auth/logout-driver`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-    });
-
     const sendHeartbeat = () => {
       if (navigator.onLine) {
         fetch(`${BACKEND_URL}/api/trip/heartbeat`, {

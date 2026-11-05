@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="js/storage-encrypt.js"></script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Platform Super Admin Portal | Where Is My Bus</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <script src="js/icons.js?v=12"></script>
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/login.css">
+  <meta name="theme-color" content="#0f172a">
+  <style>
+    .super-admin-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #7c3aed;
+      background: rgba(124, 58, 237, 0.1);
+      padding: 6px 14px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+    .back-home-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      margin-bottom: 20px;
+      transition: color 0.2s;
+    }
+    .back-home-link:hover {
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body class="theme-admin">
+  <div class="login-container">
+    <div class="login-card">
+      <!-- LEFT PANEL -->
+      <div class="login-panel-left" style="background: linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #312e81 100%);">
+        <div class="top-nav">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: rgba(255,255,255,0.18); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 4px; overflow: hidden;">
+              <img src="icons/icon-192.png" alt="Where Is My Bus Logo" style="width: 36px; height: 36px; object-fit: contain; border-radius: 8px;">
+            </div>
+            <span style="font-weight: 800; font-size: 20px; letter-spacing: -0.5px;">Where Is My Bus</span>
+          </div>
+        </div>
+        
+        <div>
+          <h1 class="tagline">Central SaaS Platform Operations.</h1>
+          <p style="margin-top: 20px; opacity: 0.75; font-size: 17px; max-width: 360px;">Platform developer console for multi-institution tenancy, access code cryptography, and cross-fleet orchestration.</p>
+        </div>
+
+        <div style="display: flex; gap: 36px;">
+          <div><span style="display:block; font-weight: 800; font-size: 20px;">Multi-Tenant</span><span style="font-size: 11px; opacity: 0.6; text-transform: uppercase; font-weight: 700;">Isolation</span></div>
+          <div><span style="display:block; font-weight: 800; font-size: 20px;">HMAC-256</span><span style="font-size: 11px; opacity: 0.6; text-transform: uppercase; font-weight: 700;">Hashed Codes</span></div>
+          <div><span style="display:block; font-weight: 800; font-size: 20px;">Full Audit</span><span style="font-size: 11px; opacity: 0.6; text-transform: uppercase; font-weight: 700;">Traceability</span></div>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL -->
+      <div class="login-panel-right">
+        <a href="index.html" class="back-home-link">
+          <i class="fas fa-arrow-left"></i> Back to Main Portal
+        </a>
+
+        <div>
+          <span class="super-admin-badge"><i class="fas fa-user-shield"></i> Platform Super Admin</span>
+        </div>
+        <h2 style="font-size: 36px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.5px; margin-top: 0;">Developer Sign In</h2>
+        <p style="color: #64748b; font-size: 15px; margin-bottom: 32px;">Enter your developer credentials to manage registered educational institutions and access codes.</p>
+
+        <div id="error-banner" class="error-banner hidden"></div>
+
+        <form id="platform-login-form">
+          <div class="form-group">
+            <label for="platform-username">Platform Developer Username</label>
+            <div class="input-wrapper">
+              <i class="far fa-user"></i>
+              <input type="text" id="platform-username" placeholder="Enter developer username" autocomplete="username" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="platform-password">Developer Password</label>
+            <div class="input-wrapper" style="position: relative;">
+              <i class="fas fa-lock"></i>
+              <input type="password" id="platform-password" placeholder="••••••••••••" autocomplete="current-password" required>
+              <i class="fas fa-eye toggle-password" style="position: absolute; left: auto; right: 16px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; z-index: 10;" onclick="togglePasswordVisibility('platform-password', this)"></i>
+            </div>
+          </div>
+
+          <button type="submit" id="submit-btn" class="btn-primary br-14" style="background: linear-gradient(135deg, #0f172a 0%, #312e81 100%); margin-top: 12px; height: 50px;">
+            <span>Authenticate to Platform</span> <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 6px;"></i>
+          </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 28px;">
+          <span style="font-size: 12px; color: #94a3b8;">
+            <i class="fas fa-shield-alt"></i> Dedicated Super Admin Identity — Server-side RBAC Enforced
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function togglePasswordVisibility(inputId, icon) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+
+    document.getElementById('platform-login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errBanner = document.getElementById('error-banner');
+      const submitBtn = document.getElementById('submit-btn');
+      const username = document.getElementById('platform-username').value.trim();
+      const password = document.getElementById('platform-password').value;
+
+      errBanner.classList.add('hidden');
+      errBanner.textContent = '';
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
+
+      try {
+        const res = await fetch('/api/platform/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          errBanner.textContent = data.error || 'Authentication failed. Please verify your credentials.';
+          errBanner.classList.remove('hidden');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>Authenticate to Platform</span> <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 6px;"></i>';
+          return;
+        }
+
+        // Store platform token and user information securely in sessionStorage
+        sessionStorage.setItem('platform_token', data.token);
+        sessionStorage.setItem('platform_user', JSON.stringify(data.user));
+
+        // Use location.replace to prevent back-navigation to the login screen
+        window.location.replace('super-admin.html');
+      } catch (err) {
+        errBanner.textContent = 'Connection error. Please try again.';
+        errBanner.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Authenticate to Platform</span> <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 6px;"></i>';
+      }
+    });
+  </script>
+</body>
+</html>
