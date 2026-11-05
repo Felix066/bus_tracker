@@ -524,10 +524,21 @@ CREATE POLICY "chat_audio_select" ON storage.objects FOR SELECT TO authenticated
 DROP POLICY IF EXISTS "chat_audio_delete" ON storage.objects;
 CREATE POLICY "chat_audio_delete" ON storage.objects FOR DELETE TO authenticated, anon USING (bucket_id = 'chat-audio');
 
--- Enable Realtime for driver messages
-ALTER PUBLICATION supabase_realtime ADD TABLE public.driver_messages;
+-- Enable Realtime for driver messages safely (checks if already a member)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+          AND schemaname = 'public' 
+          AND tablename = 'driver_messages'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.driver_messages;
+    END IF;
+END $$;
 
 -- ============================================================================
 -- VERIFICATION CONFIRMATION
 -- ============================================================================
 SELECT 'Where Is My Bus — Complete Multi-Tenant Database Migration Applied Successfully' AS result;
+

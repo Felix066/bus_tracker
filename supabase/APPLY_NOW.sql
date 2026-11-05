@@ -91,7 +91,18 @@ CREATE POLICY "chat_audio_delete" ON storage.objects
 -- driver_messages must be in the publication for INSERT + DELETE events to fire
 -- ============================================================================
 
-ALTER PUBLICATION supabase_realtime ADD TABLE public.driver_messages;
+-- Enable Realtime for driver messages safely (checks if already a member)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+          AND schemaname = 'public' 
+          AND tablename = 'driver_messages'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.driver_messages;
+    END IF;
+END $$;
 
 
 -- ============================================================================
