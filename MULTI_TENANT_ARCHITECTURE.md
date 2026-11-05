@@ -126,3 +126,4 @@ Existing single-institution records for Providence College of Engineering contin
 - Seeded default institution UUID: `e1d4b680-1a2c-4f8a-9e3b-5a7c2d1e0f9b`.
 - Operational endpoints default gracefully to Providence College when `institution_id` is omitted by older API clients.
 - Existing database records with `institution_id IS NULL` are automatically backfilled to `e1d4b680-1a2c-4f8a-9e3b-5a7c2d1e0f9b`.
+

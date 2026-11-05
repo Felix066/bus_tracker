@@ -9,8 +9,10 @@
 DO $$
 DECLARE
     v_default_inst_id UUID := 'e1d4b680-1a2c-4f8a-9e3b-5a7c2d1e0f9b';
-    v_initial_code_hash TEXT := 'e9d6724c6151c3dea11489a1772c543292c5424081e5b2b9b0898c626fe27f7e'; -- HMAC-SHA-256 for WIMB-PCE-2026-X9T4-M7K2
-    v_superadmin_pwd TEXT := '$2b$10$pUJyqb0RT1q9GDvoAUy4H.5RIDYDLOq6iEKFEzEeYNKBwLG1XpYHG'; -- SuperAdmin@2026!
+    -- Production hardening: No exposed or static access code is stored.
+    -- Generate an unpredictable cryptographic hash for initial setup.
+    -- The Super Admin must rotate the code upon first login to generate and reveal a fresh 128-bit credential.
+    v_initial_code_hash TEXT := encode(digest(gen_random_bytes(32), 'sha256'), 'hex');
 BEGIN
     -- 1. SEED DEFAULT INSTITUTION: Providence College of Engineering
     INSERT INTO public.institutions (
@@ -49,8 +51,12 @@ BEGIN
         institution_code = EXCLUDED.institution_code,
         status = 'active';
 
-    -- 2. SEED INITIAL ACCESS CODE FOR PCE-001
-    -- Code: WIMB-PCE-2026-X9T4-M7K2 (Plaintext never stored!)
+    -- 2. REVOKE ANY PREVIOUS STATIC/EXPOSED ACCESS CODES FOR PCE-001
+    UPDATE public.institution_access_codes 
+    SET status = 'revoked', revoked_at = NOW() 
+    WHERE institution_id = v_default_inst_id AND status = 'active';
+
+    -- 3. INSERT SECURE UNPREDICTABLE PLACEHOLDER (Pending rotation by Super Admin)
     INSERT INTO public.institution_access_codes (
         institution_id,
         code_hash,
@@ -65,28 +71,14 @@ BEGIN
         'v1',
         'active',
         NOW(),
-        'system_bootstrap',
-        '{"note": "Initial seeded access code for Providence College"}'::jsonb
+        'system_migration_secure_bootstrap',
+        '{"note": "Secure unguessable hash generated during migration. Must be rotated via Super Admin console to obtain initial plaintext."}'::jsonb
     )
     ON CONFLICT (code_hash) DO NOTHING;
 
-    -- 3. SEED PLATFORM SUPER ADMIN (Platform Developer)
-    INSERT INTO public.platform_admins (
-        username,
-        email,
-        password_hash,
-        role,
-        status,
-        created_at
-    ) VALUES (
-        'superadmin',
-        'platform-admin@whereismybus.internal',
-        v_superadmin_pwd,
-        'super_admin',
-        'active',
-        NOW()
-    )
-    ON CONFLICT (username) DO NOTHING;
+    -- NOTE: Platform Super Admin accounts are initialized strictly via the secure
+    -- one-time server bootstrap mechanism using environment variables (SUPER_ADMIN_BOOTSTRAP_USER / PASS),
+    -- ensuring no static or plaintext credentials exist in source-controlled migration scripts.
 
     -- 4. BACKFILL EXISTING OPERATIONAL TABLES TO PCE-001
     -- Admins
@@ -176,3 +168,4 @@ BEGIN
         NOW()
     );
 END $$;
+

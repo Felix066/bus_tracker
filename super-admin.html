@@ -473,6 +473,9 @@
       <button class="tab-item" onclick="switchTab('audit', this)">
         <i class="fas fa-list-check"></i> Platform Audit Logs
       </button>
+      <button class="tab-item" onclick="switchTab('security', this)">
+        <i class="fas fa-shield-alt"></i> Security &amp; MFA
+      </button>
     </div>
 
     <!-- TAB 1: INSTITUTIONS -->
@@ -548,6 +551,85 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: SECURITY & MFA -->
+    <div id="tab-security" class="card-panel" style="display: none;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+        <!-- PASSWORD ROTATION CARD -->
+        <div style="background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 24px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-key" style="color: #4f46e5;"></i> Change Password
+          </h3>
+          <p style="color: #64748b; font-size: 13px; margin: 0 0 20px 0;">Rotate developer Super Admin password. Minimum 12 characters, uppercase, lowercase, number, and special symbol.</p>
+
+          <div id="pwd-msg" style="display: none; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 16px;"></div>
+
+          <form id="change-pwd-form" onsubmit="handleChangePassword(event)">
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label class="form-label" for="curr-password">Current Password</label>
+              <input type="password" id="curr-password" class="form-input" required autocomplete="current-password">
+            </div>
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label class="form-label" for="new-password">New Password</label>
+              <input type="password" id="new-password" class="form-input" required minlength="12" autocomplete="new-password" placeholder="At least 12 characters with symbols">
+            </div>
+            <div class="form-group" style="margin-bottom: 20px;">
+              <label class="form-label" for="confirm-password">Confirm New Password</label>
+              <input type="password" id="confirm-password" class="form-input" required minlength="12" autocomplete="new-password">
+            </div>
+            <button type="submit" id="btn-change-pwd" class="btn-primary" style="width: 100%; height: 44px;">
+              <i class="fas fa-lock"></i> Rotate Password
+            </button>
+          </form>
+        </div>
+
+        <!-- TWO-FACTOR AUTHENTICATION (TOTP) CARD -->
+        <div style="background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 24px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-mobile-screen-button" style="color: #7c3aed;"></i> Two-Factor Authentication (TOTP)
+          </h3>
+          <p style="color: #64748b; font-size: 13px; margin: 0 0 20px 0;">Standard RFC 6238 TOTP compatible with Google Authenticator, Authy, and Microsoft Authenticator.</p>
+
+          <div id="mfa-status-box" style="padding: 16px; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 14px; font-weight: 700; color: #1e293b;">MFA Status:</span>
+              <span id="mfa-status-pill" style="font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 20px; background: #f1f5f9; color: #64748b; text-transform: uppercase;">Checking...</span>
+            </div>
+          </div>
+
+          <div id="mfa-setup-section" style="display: none;">
+            <div style="background: #fdf4ff; border: 1px solid #f5d0fe; border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+              <div style="font-size: 12px; font-weight: 700; color: #86198f; margin-bottom: 6px;">1. Authenticator Secret Key:</div>
+              <div id="mfa-secret-display" style="font-family: monospace; font-size: 14px; font-weight: 800; letter-spacing: 2px; color: #701a75; word-break: break-all; user-select: all; background: white; padding: 8px 12px; border-radius: 8px; border: 1px dashed #e879f9;"></div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+              <label class="form-label">2. Enter 6-digit confirmation code from your app:</label>
+              <input type="text" id="mfa-confirm-code" class="form-input" maxlength="6" placeholder="123456" style="letter-spacing: 4px; font-weight: 800; text-align: center; font-size: 18px;">
+            </div>
+
+            <div id="mfa-backup-box" style="display: none; background: #fefce8; border: 1px solid #fef08a; border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+              <div style="font-size: 12px; font-weight: 700; color: #854d0e; margin-bottom: 6px;">Emergency Backup Codes (Save these now!):</div>
+              <div id="mfa-backup-list" style="font-family: monospace; font-size: 12px; font-weight: 700; color: #713f12; line-height: 1.8;"></div>
+            </div>
+
+            <button type="button" class="btn-primary" onclick="confirmEnableMfa()" style="width: 100%; height: 44px; background: #7c3aed; margin-bottom: 10px;">
+              <i class="fas fa-check"></i> Verify &amp; Activate 2FA
+            </button>
+            <button type="button" class="btn-logout" onclick="cancelMfaSetup()" style="width: 100%; height: 38px; justify-content: center;">Cancel</button>
+          </div>
+
+          <div id="mfa-action-section">
+            <button type="button" id="btn-init-mfa" class="btn-primary" onclick="initMfaSetup()" style="width: 100%; height: 44px; background: #4f46e5;">
+              <i class="fas fa-qrcode"></i> Setup Two-Factor Authentication
+            </button>
+            <button type="button" id="btn-disable-mfa" class="btn-logout" onclick="promptDisableMfa()" style="width: 100%; height: 44px; display: none; color: #dc2626; border-color: #fecaca; background: #fef2f2; justify-content: center;">
+              <i class="fas fa-shield-halved"></i> Disable Two-Factor Authentication
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </main>
@@ -687,8 +769,201 @@
 
       document.getElementById('tab-institutions').style.display = tabName === 'institutions' ? 'block' : 'none';
       document.getElementById('tab-audit').style.display = tabName === 'audit' ? 'block' : 'none';
+      document.getElementById('tab-security').style.display = tabName === 'security' ? 'block' : 'none';
 
       if (tabName === 'audit') loadAuditLogs();
+      if (tabName === 'security') loadSecurityStatus();
+    }
+
+    async function loadSecurityStatus() {
+      const pill = document.getElementById('mfa-status-pill');
+      const initBtn = document.getElementById('btn-init-mfa');
+      const disableBtn = document.getElementById('btn-disable-mfa');
+
+      // Check current user details from sessionStorage
+      let user = null;
+      try {
+        user = JSON.parse(sessionStorage.getItem('platform_user') || '{}');
+      } catch (e) {}
+
+      if (user && user.mfa_enabled) {
+        pill.textContent = 'ENABLED';
+        pill.style.background = '#dcfce7';
+        pill.style.color = '#15803d';
+        initBtn.style.display = 'none';
+        disableBtn.style.display = 'flex';
+      } else {
+        pill.textContent = 'DISABLED';
+        pill.style.background = '#fee2e2';
+        pill.style.color = '#b91c1c';
+        initBtn.style.display = 'flex';
+        disableBtn.style.display = 'none';
+      }
+    }
+
+    async function handleChangePassword(e) {
+      e.preventDefault();
+      const curr = document.getElementById('curr-password').value;
+      const newPwd = document.getElementById('new-password').value;
+      const confirmPwd = document.getElementById('confirm-password').value;
+      const msgBox = document.getElementById('pwd-msg');
+      const btn = document.getElementById('btn-change-pwd');
+
+      msgBox.style.display = 'none';
+      if (newPwd !== confirmPwd) {
+        msgBox.textContent = 'New passwords do not match.';
+        msgBox.style.background = '#fef2f2';
+        msgBox.style.color = '#b91c1c';
+        msgBox.style.border = '1px solid #fecaca';
+        msgBox.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rotating...';
+
+      try {
+        const res = await fetch('/api/platform/change-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ current_password: curr, new_password: newPwd })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          msgBox.textContent = data.error || 'Failed to rotate password.';
+          msgBox.style.background = '#fef2f2';
+          msgBox.style.color = '#b91c1c';
+          msgBox.style.border = '1px solid #fecaca';
+        } else {
+          msgBox.textContent = 'Password rotated successfully! Use your new password on next sign-in.';
+          msgBox.style.background = '#f0fdf4';
+          msgBox.style.color = '#15803d';
+          msgBox.style.border = '1px solid #bbf7d0';
+          document.getElementById('change-pwd-form').reset();
+        }
+        msgBox.style.display = 'block';
+      } catch (err) {
+        msgBox.textContent = 'Network error while rotating password.';
+        msgBox.style.background = '#fef2f2';
+        msgBox.style.color = '#b91c1c';
+        msgBox.style.border = '1px solid #fecaca';
+        msgBox.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-lock"></i> Rotate Password';
+      }
+    }
+
+    let activeMfaSecret = null;
+    let activeBackupCodes = [];
+
+    async function initMfaSetup() {
+      try {
+        const res = await fetch('/api/platform/mfa/setup', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          alert(data.error || 'Unable to initiate MFA setup.');
+          return;
+        }
+
+        activeMfaSecret = data.secret;
+        activeBackupCodes = data.backup_codes || [];
+
+        document.getElementById('mfa-secret-display').textContent = data.secret;
+        if (activeBackupCodes.length > 0) {
+          const list = document.getElementById('mfa-backup-list');
+          list.innerHTML = activeBackupCodes.map(c => '<code>' + c + '</code>').join(' &nbsp; ');
+          document.getElementById('mfa-backup-box').style.display = 'block';
+        }
+
+        document.getElementById('mfa-action-section').style.display = 'none';
+        document.getElementById('mfa-setup-section').style.display = 'block';
+        document.getElementById('mfa-confirm-code').focus();
+      } catch (e) {
+        alert('Network error while starting MFA setup.');
+      }
+    }
+
+    function cancelMfaSetup() {
+      activeMfaSecret = null;
+      activeBackupCodes = [];
+      document.getElementById('mfa-setup-section').style.display = 'none';
+      document.getElementById('mfa-action-section').style.display = 'block';
+    }
+
+    async function confirmEnableMfa() {
+      const code = document.getElementById('mfa-confirm-code').value.trim();
+      if (!code || code.length !== 6) {
+        alert('Please enter a valid 6-digit confirmation code.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/platform/mfa/enable', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({
+            secret: activeMfaSecret,
+            totp_code: code,
+            backup_codes: activeBackupCodes
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          alert(data.error || 'Failed to activate 2FA.');
+          return;
+        }
+
+        alert('Two-Factor Authentication is now ENABLED! Please store your backup codes in a safe place.');
+        let user = JSON.parse(sessionStorage.getItem('platform_user') || '{}');
+        user.mfa_enabled = true;
+        sessionStorage.setItem('platform_user', JSON.stringify(user));
+        cancelMfaSetup();
+        loadSecurityStatus();
+      } catch (e) {
+        alert('Network error while activating 2FA.');
+      }
+    }
+
+    async function promptDisableMfa() {
+      const pwd = prompt('Enter your Developer Password to disable Two-Factor Authentication:');
+      if (!pwd) return;
+      const code = prompt('Enter your current 6-digit TOTP code:');
+      if (!code) return;
+
+      try {
+        const res = await fetch('/api/platform/mfa/disable', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ password: pwd, totp_code: code })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          alert(data.error || 'Failed to disable 2FA.');
+          return;
+        }
+
+        alert('Two-Factor Authentication has been disabled.');
+        let user = JSON.parse(sessionStorage.getItem('platform_user') || '{}');
+        user.mfa_enabled = false;
+        sessionStorage.setItem('platform_user', JSON.stringify(user));
+        loadSecurityStatus();
+      } catch (e) {
+        alert('Network error while disabling 2FA.');
+      }
     }
 
     async function loadDashboardStats() {
@@ -1004,3 +1279,4 @@
   </script>
 </body>
 </html>
+

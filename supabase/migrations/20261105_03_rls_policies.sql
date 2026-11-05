@@ -64,8 +64,7 @@ BEGIN
             FOR SELECT
             USING (
                 public.jwt_is_super_admin() OR 
-                institution_id IS NULL OR 
-                institution_id = public.jwt_institution_id()
+                (institution_id IS NOT NULL AND institution_id = public.jwt_institution_id())
             );
 
         DROP POLICY IF EXISTS buses_tenant_manage ON public.buses;
@@ -73,7 +72,7 @@ BEGIN
             FOR ALL
             USING (
                 public.jwt_is_super_admin() OR 
-                (institution_id = public.jwt_institution_id() AND (current_setting('request.jwt.claims', true)::jsonb->>'role') = 'admin')
+                (institution_id IS NOT NULL AND institution_id = public.jwt_institution_id() AND (current_setting('request.jwt.claims', true)::jsonb->>'role') = 'admin')
             );
     END IF;
 END $$;
@@ -89,8 +88,7 @@ BEGIN
             FOR SELECT
             USING (
                 public.jwt_is_super_admin() OR 
-                institution_id IS NULL OR 
-                institution_id = public.jwt_institution_id()
+                (institution_id IS NOT NULL AND institution_id = public.jwt_institution_id())
             );
 
         DROP POLICY IF EXISTS trips_tenant_write ON public.trips;
@@ -98,7 +96,7 @@ BEGIN
             FOR ALL
             USING (
                 public.jwt_is_super_admin() OR 
-                institution_id = public.jwt_institution_id()
+                (institution_id IS NOT NULL AND institution_id = public.jwt_institution_id())
             );
     END IF;
 END $$;
@@ -114,8 +112,7 @@ BEGIN
             FOR SELECT
             USING (
                 public.jwt_is_super_admin() OR 
-                institution_id IS NULL OR 
-                institution_id = public.jwt_institution_id()
+                (institution_id IS NOT NULL AND institution_id = public.jwt_institution_id())
             );
 
         DROP POLICY IF EXISTS curr_bus_loc_tenant_write ON public.current_bus_locations;
@@ -123,7 +120,7 @@ BEGIN
             FOR ALL
             USING (
                 public.jwt_is_super_admin() OR 
-                institution_id = public.jwt_institution_id()
+                (institution_id IS NOT NULL AND institution_id = public.jwt_institution_id())
             );
     END IF;
 END $$;
@@ -138,7 +135,8 @@ BEGIN
             FOR ALL
             USING (
                 public.jwt_is_super_admin() OR 
-                institution_id = public.jwt_institution_id()
+                (institution_id IS NOT NULL AND institution_id = public.jwt_institution_id())
             );
     END IF;
 END $$;
+

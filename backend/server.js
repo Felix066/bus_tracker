@@ -43,7 +43,7 @@ app.use((req, res, next) => {
 });
 
 app.set('trust proxy', 1); // Enable trusting reverse proxy for accurate client IPs in rate limiting
-const supabase = createClient(
+let supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
@@ -381,51 +381,111 @@ app.delete('/api/admin/authorized-users/:id', requireRole(['admin']), async (req
 });
 
 // ============================================================================
-// MULTI-TENANT SAAS CONSTANTS & CRYPTOGRAPHIC UTILITIES
+// MULTI-TENANT SAAS CONSTANTS, CRYPTOGRAPHIC UTILITIES & MFA
 // ============================================================================
 const INSTITUTION_CODE_HMAC_KEY = process.env.INSTITUTION_CODE_HMAC_KEY || 'wimb_secret_hmac_sha256_key_2026_default';
-const DEFAULT_INSTITUTION_ID = 'e1d4b680-1a2c-4f8a-9e3b-5a7c2d1e0f9b'; // Providence College of Engineering
 
+/**
+ * Generates an Institution Access Code with >= 128 bits of CSPRNG entropy.
+ * Format: WIMB-<PREFIX>-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX
+ * Randomness: 16 bytes = 128 bits = 32 hexadecimal characters (8 blocks of 4 hex chars).
+ */
 function generateAccessCode(institutionCode) {
   const prefixRaw = (institutionCode || 'INST').split('-')[0];
   const cleanPrefix = prefixRaw.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 6) || 'INST';
-  const randomHex = crypto.randomBytes(16).toString('hex').toUpperCase();
-  const chunks = randomHex.match(/.{1,4}/g).slice(0, 4).join('-');
+  const randomBytes = crypto.randomBytes(16); // 16 bytes = 128 bits of entropy
+  const randomHex = randomBytes.toString('hex').toUpperCase(); // 32 hex chars (32 * 4 = 128 bits)
+  const chunks = randomHex.match(/.{1,4}/g).join('-'); // 8 blocks of 4 hex chars
   return `WIMB-${cleanPrefix}-${chunks}`;
 }
 
+/**
+ * Calculates HMAC-SHA-256 digest of normalized access code.
+ * Plaintext codes are NEVER stored in persistent storage or logs.
+ */
 function hashAccessCode(code) {
   if (!code || typeof code !== 'string') return null;
   const normalized = code.trim().toUpperCase();
   return crypto.createHmac('sha256', INSTITUTION_CODE_HMAC_KEY).update(normalized).digest('hex');
 }
 
-// Resilient memory store for multi-tenancy before or during database migration
-const memoryInstitutions = new Map();
-const memoryAccessCodes = new Map();
-const memoryAuditLogs = [];
+/**
+ * Enforces strong password policy:
+ * >= 12 characters, >= 1 uppercase, >= 1 lowercase, >= 1 number, >= 1 special symbol.
+ */
+function validateStrongPassword(password) {
+  if (typeof password !== 'string') return { valid: false, message: 'Password must be a string' };
+  if (password.length < 12) return { valid: false, message: 'Password must be at least 12 characters long' };
+  if (!/[A-Z]/.test(password)) return { valid: false, message: 'Password must contain at least one uppercase letter' };
+  if (!/[a-z]/.test(password)) return { valid: false, message: 'Password must contain at least one lowercase letter' };
+  if (!/[0-9]/.test(password)) return { valid: false, message: 'Password must contain at least one number' };
+  const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"|,.<>\/?~`]/.test(password) || password.includes('\\');
+  if (!hasSymbol) return { valid: false, message: 'Password must contain at least one special character' };
+  return { valid: true };
+}
 
-// Seed default institution in memory fallback
-memoryInstitutions.set(DEFAULT_INSTITUTION_ID, {
-  id: DEFAULT_INSTITUTION_ID,
-  institution_name: 'Providence College of Engineering',
-  institution_type: 'college',
-  institution_code: 'PCE-001',
-  status: 'active',
-  allow_admin_code_rotation: true,
-  created_at: new Date().toISOString()
-});
+// RFC 6238 TOTP Multi-Factor Authentication Utilities (Pure Node.js crypto, zero dependencies)
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
-const defaultSeedCode = 'WIMB-PCE-2026-X9T4-M7K2';
-const defaultSeedHash = hashAccessCode(defaultSeedCode);
-memoryAccessCodes.set(defaultSeedHash, {
-  id: '00000000-0000-0000-0000-000000000002',
-  institution_id: DEFAULT_INSTITUTION_ID,
-  code_hash: defaultSeedHash,
-  status: 'active',
-  created_at: new Date().toISOString()
-});
+function base32Encode(buffer) {
+  let bits = 0, value = 0, output = '';
+  for (let i = 0; i < buffer.length; i++) {
+    value = (value << 8) | buffer[i];
+    bits += 8;
+    while (bits >= 5) {
+      output += BASE32_ALPHABET[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) output += BASE32_ALPHABET[(value << (5 - bits)) & 31];
+  return output;
+}
 
+function base32Decode(str) {
+  const clean = str.toUpperCase().replace(/=+$/, '').replace(/[^A-Z2-7]/g, '');
+  let bits = 0, value = 0;
+  const bytes = [];
+  for (let i = 0; i < clean.length; i++) {
+    const idx = BASE32_ALPHABET.indexOf(clean[i]);
+    if (idx === -1) continue;
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8) {
+      bytes.push((value >>> (bits - 8)) & 255);
+      bits -= 8;
+    }
+  }
+  return Buffer.from(bytes);
+}
+
+function generateTOTP(secretBase32, timeOffsetSteps = 0, timeStepSec = 30) {
+  const key = base32Decode(secretBase32);
+  const epoch = Math.floor(Date.now() / 1000);
+  const counter = Math.floor(epoch / timeStepSec) + timeOffsetSteps;
+  const buf = Buffer.alloc(8);
+  buf.writeBigInt64BE(BigInt(counter));
+  const hmac = crypto.createHmac('sha1', key).update(buf).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const codeInt = (
+    ((hmac[offset] & 0x7f) << 24) |
+    ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) << 8) |
+    (hmac[offset + 3] & 0xff)
+  ) % 1000000;
+  return codeInt.toString().padStart(6, '0');
+}
+
+function verifyTOTP(secretBase32, token, window = 1) {
+  if (!secretBase32 || !token) return false;
+  const cleanToken = String(token).trim();
+  if (cleanToken.length !== 6 || !/^\d{6}$/.test(cleanToken)) return false;
+  for (let step = -window; step <= window; step++) {
+    if (generateTOTP(secretBase32, step) === cleanToken) return true;
+  }
+  return false;
+}
+
+// Persistent Audit Logging to Supabase
 async function logPlatformAudit(actorId, actorType, action, institutionId = null, metadata = {}, req = null) {
   const logEntry = {
     id: crypto.randomUUID(),
@@ -438,13 +498,14 @@ async function logPlatformAudit(actorId, actorType, action, institutionId = null
     user_agent: req ? req.headers['user-agent'] : null,
     created_at: new Date().toISOString()
   };
-  memoryAuditLogs.unshift(logEntry);
-  if (memoryAuditLogs.length > 200) memoryAuditLogs.pop();
 
   try {
-    await supabase.from('platform_audit_logs').insert([logEntry]);
+    const { error } = await supabase.from('platform_audit_logs').insert([logEntry]);
+    if (error) {
+      console.warn('[Platform Audit] Failed to record audit log:', error.message);
+    }
   } catch (err) {
-    // Non-blocking
+    console.warn('[Platform Audit] Audit log exception:', err.message);
   }
 }
 
@@ -466,7 +527,7 @@ const platformLimiter = rateLimit({
 });
 
 // ============================================================================
-// AUTHORIZATION MIDDLEWARE
+// AUTHORIZATION MIDDLEWARE (AUTHORITATIVE SERVER-SIDE TENANT DERIVATION)
 // ============================================================================
 async function verifyRole(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
@@ -479,21 +540,71 @@ async function verifyRole(req, res, next) {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
 
-    // ACTIVE DATABASE CHECK FOR HIGH SECURITY
+    // AUTHORITATIVE ACTIVE DATABASE VERIFICATION & TENANT DERIVATION
     if (decoded.role === 'admin') {
-      const { data } = await supabase.from('admins').select('id').eq('username', decoded.username).single();
-      if (!data) return res.status(401).json({ error: 'Admin account revoked or deleted' });
-      req.user.institution_id = decoded.institution_id || DEFAULT_INSTITUTION_ID;
+      const { data: adminRecord, error: adminErr } = await supabase
+        .from('admins')
+        .select('id, username, institution_id')
+        .eq('id', decoded.user_id)
+        .single();
+
+      if (adminErr || !adminRecord) {
+        return res.status(401).json({ error: 'Admin account revoked or deleted' });
+      }
+
+      if (!adminRecord.institution_id) {
+        return res.status(403).json({ error: 'Admin account has no institution assigned' });
+      }
+
+      const { data: inst, error: instErr } = await supabase
+        .from('institutions')
+        .select('id, status')
+        .eq('id', adminRecord.institution_id)
+        .single();
+
+      if (instErr || !inst || inst.status !== 'active') {
+        return res.status(403).json({ error: 'Associated institution is inactive or suspended' });
+      }
+
+      // Authoritative tenant derived exclusively from database record
+      req.user.institution_id = adminRecord.institution_id;
     } else if (decoded.role === 'driver') {
-      const { data } = await supabase.from('drivers').select('id').eq('id', decoded.user_id).single();
-      if (!data) return res.status(401).json({ error: 'Driver account revoked or deleted' });
-      req.user.institution_id = decoded.institution_id || DEFAULT_INSTITUTION_ID;
+      const { data: driverRecord, error: driverErr } = await supabase
+        .from('drivers')
+        .select('id, username, assigned_bus, institution_id')
+        .eq('id', decoded.user_id)
+        .single();
+
+      if (driverErr || !driverRecord) {
+        return res.status(401).json({ error: 'Driver account revoked or deleted' });
+      }
+
+      if (!driverRecord.institution_id) {
+        return res.status(403).json({ error: 'Driver account has no institution assigned' });
+      }
+
+      const { data: inst, error: instErr } = await supabase
+        .from('institutions')
+        .select('id, status')
+        .eq('id', driverRecord.institution_id)
+        .single();
+
+      if (instErr || !inst || inst.status !== 'active') {
+        return res.status(403).json({ error: 'Associated institution is inactive or suspended' });
+      }
+
+      // Authoritative tenant & assigned bus derived exclusively from database record
+      req.user.institution_id = driverRecord.institution_id;
+      req.user.assignedBus = driverRecord.assigned_bus;
     } else if (decoded.role === 'super_admin') {
-      try {
-        const { data } = await supabase.from('platform_admins').select('id, status').eq('id', decoded.user_id).single();
-        if (data && data.status !== 'active') return res.status(401).json({ error: 'Platform admin account inactive or revoked' });
-      } catch (err) {
-        // Fallback for bootstrap admin before migration
+      const { data: platformAdmin, error: paErr } = await supabase
+        .from('platform_admins')
+        .select('id, status')
+        .eq('id', decoded.user_id)
+        .single();
+
+      if (paErr || !platformAdmin || platformAdmin.status !== 'active') {
+        return res.status(401).json({ error: 'Platform admin account inactive or revoked' });
       }
     }
 
@@ -639,11 +750,11 @@ app.post('/api/auth/login-admin', async (req, res) => {
     // Check credentials against the hashed password
     const { data: adminData, error: adminError } = await supabase
       .from('admins')
-      .select('id, username, password_hash')
+      .select('id, username, password_hash, institution_id')
       .eq('username', username)
       .single();
 
-    if (adminError && adminError.code !== 'PGRST116') { // PGRST116 is no rows found
+    if (adminError && adminError.code !== 'PGRST116') {
       console.error('[login-admin] DB Error:', adminError);
       return res.status(500).json({ error: 'Database connection failed. Please try again later.' });
     }
@@ -657,12 +768,26 @@ app.post('/api/auth/login-admin', async (req, res) => {
       return res.status(401).json({ error: 'Invalid admin credentials' });
     }
 
+    if (!adminData.institution_id) {
+      return res.status(403).json({ error: 'Admin account has no institution assigned' });
+    }
+
+    const { data: inst, error: instErr } = await supabase
+      .from('institutions')
+      .select('id, status')
+      .eq('id', adminData.institution_id)
+      .single();
+
+    if (instErr || !inst || inst.status !== 'active') {
+      return res.status(403).json({ error: 'Associated institution is inactive or suspended' });
+    }
+
     const token = jwt.sign(
       { 
         user_id: adminData.id || username, 
         username, 
         role: 'admin',
-        institution_id: adminData.institution_id || DEFAULT_INSTITUTION_ID 
+        institution_id: adminData.institution_id 
       }, 
       JWT_SECRET, 
       { expiresIn: '7d' }
@@ -688,7 +813,7 @@ app.post('/api/auth/login-driver', async (req, res) => {
     // Check credentials against the hashed password
     const { data: driverData, error: driverError } = await supabase
       .from('drivers')
-      .select('id, username, password_hash, assigned_bus')
+      .select('id, username, password_hash, assigned_bus, institution_id')
       .eq('username', username)
       .single();
 
@@ -706,13 +831,27 @@ app.post('/api/auth/login-driver', async (req, res) => {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
+    if (!driverData.institution_id) {
+      return res.status(403).json({ error: 'Driver account has no institution assigned' });
+    }
+
+    const { data: inst, error: instErr } = await supabase
+      .from('institutions')
+      .select('id, status')
+      .eq('id', driverData.institution_id)
+      .single();
+
+    if (instErr || !inst || inst.status !== 'active') {
+      return res.status(403).json({ error: 'Associated institution is inactive or suspended' });
+    }
+
     const token = jwt.sign(
       { 
         user_id: driverData.id, 
         username, 
         role: 'driver', 
         assignedBus: driverData.assigned_bus,
-        institution_id: driverData.institution_id || DEFAULT_INSTITUTION_ID 
+        institution_id: driverData.institution_id 
       }, 
       JWT_SECRET, 
       { expiresIn: '5d' }
@@ -968,13 +1107,32 @@ app.post('/api/trip/start', requireRole(['driver']), async (req, res) => {
     }
     const driver_id = req.user.user_id;
 
+    if (!req.user.institution_id) {
+      return res.status(403).json({ error: 'Driver has no valid institution assigned' });
+    }
+
+    // Verify bus belongs to the driver's institution
+    const { data: busData, error: busError } = await supabase
+      .from('buses')
+      .select('id, driver_name, institution_id')
+      .eq('id', bus_id)
+      .single();
+
+    if (busError || !busData) {
+      return res.status(404).json({ error: 'Bus not found' });
+    }
+
+    if (busData.institution_id && busData.institution_id !== req.user.institution_id) {
+      return res.status(403).json({ error: 'Forbidden: Bus does not belong to your institution' });
+    }
+
     const { data, error } = await supabase
       .from('trips')
       .insert({
         bus_id,
         trip_type,
         driver_id,
-        institution_id: req.user.institution_id || DEFAULT_INSTITUTION_ID,
+        institution_id: req.user.institution_id,
         status: 'active',
         started_at: new Date().toISOString()
       })
@@ -1178,21 +1336,36 @@ app.get('/api/location/bus/:bus_id', async (req, res) => {
 app.get('/api/public/buses', async (req, res) => {
   try {
     const institutionId = req.query.institution_id;
-    let busesQuery = supabase.from('buses').select('*').order('id');
-    let sessionsQuery = supabase.from('driver_sessions').select('*');
-    let tripsQuery = supabase.from('trips').select('bus_id').eq('status', 'active');
+    if (!institutionId) {
+      return res.status(400).json({ error: 'institution_id parameter is required' });
+    }
 
-    if (institutionId) {
-      busesQuery = busesQuery.or(`institution_id.eq.${institutionId},institution_id.is.null`);
-      sessionsQuery = sessionsQuery.or(`institution_id.eq.${institutionId},institution_id.is.null`);
-      tripsQuery = tripsQuery.or(`institution_id.eq.${institutionId},institution_id.is.null`);
+    // Validate UUID format
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(institutionId)) {
+      return res.status(400).json({ error: 'Invalid institution_id format' });
+    }
+
+    // Check institution is active
+    const { data: inst, error: instErr } = await supabase
+      .from('institutions')
+      .select('id, status')
+      .eq('id', institutionId)
+      .single();
+
+    if (instErr || !inst || inst.status !== 'active') {
+      return res.status(404).json({ error: 'Institution not found or inactive' });
     }
 
     const [busesRes, sessionsRes, tripsRes] = await Promise.all([
-      busesQuery,
-      sessionsQuery,
-      tripsQuery
+      supabase.from('buses').select('*').eq('institution_id', institutionId).order('id'),
+      supabase.from('driver_sessions').select('*').eq('institution_id', institutionId),
+      supabase.from('trips').select('bus_id').eq('status', 'active').eq('institution_id', institutionId)
     ]);
+
+    if (busesRes.error) {
+      console.error('[public/buses] DB Error:', busesRes.error);
+      return res.status(503).json({ error: 'Database service unavailable' });
+    }
 
     res.json({
       success: true,
@@ -2218,7 +2391,60 @@ app.get('/api/admin/eta-monitor', requireRole(['admin']), (req, res) => {
 // MULTI-TENANT SAAS & INSTITUTION ACCESS-CODE ENDPOINTS
 // ============================================================================
 
-// 1. PUBLIC INSTITUTION RESOLUTION
+// ============================================================================
+// SUPER ADMIN ONE-TIME BOOTSTRAP INITIALIZATION
+// ============================================================================
+async function initializeSuperAdminBootstrap() {
+  const bootstrapUser = process.env.SUPER_ADMIN_BOOTSTRAP_USER;
+  const bootstrapPass = process.env.SUPER_ADMIN_BOOTSTRAP_PASS;
+  
+  if (!bootstrapUser || !bootstrapPass) {
+    return;
+  }
+
+  try {
+    const { count, error } = await supabase
+      .from('platform_admins')
+      .select('id', { count: 'exact', head: true });
+
+    if (error) {
+      // Schema may not be initialized yet
+      return;
+    }
+
+    if (count > 0) {
+      console.log('[Platform Security] Super Admin bootstrap disabled: Platform admin accounts already exist.');
+      return;
+    }
+
+    const pwdCheck = validateStrongPassword(bootstrapPass);
+    if (!pwdCheck.valid) {
+      console.error('[Platform Security] Super Admin bootstrap aborted: Password does not meet security requirements -', pwdCheck.message);
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(bootstrapPass, 12);
+    const { error: insertErr } = await supabase.from('platform_admins').insert([{
+      username: bootstrapUser,
+      email: `${bootstrapUser}@whereismybus.internal`,
+      password_hash: passwordHash,
+      role: 'super_admin',
+      status: 'active',
+      created_at: new Date().toISOString()
+    }]);
+
+    if (insertErr) {
+      console.error('[Platform Security] Failed to create initial super admin:', insertErr.message);
+    } else {
+      console.log(`[Platform Security] One-time Super Admin bootstrap completed for user '${bootstrapUser}'.`);
+      await logPlatformAudit('bootstrap', 'system', 'PLATFORM_SUPERADMIN_BOOTSTRAP', null, { username: bootstrapUser });
+    }
+  } catch (err) {
+    console.warn('[Platform Security] Bootstrap check exception:', err.message);
+  }
+}
+
+// 1. PUBLIC INSTITUTION RESOLUTION (STRICT SUPABASE QUERIES, NO IN-MEMORY FALLBACK)
 app.post('/api/institutions/resolve-code', resolveCodeLimiter, async (req, res) => {
   try {
     const { code } = req.body;
@@ -2227,39 +2453,24 @@ app.post('/api/institutions/resolve-code', resolveCodeLimiter, async (req, res) 
     }
 
     const cleanCode = code.trim().toUpperCase();
-    if (cleanCode.length < 6 || cleanCode.length > 64) {
+    if (cleanCode.length < 6 || cleanCode.length > 128) {
       return res.status(400).json({ ok: false, error: 'Invalid access code format.' });
     }
 
     const codeHash = hashAccessCode(cleanCode);
 
-    let codeRecord = null;
-    try {
-      const { data, error } = await supabase
-        .from('institution_access_codes')
-        .select('id, institution_id, status, expires_at')
-        .eq('code_hash', codeHash)
-        .maybeSingle();
-      if (!error && data) codeRecord = data;
-    } catch (e) {}
+    const { data: codeRecord, error: codeErr } = await supabase
+      .from('institution_access_codes')
+      .select('id, institution_id, status, expires_at')
+      .eq('code_hash', codeHash)
+      .maybeSingle();
 
-    if (!codeRecord) {
-      codeRecord = memoryAccessCodes.get(codeHash);
+    if (codeErr) {
+      console.error('[resolve-code] DB Error:', codeErr);
+      return res.status(503).json({ ok: false, error: 'Database service unavailable. Please ensure migrations are applied.' });
     }
 
     if (!codeRecord) {
-      const defaultCode = 'WIMB-PCE-2026-X9T4-M7K2';
-      if (cleanCode === defaultCode || cleanCode === 'WIMB-PCE-001') {
-        return res.json({
-          ok: true,
-          institution: {
-            id: DEFAULT_INSTITUTION_ID,
-            name: 'Providence College of Engineering',
-            code: 'PCE-001',
-            type: 'college'
-          }
-        });
-      }
       return res.status(401).json({ ok: false, error: 'Invalid or inactive institution access code.' });
     }
 
@@ -2271,18 +2482,15 @@ app.post('/api/institutions/resolve-code', resolveCodeLimiter, async (req, res) 
       return res.status(401).json({ ok: false, error: 'This institution access code has expired.' });
     }
 
-    let institution = null;
-    try {
-      const { data, error } = await supabase
-        .from('institutions')
-        .select('id, institution_name, institution_type, institution_code, status')
-        .eq('id', codeRecord.institution_id)
-        .maybeSingle();
-      if (!error && data) institution = data;
-    } catch (e) {}
+    const { data: institution, error: instErr } = await supabase
+      .from('institutions')
+      .select('id, institution_name, institution_type, institution_code, status')
+      .eq('id', codeRecord.institution_id)
+      .maybeSingle();
 
-    if (!institution) {
-      institution = memoryInstitutions.get(codeRecord.institution_id);
+    if (instErr) {
+      console.error('[resolve-code] DB Error fetching institution:', instErr);
+      return res.status(503).json({ ok: false, error: 'Database service unavailable. Please try again later.' });
     }
 
     if (!institution) {
@@ -2308,7 +2516,7 @@ app.post('/api/institutions/resolve-code', resolveCodeLimiter, async (req, res) 
   }
 });
 
-// 2. PLATFORM SUPER ADMIN (DEVELOPER) AUTHENTICATION
+// 2. PLATFORM SUPER ADMIN (DEVELOPER) AUTHENTICATION & MFA
 app.post('/api/platform/login', authLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -2316,34 +2524,43 @@ app.post('/api/platform/login', authLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required.' });
     }
 
-    let admin = null;
-    try {
-      const { data, error: dbError } = await supabase
-        .from('platform_admins')
-        .select('id, username, email, password_hash, role, status')
-        .eq('username', username)
-        .maybeSingle();
-      if (!dbError && data) admin = data;
-    } catch (e) {}
+    const { data: admin, error: dbError } = await supabase
+      .from('platform_admins')
+      .select('id, username, email, password_hash, role, status, mfa_enabled, mfa_secret, mfa_backup_codes')
+      .eq('username', username)
+      .maybeSingle();
+
+    if (dbError) {
+      console.error('[platform-login] DB Error:', dbError);
+      return res.status(503).json({ error: 'Database service unavailable. Ensure migrations are applied.' });
+    }
 
     if (!admin) {
-      const bootstrapUser = process.env.SUPER_ADMIN_BOOTSTRAP_USER || 'superadmin';
-      const bootstrapPass = process.env.SUPER_ADMIN_BOOTSTRAP_PASS || 'SuperAdmin@2026!';
-      if (username === bootstrapUser && password === bootstrapPass) {
-        admin = {
-          id: '00000000-0000-0000-0000-000000000001',
-          username: bootstrapUser,
-          email: 'platform-admin@whereismybus.internal',
-          role: 'super_admin',
-          status: 'active'
-        };
-      } else {
-        return res.status(401).json({ error: 'Invalid platform credentials.' });
-      }
-    } else {
-      const valid = await bcrypt.compare(password, admin.password_hash);
-      if (!valid) return res.status(401).json({ error: 'Invalid platform credentials.' });
-      if (admin.status !== 'active') return res.status(401).json({ error: 'Platform administrator account is inactive.' });
+      return res.status(401).json({ error: 'Invalid platform credentials.' });
+    }
+
+    const valid = await bcrypt.compare(password, admin.password_hash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid platform credentials.' });
+    }
+
+    if (admin.status !== 'active') {
+      return res.status(401).json({ error: 'Platform administrator account is inactive.' });
+    }
+
+    // Two-factor authentication check
+    if (admin.mfa_enabled && admin.mfa_secret) {
+      const mfaTempToken = jwt.sign(
+        { user_id: admin.id, username: admin.username, role: 'mfa_pending' },
+        JWT_SECRET,
+        { expiresIn: '5m' }
+      );
+      return res.json({
+        success: true,
+        mfa_required: true,
+        temp_token: mfaTempToken,
+        message: 'Two-factor authentication code required.'
+      });
     }
 
     const token = jwt.sign(
@@ -2352,6 +2569,7 @@ app.post('/api/platform/login', authLimiter, async (req, res) => {
       { expiresIn: '8h' }
     );
 
+    await supabase.from('platform_admins').update({ last_login_at: new Date().toISOString() }).eq('id', admin.id);
     await logPlatformAudit(admin.username, 'super_admin', 'SUPER_ADMIN_LOGIN', null, {}, req);
 
     res.json({
@@ -2370,19 +2588,282 @@ app.post('/api/platform/login', authLimiter, async (req, res) => {
   }
 });
 
+// Platform Super Admin MFA Login Verification
+app.post('/api/platform/mfa/verify-login', authLimiter, async (req, res) => {
+  try {
+    const { temp_token, totp_code, backup_code } = req.body;
+    if (!temp_token) return res.status(400).json({ error: 'MFA challenge token is required.' });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(temp_token, JWT_SECRET);
+      if (decoded.role !== 'mfa_pending') throw new Error('Invalid token scope');
+    } catch (e) {
+      return res.status(401).json({ error: 'MFA challenge has expired or is invalid. Please log in again.' });
+    }
+
+    const { data: admin, error: dbError } = await supabase
+      .from('platform_admins')
+      .select('id, username, email, role, status, mfa_enabled, mfa_secret, mfa_backup_codes')
+      .eq('id', decoded.user_id)
+      .single();
+
+    if (dbError || !admin || admin.status !== 'active' || !admin.mfa_enabled) {
+      return res.status(401).json({ error: 'Platform admin not found or MFA not configured.' });
+    }
+
+    let authenticated = false;
+    let usedBackupCodeIndex = -1;
+
+    if (totp_code && verifyTOTP(admin.mfa_secret, totp_code)) {
+      authenticated = true;
+    } else if (backup_code && Array.isArray(admin.mfa_backup_codes)) {
+      const cleanBackup = String(backup_code).trim().toUpperCase();
+      const codeHash = crypto.createHash('sha256').update(cleanBackup).digest('hex');
+      usedBackupCodeIndex = admin.mfa_backup_codes.indexOf(codeHash);
+      if (usedBackupCodeIndex !== -1) {
+        authenticated = true;
+      }
+    }
+
+    if (!authenticated) {
+      return res.status(401).json({ error: 'Invalid MFA verification code or backup code.' });
+    }
+
+    if (usedBackupCodeIndex !== -1) {
+      const updatedBackupCodes = [...admin.mfa_backup_codes];
+      updatedBackupCodes.splice(usedBackupCodeIndex, 1);
+      await supabase.from('platform_admins').update({ mfa_backup_codes: updatedBackupCodes }).eq('id', admin.id);
+      await logPlatformAudit(admin.username, 'super_admin', 'MFA_BACKUP_CODE_USED', null, { remaining: updatedBackupCodes.length }, req);
+    }
+
+    const token = jwt.sign(
+      { user_id: admin.id, username: admin.username, role: 'super_admin' },
+      JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+
+    await supabase.from('platform_admins').update({ last_login_at: new Date().toISOString() }).eq('id', admin.id);
+    await logPlatformAudit(admin.username, 'super_admin', 'SUPER_ADMIN_MFA_LOGIN', null, {}, req);
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: admin.id,
+        username: admin.username,
+        email: admin.email,
+        role: 'super_admin'
+      }
+    });
+  } catch (err) {
+    console.error('[mfa-verify-login] Error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// Setup MFA: Generate Base32 secret and 5 emergency backup codes
+app.post('/api/platform/mfa/setup', requireSuperAdmin, async (req, res) => {
+  try {
+    const rawSecret = crypto.randomBytes(20);
+    const secretBase32 = base32Encode(rawSecret);
+    const otpauthUrl = `otpauth://totp/WhereIsMyBus:${encodeURIComponent(req.user.username)}?secret=${secretBase32}&issuer=WhereIsMyBus`;
+
+    const plainBackupCodes = [];
+    const hashedBackupCodes = [];
+    for (let i = 0; i < 5; i++) {
+      const code = crypto.randomBytes(4).toString('hex').toUpperCase(); // 8 hex chars
+      plainBackupCodes.push(code);
+      hashedBackupCodes.push(crypto.createHash('sha256').update(code).digest('hex'));
+    }
+
+    res.json({
+      success: true,
+      secret: secretBase32,
+      otpauth_url: otpauthUrl,
+      backup_codes: plainBackupCodes,
+      message: 'Scan the OTP URL or manually enter the secret into your Authenticator app. Save your emergency backup codes.'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Enable MFA after confirming a valid code
+app.post('/api/platform/mfa/enable', requireSuperAdmin, async (req, res) => {
+  try {
+    const { secret, totp_code, backup_codes } = req.body;
+    if (!secret || !totp_code) {
+      return res.status(400).json({ error: 'Secret and verification code are required.' });
+    }
+
+    if (!verifyTOTP(secret, totp_code)) {
+      return res.status(400).json({ error: 'Verification code is invalid or expired. Check your device clock.' });
+    }
+
+    const hashedCodes = Array.isArray(backup_codes)
+      ? backup_codes.map(c => crypto.createHash('sha256').update(String(c).trim().toUpperCase()).digest('hex'))
+      : [];
+
+    const { error } = await supabase.from('platform_admins').update({
+      mfa_enabled: true,
+      mfa_secret: secret,
+      mfa_backup_codes: hashedCodes,
+      updated_at: new Date().toISOString()
+    }).eq('id', req.user.user_id);
+
+    if (error) {
+      return res.status(503).json({ error: 'Failed to enable MFA in database.' });
+    }
+
+    await logPlatformAudit(req.user.username, 'super_admin', 'MFA_ENABLED', null, {}, req);
+    res.json({ success: true, message: 'Two-Factor Authentication is now enabled.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Disable MFA (requires password and current TOTP code)
+app.post('/api/platform/mfa/disable', requireSuperAdmin, async (req, res) => {
+  try {
+    const { password, totp_code } = req.body;
+    if (!password || !totp_code) {
+      return res.status(400).json({ error: 'Password and current MFA code are required.' });
+    }
+
+    const { data: admin, error: dbErr } = await supabase
+      .from('platform_admins')
+      .select('id, password_hash, mfa_secret')
+      .eq('id', req.user.user_id)
+      .single();
+
+    if (dbErr || !admin) return res.status(404).json({ error: 'Admin account not found.' });
+
+    const validPwd = await bcrypt.compare(password, admin.password_hash);
+    if (!validPwd) return res.status(401).json({ error: 'Incorrect password.' });
+
+    if (!verifyTOTP(admin.mfa_secret, totp_code)) {
+      return res.status(400).json({ error: 'Invalid MFA verification code.' });
+    }
+
+    await supabase.from('platform_admins').update({
+      mfa_enabled: false,
+      mfa_secret: null,
+      mfa_backup_codes: [],
+      updated_at: new Date().toISOString()
+    }).eq('id', req.user.user_id);
+
+    await logPlatformAudit(req.user.username, 'super_admin', 'MFA_DISABLED', null, {}, req);
+    res.json({ success: true, message: 'Two-Factor Authentication has been disabled.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Password Rotation for Platform Super Admins
+app.post('/api/platform/change-password', requireSuperAdmin, async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) {
+      return res.status(400).json({ error: 'Current password and new password are required.' });
+    }
+
+    const { data: admin, error: dbErr } = await supabase
+      .from('platform_admins')
+      .select('id, password_hash')
+      .eq('id', req.user.user_id)
+      .single();
+
+    if (dbErr || !admin) return res.status(404).json({ error: 'Admin account not found.' });
+
+    const validPwd = await bcrypt.compare(current_password, admin.password_hash);
+    if (!validPwd) return res.status(401).json({ error: 'Current password is incorrect.' });
+
+    if (current_password === new_password) {
+      return res.status(400).json({ error: 'New password cannot be identical to the current password.' });
+    }
+
+    const check = validateStrongPassword(new_password);
+    if (!check.valid) {
+      return res.status(400).json({ error: check.message });
+    }
+
+    const newHash = await bcrypt.hash(new_password, 12);
+    const { error: updateErr } = await supabase.from('platform_admins').update({
+      password_hash: newHash,
+      password_changed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }).eq('id', admin.id);
+
+    if (updateErr) return res.status(503).json({ error: 'Failed to update password in database.' });
+
+    await logPlatformAudit(req.user.username, 'super_admin', 'PLATFORM_PASSWORD_ROTATED', null, {}, req);
+    res.json({ success: true, message: 'Password rotated successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create Additional Platform Admins (Restricted strictly to existing Super Admins)
+app.post('/api/platform/admins', requireSuperAdmin, platformLimiter, async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required.' });
+    }
+
+    const check = validateStrongPassword(password);
+    if (!check.valid) {
+      return res.status(400).json({ error: check.message });
+    }
+
+    const { data: existing } = await supabase
+      .from('platform_admins')
+      .select('id')
+      .eq('username', username.trim())
+      .maybeSingle();
+
+    if (existing) {
+      return res.status(400).json({ error: 'A platform admin with this username already exists.' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    const { data, error } = await supabase.from('platform_admins').insert([{
+      username: username.trim(),
+      email: email ? email.trim() : null,
+      password_hash: passwordHash,
+      role: 'super_admin',
+      status: 'active',
+      created_at: new Date().toISOString()
+    }]).select('id, username, email, role, status, created_at').single();
+
+    if (error) return res.status(503).json({ error: error.message });
+
+    await logPlatformAudit(req.user.username, 'super_admin', 'PLATFORM_ADMIN_CREATED', null, { new_admin: username }, req);
+    res.status(201).json({ success: true, admin: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 3. PLATFORM SUPER ADMIN DASHBOARD OVERVIEW STATS
 app.get('/api/platform/dashboard-stats', requireSuperAdmin, async (req, res) => {
   try {
-    const [instRes, busesRes, driversRes, tripsRes] = await Promise.all([
+    const [instRes, busesRes, driversRes, tripsRes, logsRes] = await Promise.all([
       supabase.from('institutions').select('id, status'),
       supabase.from('buses').select('id'),
       supabase.from('drivers').select('id'),
-      supabase.from('trips').select('id').eq('status', 'active')
+      supabase.from('trips').select('id').eq('status', 'active'),
+      supabase.from('platform_audit_logs').select('*').order('created_at', { ascending: false }).limit(10)
     ]);
 
-    let instList = instRes.data || Array.from(memoryInstitutions.values());
-    const totalInstitutions = instList.length || 1;
-    const activeInstitutions = instList.filter(i => i.status === 'active').length || 1;
+    if (instRes.error) {
+      return res.status(503).json({ error: 'Database service unavailable. Ensure migrations are applied.' });
+    }
+
+    const instList = instRes.data || [];
+    const totalInstitutions = instList.length;
+    const activeInstitutions = instList.filter(i => i.status === 'active').length;
     const inactiveInstitutions = totalInstitutions - activeInstitutions;
 
     res.json({
@@ -2394,7 +2875,7 @@ app.get('/api/platform/dashboard-stats', requireSuperAdmin, async (req, res) => 
         totalBuses: busesRes.data ? busesRes.data.length : 0,
         totalDrivers: driversRes.data ? driversRes.data.length : 0,
         activeTrips: tripsRes.data ? tripsRes.data.length : 0,
-        recentLogs: memoryAuditLogs.slice(0, 10)
+        recentLogs: logsRes.data || []
       }
     });
   } catch (err) {
@@ -2405,20 +2886,16 @@ app.get('/api/platform/dashboard-stats', requireSuperAdmin, async (req, res) => 
 // 4. PLATFORM SUPER ADMIN INSTITUTIONS LIST & REGISTRATION
 app.get('/api/platform/institutions', requireSuperAdmin, async (req, res) => {
   try {
-    let institutions = [];
-    try {
-      const { data, error: instError } = await supabase
-        .from('institutions')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (!instError && data) institutions = data;
-    } catch (e) {}
+    const { data: institutions, error } = await supabase
+      .from('institutions')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    if (institutions.length === 0) {
-      institutions = Array.from(memoryInstitutions.values());
+    if (error) {
+      return res.status(503).json({ error: 'Database service unavailable. Ensure migrations are applied.' });
     }
 
-    res.json({ success: true, institutions });
+    res.json({ success: true, institutions: institutions || [] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2440,62 +2917,53 @@ app.post('/api/platform/institutions', requireSuperAdmin, platformLimiter, async
     } = req.body;
 
     if (!institution_name || !institution_code) {
-      return res.status(400).json({ error: 'Institution Name and Institution Identifier Code are required.' });
+      return res.status(400).json({ error: 'Institution Name and Identifier Code are required.' });
     }
 
     const cleanCode = institution_code.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
 
-    let existing = null;
-    try {
-      const { data } = await supabase.from('institutions').select('id').eq('institution_code', cleanCode).maybeSingle();
-      existing = data;
-    } catch (e) {}
+    const { data: existing, error: checkErr } = await supabase
+      .from('institutions')
+      .select('id')
+      .eq('institution_code', cleanCode)
+      .maybeSingle();
 
-    if (!existing) {
-      for (const inst of memoryInstitutions.values()) {
-        if (inst.institution_code === cleanCode) {
-          existing = inst;
-          break;
-        }
-      }
+    if (checkErr) {
+      return res.status(503).json({ error: 'Database service unavailable.' });
     }
 
     if (existing) {
       return res.status(400).json({ error: `Institution Identifier '${cleanCode}' is already registered.` });
     }
 
-    const newInstRecord = {
-      id: crypto.randomUUID(),
-      institution_name: institution_name.trim(),
-      institution_type,
-      institution_code: cleanCode,
-      address,
-      district,
-      state,
-      contact_person,
-      contact_email,
-      contact_phone,
-      status: 'active',
-      allow_admin_code_rotation: Boolean(allow_admin_code_rotation),
-      created_at: new Date().toISOString()
-    };
+    const { data: newInst, error: insertErr } = await supabase
+      .from('institutions')
+      .insert([{
+        institution_name: institution_name.trim(),
+        institution_type,
+        institution_code: cleanCode,
+        address,
+        district,
+        state,
+        contact_person,
+        contact_email,
+        contact_phone,
+        status: 'active',
+        allow_admin_code_rotation: Boolean(allow_admin_code_rotation),
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
 
-    let newInst = null;
-    try {
-      const { data, error: insertErr } = await supabase.from('institutions').insert([newInstRecord]).select().single();
-      if (!insertErr && data) newInst = data;
-    } catch (e) {}
-
-    if (!newInst) {
-      newInst = newInstRecord;
+    if (insertErr || !newInst) {
+      return res.status(503).json({ error: insertErr ? insertErr.message : 'Failed to register institution in database.' });
     }
-    memoryInstitutions.set(newInst.id, newInst);
 
+    // Generate 128-bit cryptographically secure access code
     const plainAccessCode = generateAccessCode(cleanCode);
     const codeHash = hashAccessCode(plainAccessCode);
 
-    const newCodeRecord = {
-      id: crypto.randomUUID(),
+    const { error: codeErr } = await supabase.from('institution_access_codes').insert([{
       institution_id: newInst.id,
       code_hash: codeHash,
       hash_key_version: 'v1',
@@ -2503,12 +2971,11 @@ app.post('/api/platform/institutions', requireSuperAdmin, platformLimiter, async
       created_by: req.user.username,
       created_at: new Date().toISOString(),
       metadata: { initial: true }
-    };
+    }]);
 
-    try {
-      await supabase.from('institution_access_codes').insert([newCodeRecord]);
-    } catch (e) {}
-    memoryAccessCodes.set(codeHash, newCodeRecord);
+    if (codeErr) {
+      return res.status(503).json({ error: 'Failed to record access code in database.' });
+    }
 
     await logPlatformAudit(req.user.username, 'super_admin', 'INSTITUTION_REGISTERED', newInst.id, {
       name: newInst.institution_name,
@@ -2530,19 +2997,15 @@ app.post('/api/platform/institutions', requireSuperAdmin, platformLimiter, async
 // 5. PLATFORM GET, UPDATE & ROTATE ACCESS CODE FOR AN INSTITUTION
 app.get('/api/platform/institutions/:id', requireSuperAdmin, async (req, res) => {
   try {
-    let inst = null;
-    try {
-      const { data, error } = await supabase.from('institutions').select('*').eq('id', req.params.id).single();
-      if (!error && data) inst = data;
-    } catch (e) {}
+    const { data: inst, error } = await supabase
+      .from('institutions')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
 
-    if (!inst) inst = memoryInstitutions.get(req.params.id);
-    if (!inst) return res.status(404).json({ error: 'Institution not found.' });
+    if (error || !inst) return res.status(404).json({ error: 'Institution not found.' });
 
-    res.json({
-      success: true,
-      institution: inst
-    });
+    res.json({ success: true, institution: inst });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2557,16 +3020,14 @@ app.patch('/api/platform/institutions/:id', requireSuperAdmin, platformLimiter, 
     }
     updates.updated_at = new Date().toISOString();
 
-    let updated = null;
-    try {
-      const { data, error } = await supabase.from('institutions').update(updates).eq('id', req.params.id).select().single();
-      if (!error && data) updated = data;
-    } catch (e) {}
+    const { data: updated, error } = await supabase
+      .from('institutions')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
 
-    if (!updated && memoryInstitutions.has(req.params.id)) {
-      updated = { ...memoryInstitutions.get(req.params.id), ...updates };
-      memoryInstitutions.set(req.params.id, updated);
-    }
+    if (error || !updated) return res.status(503).json({ error: 'Failed to update institution.' });
 
     await logPlatformAudit(req.user.username, 'super_admin', 'INSTITUTION_UPDATED', req.params.id, updates, req);
     res.json({ success: true, institution: updated });
@@ -2578,43 +3039,37 @@ app.patch('/api/platform/institutions/:id', requireSuperAdmin, platformLimiter, 
 // Platform Super Admin: Rotate Institution Access Code
 app.post('/api/platform/institutions/:id/access-code/rotate', requireSuperAdmin, platformLimiter, async (req, res) => {
   try {
-    let inst = null;
-    try {
-      const { data } = await supabase.from('institutions').select('id, institution_code, institution_name').eq('id', req.params.id).single();
-      if (data) inst = data;
-    } catch (e) {}
+    const { data: inst, error: instErr } = await supabase
+      .from('institutions')
+      .select('id, institution_code, institution_name')
+      .eq('id', req.params.id)
+      .single();
 
-    if (!inst) inst = memoryInstitutions.get(req.params.id);
-    if (!inst) return res.status(404).json({ error: 'Institution not found.' });
+    if (instErr || !inst) return res.status(404).json({ error: 'Institution not found.' });
 
     const plainAccessCode = generateAccessCode(inst.institution_code);
     const newHash = hashAccessCode(plainAccessCode);
 
-    try {
-      await supabase.from('institution_access_codes').update({ status: 'revoked', revoked_at: new Date().toISOString() }).eq('institution_id', inst.id).eq('status', 'active');
-    } catch (e) {}
+    // Atomically revoke current active code
+    await supabase
+      .from('institution_access_codes')
+      .update({ status: 'revoked', revoked_at: new Date().toISOString() })
+      .eq('institution_id', inst.id)
+      .eq('status', 'active');
 
-    for (const [hash, record] of memoryAccessCodes.entries()) {
-      if (record.institution_id === inst.id && record.status === 'active') {
-        record.status = 'revoked';
-        record.revoked_at = new Date().toISOString();
-      }
-    }
-
-    const newRecord = {
-      id: crypto.randomUUID(),
+    // Insert new active code
+    const { error: insertErr } = await supabase.from('institution_access_codes').insert([{
       institution_id: inst.id,
       code_hash: newHash,
       hash_key_version: 'v1',
       status: 'active',
       rotated_at: new Date().toISOString(),
       created_by: req.user.username
-    };
+    }]);
 
-    try {
-      await supabase.from('institution_access_codes').insert([newRecord]);
-    } catch (e) {}
-    memoryAccessCodes.set(newHash, newRecord);
+    if (insertErr) {
+      return res.status(503).json({ error: 'Failed to record rotated access code in database.' });
+    }
 
     await logPlatformAudit(req.user.username, 'super_admin', 'ACCESS_CODE_ROTATED', inst.id, {}, req);
 
@@ -2631,16 +3086,13 @@ app.post('/api/platform/institutions/:id/access-code/rotate', requireSuperAdmin,
 // Platform Super Admin: Revoke Access Code
 app.post('/api/platform/institutions/:id/access-code/revoke', requireSuperAdmin, platformLimiter, async (req, res) => {
   try {
-    try {
-      await supabase.from('institution_access_codes').update({ status: 'revoked', revoked_at: new Date().toISOString() }).eq('institution_id', req.params.id).eq('status', 'active');
-    } catch (e) {}
+    const { error } = await supabase
+      .from('institution_access_codes')
+      .update({ status: 'revoked', revoked_at: new Date().toISOString() })
+      .eq('institution_id', req.params.id)
+      .eq('status', 'active');
 
-    for (const [hash, record] of memoryAccessCodes.entries()) {
-      if (record.institution_id === req.params.id && record.status === 'active') {
-        record.status = 'revoked';
-        record.revoked_at = new Date().toISOString();
-      }
-    }
+    if (error) return res.status(503).json({ error: 'Failed to revoke access code in database.' });
 
     await logPlatformAudit(req.user.username, 'super_admin', 'ACCESS_CODE_REVOKED', req.params.id, {}, req);
     res.json({ success: true, message: 'Access code revoked successfully.' });
@@ -2653,14 +3105,12 @@ app.post('/api/platform/institutions/:id/access-code/revoke', requireSuperAdmin,
 app.patch('/api/platform/institutions/:id/code-settings', requireSuperAdmin, platformLimiter, async (req, res) => {
   try {
     const { allow_admin_code_rotation } = req.body;
-    try {
-      await supabase.from('institutions').update({ allow_admin_code_rotation: Boolean(allow_admin_code_rotation), updated_at: new Date().toISOString() }).eq('id', req.params.id);
-    } catch (e) {}
+    const { error } = await supabase
+      .from('institutions')
+      .update({ allow_admin_code_rotation: Boolean(allow_admin_code_rotation), updated_at: new Date().toISOString() })
+      .eq('id', req.params.id);
 
-    if (memoryInstitutions.has(req.params.id)) {
-      const inst = memoryInstitutions.get(req.params.id);
-      inst.allow_admin_code_rotation = Boolean(allow_admin_code_rotation);
-    }
+    if (error) return res.status(503).json({ error: 'Failed to update code settings in database.' });
 
     await logPlatformAudit(req.user.username, 'super_admin', 'CODE_SETTINGS_UPDATED', req.params.id, { allow_admin_code_rotation }, req);
     res.json({ success: true, allow_admin_code_rotation: Boolean(allow_admin_code_rotation) });
@@ -2672,17 +3122,15 @@ app.patch('/api/platform/institutions/:id/code-settings', requireSuperAdmin, pla
 // Platform Super Admin: Audit Logs
 app.get('/api/platform/audit-logs', requireSuperAdmin, async (req, res) => {
   try {
-    let logs = [];
-    try {
-      const { data, error } = await supabase.from('platform_audit_logs').select('*').order('created_at', { ascending: false }).limit(100);
-      if (!error && data && data.length > 0) logs = data;
-    } catch (e) {}
+    const { data: logs, error } = await supabase
+      .from('platform_audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100);
 
-    if (logs.length === 0) {
-      logs = memoryAuditLogs;
-    }
+    if (error) return res.status(503).json({ error: 'Failed to retrieve audit logs from database.' });
 
-    res.json({ success: true, logs });
+    res.json({ success: true, logs: logs || [] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2691,45 +3139,23 @@ app.get('/api/platform/audit-logs', requireSuperAdmin, async (req, res) => {
 // 6. INSTITUTION ADMINISTRATOR ENDPOINTS (Settings -> Institution)
 app.get('/api/institution/access-code/status', requireRole(['admin']), async (req, res) => {
   try {
-    const instId = req.user.institution_id || DEFAULT_INSTITUTION_ID;
+    const instId = req.user.institution_id;
+    if (!instId) return res.status(403).json({ error: 'Admin has no institution assigned.' });
 
-    let inst = null;
-    try {
-      const { data } = await supabase.from('institutions').select('id, institution_name, institution_type, institution_code, status, allow_admin_code_rotation, created_at').eq('id', instId).maybeSingle();
-      if (data) inst = data;
-    } catch (e) {}
+    const [instRes, codeRes] = await Promise.all([
+      supabase.from('institutions').select('id, institution_name, institution_type, institution_code, status, allow_admin_code_rotation, created_at').eq('id', instId).single(),
+      supabase.from('institution_access_codes').select('status, created_at, rotated_at, expires_at').eq('institution_id', instId).eq('status', 'active').maybeSingle()
+    ]);
 
-    if (!inst) inst = memoryInstitutions.get(instId);
-
-    let codeData = null;
-    try {
-      const { data } = await supabase.from('institution_access_codes').select('status, created_at, rotated_at, expires_at').eq('institution_id', instId).eq('status', 'active').maybeSingle();
-      if (data) codeData = data;
-    } catch (e) {}
-
-    if (!codeData) {
-      for (const record of memoryAccessCodes.values()) {
-        if (record.institution_id === instId && record.status === 'active') {
-          codeData = { status: record.status, created_at: record.created_at, rotated_at: record.rotated_at, expires_at: record.expires_at };
-          break;
-        }
-      }
+    if (instRes.error || !instRes.data) {
+      return res.status(503).json({ error: 'Unable to retrieve institution profile.' });
     }
 
     res.json({
       success: true,
-      institution: inst || {
-        id: instId,
-        institution_name: 'Providence College of Engineering',
-        institution_code: 'PCE-001',
-        institution_type: 'college',
-        status: 'active'
-      },
-      accessCode: codeData || {
-        status: 'active',
-        created_at: new Date().toISOString()
-      },
-      allow_admin_code_rotation: Boolean(inst ? inst.allow_admin_code_rotation : true)
+      institution: instRes.data,
+      accessCode: codeRes.data || { status: 'none', created_at: null },
+      allow_admin_code_rotation: Boolean(instRes.data.allow_admin_code_rotation)
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2738,50 +3164,44 @@ app.get('/api/institution/access-code/status', requireRole(['admin']), async (re
 
 app.post('/api/institution/access-code/rotate', requireRole(['admin']), platformLimiter, async (req, res) => {
   try {
-    const instId = req.user.institution_id || DEFAULT_INSTITUTION_ID;
+    const instId = req.user.institution_id;
+    if (!instId) return res.status(403).json({ error: 'Admin has no institution assigned.' });
 
-    let inst = null;
-    try {
-      const { data } = await supabase.from('institutions').select('id, institution_code, allow_admin_code_rotation, status').eq('id', instId).maybeSingle();
-      if (data) inst = data;
-    } catch (e) {}
+    const { data: inst, error: instErr } = await supabase
+      .from('institutions')
+      .select('id, institution_code, allow_admin_code_rotation, status')
+      .eq('id', instId)
+      .single();
 
-    if (!inst) inst = memoryInstitutions.get(instId);
+    if (instErr || !inst) return res.status(404).json({ error: 'Institution not found.' });
 
-    if (inst && !inst.allow_admin_code_rotation) {
+    if (!inst.allow_admin_code_rotation) {
       return res.status(403).json({ 
         error: 'Access code rotation by institution administrators is currently disabled. Please contact the platform developer.' 
       });
     }
 
-    const plainAccessCode = generateAccessCode(inst?.institution_code || 'PCE');
+    const plainAccessCode = generateAccessCode(inst.institution_code);
     const newHash = hashAccessCode(plainAccessCode);
 
-    try {
-      await supabase.from('institution_access_codes').update({ status: 'revoked', revoked_at: new Date().toISOString() }).eq('institution_id', instId).eq('status', 'active');
-    } catch (e) {}
+    // Revoke old active code
+    await supabase
+      .from('institution_access_codes')
+      .update({ status: 'revoked', revoked_at: new Date().toISOString() })
+      .eq('institution_id', instId)
+      .eq('status', 'active');
 
-    for (const [hash, record] of memoryAccessCodes.entries()) {
-      if (record.institution_id === instId && record.status === 'active') {
-        record.status = 'revoked';
-        record.revoked_at = new Date().toISOString();
-      }
-    }
-
-    const newRecord = {
-      id: crypto.randomUUID(),
+    // Insert new active code
+    const { error: insertErr } = await supabase.from('institution_access_codes').insert([{
       institution_id: instId,
       code_hash: newHash,
       hash_key_version: 'v1',
       status: 'active',
       rotated_at: new Date().toISOString(),
       created_by: req.user.username
-    };
+    }]);
 
-    try {
-      await supabase.from('institution_access_codes').insert([newRecord]);
-    } catch (e) {}
-    memoryAccessCodes.set(newHash, newRecord);
+    if (insertErr) return res.status(503).json({ error: 'Failed to record rotated access code in database.' });
 
     await logPlatformAudit(req.user.username, 'institution_admin', 'ADMIN_ROTATED_ACCESS_CODE', instId, {}, req);
 
@@ -2797,25 +3217,18 @@ app.post('/api/institution/access-code/rotate', requireRole(['admin']), platform
 
 app.get('/api/institution/settings', requireRole(['admin']), async (req, res) => {
   try {
-    const instId = req.user.institution_id || DEFAULT_INSTITUTION_ID;
-    let inst = null;
-    try {
-      const { data } = await supabase.from('institutions').select('*').eq('id', instId).maybeSingle();
-      if (data) inst = data;
-    } catch (e) {}
+    const instId = req.user.institution_id;
+    if (!instId) return res.status(403).json({ error: 'Admin has no institution assigned.' });
 
-    if (!inst) inst = memoryInstitutions.get(instId);
+    const { data: inst, error } = await supabase
+      .from('institutions')
+      .select('*')
+      .eq('id', instId)
+      .single();
 
-    res.json({
-      success: true,
-      settings: inst || {
-        id: instId,
-        institution_name: 'Providence College of Engineering',
-        institution_code: 'PCE-001',
-        institution_type: 'college',
-        status: 'active'
-      }
-    });
+    if (error || !inst) return res.status(503).json({ error: 'Unable to retrieve institution settings.' });
+
+    res.json({ success: true, settings: inst });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2824,8 +3237,16 @@ app.get('/api/institution/settings', requireRole(['admin']), async (req, res) =>
 // Expose utilities on app.locals for test suite verification
 app.locals.generateAccessCode = generateAccessCode;
 app.locals.hashAccessCode = hashAccessCode;
-app.locals.DEFAULT_INSTITUTION_ID = DEFAULT_INSTITUTION_ID;
+app.locals.validateStrongPassword = validateStrongPassword;
+app.locals.generateTOTP = generateTOTP;
+app.locals.verifyTOTP = verifyTOTP;
+app.locals.base32Encode = base32Encode;
+app.locals.base32Decode = base32Decode;
 
+// Run bootstrap check on initialization
+initializeSuperAdminBootstrap().catch(err => {
+  console.warn('[Bootstrap] Startup initialization error:', err.message);
+});
 
 const PORT = process.env.PORT || 3001;
 if (require.main === module) {
@@ -2834,5 +3255,14 @@ if (require.main === module) {
   });
 }
 
-module.exports = app;
-
+module.exports = {
+  app,
+  generateAccessCode,
+  hashAccessCode,
+  validateStrongPassword,
+  generateTOTP,
+  verifyTOTP,
+  base32Encode,
+  base32Decode,
+  setSupabaseClient: (client) => { supabase = client; }
+};

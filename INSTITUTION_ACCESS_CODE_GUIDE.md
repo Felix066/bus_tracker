@@ -98,3 +98,4 @@ sequenceDiagram
 2. **Do Not Post Publicly on Billboards:** Treat the code as an internal campus identifier.
 3. **Scheduled Rotation:** Rotate the code at the beginning of each academic semester or annual school year.
 4. **Emergency Rotation:** If unauthorized individuals obtain access, navigate to **Settings → Institution** and click **Rotate Access Code** to revoke the old code instantly.
+

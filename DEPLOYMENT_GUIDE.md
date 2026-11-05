@@ -93,3 +93,4 @@ Render automatically triggers the build and deploy pipeline.
 If an unexpected production issue arises:
 1. **Application Rollback:** In Render Dashboard, click **Deploys** and select **Rollback** to revert to the previous release commit.
 2. **Database Rollback:** If necessary, execute the rollback script documented in `DATABASE_MIGRATION_GUIDE.md` in the Supabase SQL editor.
+

@@ -119,3 +119,4 @@ Navigate to the **Platform Audit Logs** tab in the dashboard to review an immuta
 - **No In-Memory Secret Storage:** The Super Admin token is stored only in `sessionStorage` (`platform_token`) and cleared completely on logout.
 - **Bfcache Protection:** Protected by server-side `Cache-Control: no-store` headers and client-side `pageshow` event handlers.
 - **Hardened Endpoint Verification:** Every `/api/platform/*` route executes `requireSuperAdmin` to verify `req.user.role === 'super_admin'`.
+

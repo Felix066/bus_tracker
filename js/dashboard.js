@@ -17,7 +17,20 @@ async function loadStudentDashboard() {
   if (!container) return;
 
   try {
-    const res = await fetch(`${BACKEND_URL}/api/public/buses`);
+    let institutionId = null;
+    try {
+      const stored = sessionStorage.getItem('current_institution');
+      if (stored) {
+        const inst = JSON.parse(stored);
+        if (inst && inst.id) institutionId = inst.id;
+      }
+    } catch (e) {}
+
+    const queryUrl = institutionId
+      ? `${BACKEND_URL}/api/public/buses?institution_id=${encodeURIComponent(institutionId)}`
+      : `${BACKEND_URL}/api/public/buses`;
+
+    const res = await fetch(queryUrl);
     if (res.ok) {
       const data = await res.json();
       if (data.success) {
@@ -25,6 +38,9 @@ async function loadStudentDashboard() {
         driverSessions = data.sessions || [];
         activeTripsData = data.activeTrips || [];
       }
+    } else if (res.status === 400 && !institutionId) {
+      window.location.replace('index.html');
+      return;
     }
   } catch (err) {
     console.error("Failed to load dashboard from backend", err);

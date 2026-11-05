@@ -85,6 +85,7 @@
 
         <div id="error-banner" class="error-banner hidden"></div>
 
+        <!-- STEP 1: CREDENTIALS FORM -->
         <form id="platform-login-form">
           <div class="form-group">
             <label for="platform-username">Platform Developer Username</label>
@@ -104,6 +105,33 @@
 
           <button type="submit" id="submit-btn" class="btn-primary br-14" style="background: linear-gradient(135deg, #0f172a 0%, #312e81 100%); margin-top: 12px; height: 50px;">
             <span>Authenticate to Platform</span> <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 6px;"></i>
+          </button>
+        </form>
+
+        <!-- STEP 2: MFA CHALLENGE FORM (Shown when 2FA is active) -->
+        <form id="platform-mfa-form" style="display: none;">
+          <div style="background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 12px; padding: 12px 14px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-shield-alt" style="color: #7c3aed; font-size: 18px;"></i>
+            <span style="font-size: 13px; color: #5b21b6; font-weight: 600;">Two-Factor Authentication is enabled for this account.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="mfa-totp-code">6-Digit Verification Code</label>
+            <div class="input-wrapper">
+              <i class="fas fa-key"></i>
+              <input type="text" id="mfa-totp-code" placeholder="123456" maxlength="8" autocomplete="one-time-code" style="letter-spacing: 4px; font-weight: 700; text-align: center; font-size: 18px;">
+            </div>
+            <div style="font-size: 12px; color: #64748b; margin-top: 6px;">
+              Enter the code from Google Authenticator, Authy, or an emergency backup code.
+            </div>
+          </div>
+
+          <button type="submit" id="mfa-submit-btn" class="btn-primary br-14" style="background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%); margin-top: 12px; height: 50px;">
+            <span>Verify & Enter Console</span> <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 6px;"></i>
+          </button>
+
+          <button type="button" onclick="cancelMfaStep()" style="background: none; border: none; width: 100%; color: #64748b; font-size: 13px; font-weight: 600; margin-top: 14px; cursor: pointer;">
+            <i class="fas fa-arrow-left"></i> Back to Username & Password
           </button>
         </form>
 
@@ -158,6 +186,15 @@
           return;
         }
 
+        if (data.mfa_required && data.temp_token) {
+          // Switch to MFA step
+          window.mfaTempToken = data.temp_token;
+          document.getElementById('platform-login-form').style.display = 'none';
+          document.getElementById('platform-mfa-form').style.display = 'block';
+          document.getElementById('mfa-totp-code').focus();
+          return;
+        }
+
         // Store platform token and user information securely in sessionStorage
         sessionStorage.setItem('platform_token', data.token);
         sessionStorage.setItem('platform_user', JSON.stringify(data.user));
@@ -171,6 +208,59 @@
         submitBtn.innerHTML = '<span>Authenticate to Platform</span> <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 6px;"></i>';
       }
     });
+
+    function cancelMfaStep() {
+      window.mfaTempToken = null;
+      document.getElementById('platform-mfa-form').style.display = 'none';
+      document.getElementById('platform-login-form').style.display = 'block';
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>Authenticate to Platform</span> <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 6px;"></i>';
+    }
+
+    document.getElementById('platform-mfa-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errBanner = document.getElementById('error-banner');
+      const mfaBtn = document.getElementById('mfa-submit-btn');
+      const codeInput = document.getElementById('mfa-totp-code').value.trim();
+
+      errBanner.classList.add('hidden');
+      errBanner.textContent = '';
+      mfaBtn.disabled = true;
+      mfaBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+
+      try {
+        const isBackup = codeInput.length === 8 && /^[0-9A-Fa-f]{8}$/.test(codeInput);
+        const res = await fetch('/api/platform/mfa/verify-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            temp_token: window.mfaTempToken,
+            totp_code: isBackup ? null : codeInput,
+            backup_code: isBackup ? codeInput : null
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          errBanner.textContent = data.error || 'Invalid verification code. Please try again.';
+          errBanner.classList.remove('hidden');
+          mfaBtn.disabled = false;
+          mfaBtn.innerHTML = '<span>Verify & Enter Console</span> <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 6px;"></i>';
+          return;
+        }
+
+        sessionStorage.setItem('platform_token', data.token);
+        sessionStorage.setItem('platform_user', JSON.stringify(data.user));
+        window.location.replace('super-admin.html');
+      } catch (err) {
+        errBanner.textContent = 'Connection error. Please try again.';
+        errBanner.classList.remove('hidden');
+        mfaBtn.disabled = false;
+        mfaBtn.innerHTML = '<span>Verify & Enter Console</span> <i class="fas fa-arrow-right" style="font-size: 14px; margin-left: 6px;"></i>';
+      }
+    });
   </script>
 </body>
 </html>
+

@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS public.institutions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     institution_name TEXT NOT NULL,
     institution_type TEXT NOT NULL DEFAULT 'college' CHECK (institution_type IN ('college', 'school', 'university', 'institute', 'other')),
-    institution_code TEXT UNIQUE NOT NULL, -- Short unique slug/identifier, e.g. 'PCE-001'
+    institution_code TEXT UNIQUE NOT NULL CONSTRAINT check_institution_code_format CHECK (institution_code ~ '^[A-Z0-9-]{2,20}$'), -- Short unique slug/identifier, e.g. 'PCE-001'
     address TEXT,
     district TEXT,
     state TEXT,
@@ -37,7 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_institutions_status ON public.institutions (statu
 CREATE TABLE IF NOT EXISTS public.institution_access_codes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     institution_id UUID NOT NULL REFERENCES public.institutions(id) ON DELETE CASCADE,
-    code_hash TEXT UNIQUE NOT NULL,
+    code_hash TEXT UNIQUE NOT NULL CONSTRAINT check_code_hash_format CHECK (code_hash ~ '^[a-f0-9]{64}$'),
     hash_key_version TEXT NOT NULL DEFAULT 'v1',
     status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'revoked', 'expired')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -65,6 +65,10 @@ CREATE TABLE IF NOT EXISTS public.platform_admins (
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'super_admin' CHECK (role = 'super_admin'),
     status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
+    mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    mfa_secret TEXT,
+    mfa_backup_codes JSONB DEFAULT '[]'::jsonb,
+    password_changed_at TIMESTAMPTZ DEFAULT NOW(),
     last_login_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -204,3 +208,4 @@ BEGIN
         END IF;
     END IF;
 END $$;
+

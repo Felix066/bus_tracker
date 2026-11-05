@@ -59,7 +59,7 @@ $$;
 
 
 -- ============================================================================
--- SECTION 3: CHAT-AUDIO STORAGE BUCKET
+-- SECTION 3: CHAT-AUDIO STORAGE BUCKET 
 -- Run if bucket doesn't exist yet (setup_bucket.js may have already done this)
 -- ============================================================================
 
