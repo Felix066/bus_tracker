@@ -1019,37 +1019,37 @@
         return `
           <tr>
             <td>
-              <div style="font-weight: 700; color: #0f172a;">\${escapeHtml(inst.institution_name)}</div>
-              <div style="font-size: 12px; color: #64748b;">\${escapeHtml(inst.contact_email || inst.district || '')}</div>
+              <div style="font-weight: 700; color: #0f172a;">${escapeHtml(inst.institution_name)}</div>
+              <div style="font-size: 12px; color: #64748b;">${escapeHtml(inst.contact_email || inst.district || '')}</div>
             </td>
-            <td><span style="font-family: monospace; font-weight: 700;">\${escapeHtml(inst.institution_code)}</span></td>
-            <td><span class="badge badge-purple" style="text-transform: capitalize;">\${escapeHtml(inst.institution_type || 'college')}</span></td>
+            <td><span style="font-family: monospace; font-weight: 700;">${escapeHtml(inst.institution_code)}</span></td>
+            <td><span class="badge badge-purple" style="text-transform: capitalize;">${escapeHtml(inst.institution_type || 'college')}</span></td>
             <td>
-              <span class="badge \${inst.status === 'active' ? 'badge-active' : 'badge-inactive'}">
-                \${inst.status === 'active' ? '<i class="fas fa-circle-check"></i> Active' : '<i class="fas fa-circle-xmark"></i> Inactive'}
+              <span class="badge ${inst.status === 'active' ? 'badge-active' : 'badge-inactive'}">
+                ${inst.status === 'active' ? '<i class="fas fa-circle-check"></i> Active' : '<i class="fas fa-circle-xmark"></i> Inactive'}
               </span>
             </td>
             <td>
-              <span class="badge \${codeStatus === 'active' ? 'badge-active' : 'badge-revoked'}">
-                \${codeStatus === 'active' ? '<i class="fas fa-key"></i> Active' : '<i class="fas fa-ban"></i> Revoked'}
+              <span class="badge ${codeStatus === 'active' ? 'badge-active' : 'badge-revoked'}">
+                ${codeStatus === 'active' ? '<i class="fas fa-key"></i> Active' : '<i class="fas fa-ban"></i> Revoked'}
               </span>
             </td>
-            <td style="color: #64748b; font-size: 13px;">\${lastRotated}</td>
+            <td style="color: #64748b; font-size: 13px;">${lastRotated}</td>
             <td>
-              <button onclick="toggleAdminRotation('\${inst.id}', \${!inst.allow_admin_code_rotation})" 
-                style="background: none; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer; color: \${inst.allow_admin_code_rotation ? '#15803d' : '#64748b'};">
-                <i class="fas \${inst.allow_admin_code_rotation ? 'fa-toggle-on' : 'fa-toggle-off'}"></i> \${inst.allow_admin_code_rotation ? 'Allowed' : 'Disabled'}
+              <button onclick="toggleAdminRotation('${inst.id}', ${!inst.allow_admin_code_rotation})" 
+                style="background: none; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer; color: ${inst.allow_admin_code_rotation ? '#15803d' : '#64748b'};">
+                <i class="fas ${inst.allow_admin_code_rotation ? 'fa-toggle-on' : 'fa-toggle-off'}"></i> ${inst.allow_admin_code_rotation ? 'Allowed' : 'Disabled'}
               </button>
             </td>
             <td style="text-align: right;">
               <div class="action-btn-group" style="justify-content: flex-end;">
-                <button class="btn-action-icon" title="Rotate Access Code" onclick="rotateCode('\${inst.id}', '\${escapeHtml(inst.institution_name)}')">
+                <button class="btn-action-icon" title="Rotate Access Code" onclick="rotateCode('${inst.id}', '${escapeHtml(inst.institution_name)}')">
                   <i class="fas fa-arrows-rotate"></i>
                 </button>
-                <button class="btn-action-icon" title="\${inst.status === 'active' ? 'Deactivate' : 'Activate'}" onclick="toggleStatus('\${inst.id}', '\${inst.status}')">
-                  <i class="fas \${inst.status === 'active' ? 'fa-pause' : 'fa-play'}"></i>
+                <button class="btn-action-icon" title="${inst.status === 'active' ? 'Deactivate' : 'Activate'}" onclick="toggleStatus('${inst.id}', '${inst.status}')">
+                  <i class="fas ${inst.status === 'active' ? 'fa-pause' : 'fa-play'}"></i>
                 </button>
-                <button class="btn-action-icon" title="Revoke Code" style="color: #dc2626;" onclick="revokeCode('\${inst.id}', '\${escapeHtml(inst.institution_name)}')">
+                <button class="btn-action-icon" title="Revoke Code" style="color: #dc2626;" onclick="revokeCode('${inst.id}', '${escapeHtml(inst.institution_name)}')">
                   <i class="fas fa-ban"></i>
                 </button>
               </div>
@@ -1131,11 +1131,11 @@
 
     // Access Code Actions
     async function rotateCode(id, name) {
-      if (!confirm(`Are you sure you want to rotate the access code for "\${name}"? The previous code will stop working immediately.`)) {
+      if (!confirm(`Are you sure you want to rotate the access code for "${name}"? The previous code will stop working immediately.`)) {
         return;
       }
       try {
-        const res = await fetch(`/api/platform/institutions/\${id}/access-code/rotate`, {
+        const res = await fetch(`/api/platform/institutions/${id}/access-code/rotate`, {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + token }
         });
@@ -1152,11 +1152,11 @@
     }
 
     async function revokeCode(id, name) {
-      if (!confirm(`Revoke the active access code for "\${name}"? Users from this institution will not be able to resolve portals until a new code is rotated.`)) {
+      if (!confirm(`Revoke the active access code for "${name}"? Users from this institution will not be able to resolve portals until a new code is rotated.`)) {
         return;
       }
       try {
-        const res = await fetch(`/api/platform/institutions/\${id}/access-code/revoke`, {
+        const res = await fetch(`/api/platform/institutions/${id}/access-code/revoke`, {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + token }
         });
@@ -1174,7 +1174,7 @@
 
     async function toggleAdminRotation(id, allow) {
       try {
-        const res = await fetch(`/api/platform/institutions/\${id}/code-settings`, {
+        const res = await fetch(`/api/platform/institutions/${id}/code-settings`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -1192,7 +1192,7 @@
     async function toggleStatus(id, currentStatus) {
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
       try {
-        const res = await fetch(`/api/platform/institutions/\${id}`, {
+        const res = await fetch(`/api/platform/institutions/${id}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -1248,12 +1248,12 @@
         if (data.success && data.logs && data.logs.length > 0) {
           tbody.innerHTML = data.logs.map(l => `
             <tr>
-              <td style="font-size: 13px; color: #64748b; white-space: nowrap;">\${new Date(l.created_at).toLocaleString()}</td>
-              <td style="font-weight: 700;">\${escapeHtml(l.actor_id)}</td>
-              <td><span class="badge badge-purple" style="font-size: 11px;">\${escapeHtml(l.actor_type)}</span></td>
-              <td><span style="font-family: monospace; font-weight: 700; color: #0f172a;">\${escapeHtml(l.action)}</span></td>
-              <td style="font-size: 13px; color: #64748b;">\${escapeHtml(l.ip_address || '-')}</td>
-              <td style="font-size: 12px; color: #64748b; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${escapeHtml(JSON.stringify(l.metadata || {}))}</td>
+              <td style="font-size: 13px; color: #64748b; white-space: nowrap;">${new Date(l.created_at).toLocaleString()}</td>
+              <td style="font-weight: 700;">${escapeHtml(l.actor_id)}</td>
+              <td><span class="badge badge-purple" style="font-size: 11px;">${escapeHtml(l.actor_type)}</span></td>
+              <td><span style="font-family: monospace; font-weight: 700; color: #0f172a;">${escapeHtml(l.action)}</span></td>
+              <td style="font-size: 13px; color: #64748b;">${escapeHtml(l.ip_address || '-')}</td>
+              <td style="font-size: 12px; color: #64748b; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(JSON.stringify(l.metadata || {}))}</td>
             </tr>
           `).join('');
         } else {
